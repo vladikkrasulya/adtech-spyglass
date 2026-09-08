@@ -177,10 +177,10 @@
   "knownGap": {
     "id": "DEF-245",
     "layers": ["browser"],
-    "note": "A script-shaped pop adm (window.open/location redirect) renders correctly as inert markup with nothing visible — kind and rendered state are measured correctly — but the destination text never appears on screen, so the browser layer's per-bid identity/marker check cannot confirm which creative loaded.",
+    "note": "The redirect-script pop is detected and an inert destination note is built, but it does not reach the measured on-screen identity: the caption is appended beside a zero-footprint iframe and the harness still reads no visible marker. The sandbox refusal itself is correct and unchanged.",
     "matches": {
       "browser": [
-        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"https://offers\\.example\\.test/landing/pop-x-openrtb-shape-flag-allowshock\"\\ absent$"
+        "^browser\\.bid\\[0,0\\]\\.identity: expected marker \"https:\\/\\/offers\\.example\\.test\\/landing\\/pop\\-x\\-openrtb\\-shape\\-flag\\-allowshock\" absent$"
       ]
     }
   }

@@ -23,7 +23,7 @@ node --test tests/creative-preview-browser.test.js tests/clear-resets-results-br
 ## 3. Look at it (measure-then-look)
 
 ```bash
-node /tmp/claude-1000/-srv-DATA-Stacks-ortbtools/1a50bc16-1ac1-4b14-8f97-1671229d76ac/scratchpad/push-preview-shot.js after.png
+node ~/.local/share/ortbtools-research/2026-08-26-014-push-preview/push-preview-shot.js after.png
 ```
 
 Before-state (captured 2026-08-26, pre-change):

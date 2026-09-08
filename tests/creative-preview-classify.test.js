@@ -288,3 +288,106 @@ test('the classifier adheres to the zero-network policy', () => {
   assert.doesNotMatch(code, /\bsendBeacon\s*\(/, 'must not call sendBeacon()');
   assert.doesNotMatch(code, /\bimport\s*\(/, 'must not dynamically import');
 });
+
+// ── DEF-245: detectPopRedirect ───────────────────────────────────────────
+// A pop creative shaped as a redirect script renders as inert markup with
+// nothing visible in it — the sandbox correctly refuses the navigation, but
+// pre-fix there was no way to tell WHICH creative that refusal was for.
+// detectPopRedirect is additive: it never changes classify()'s own kind.
+
+const POP_REDIRECT_ADMS = [
+  {
+    name: 'window.open, single quotes, target arg',
+    adm: "<script>window.open('https://offers.example.test/landing/pop-x-openrtb-shape-flag-allowshock','_blank');</script>",
+    url: 'https://offers.example.test/landing/pop-x-openrtb-shape-flag-allowshock',
+  },
+  {
+    name: 'location.replace(...)',
+    adm: "<script>location.replace('https://advertiser.example.test/offers/pop-x-openrtb-flag-popunder-bool');</script>",
+    url: 'https://advertiser.example.test/offers/pop-x-openrtb-flag-popunder-bool',
+  },
+  {
+    name: 'window.open, double quotes',
+    adm: '<script>window.open("https://advertiser.example.test/offers/pop-x-openrtb-adtype-popunder-window-open",\'_blank\');</script>',
+    url: 'https://advertiser.example.test/offers/pop-x-openrtb-adtype-popunder-window-open',
+  },
+  {
+    name: 'top.location.href = ... (the case the URL regex resolves via its THIRD alternative, not the one that matched the grammar test)',
+    adm: "<script>top.location.href='https://advertiser.example.test/offers/pop-x-openrtb-adtype-clickunder-location';</script>",
+    url: 'https://advertiser.example.test/offers/pop-x-openrtb-adtype-clickunder-location',
+  },
+  {
+    name: 'parent.location = ... (no .href)',
+    adm: "<script>parent.location='https://advertiser.example.test/offers/parent-location';</script>",
+    url: 'https://advertiser.example.test/offers/parent-location',
+  },
+  {
+    name: 'location.assign(...)',
+    adm: "<script>location.assign('https://advertiser.example.test/offers/assign-case');</script>",
+    url: 'https://advertiser.example.test/offers/assign-case',
+  },
+];
+
+for (const c of POP_REDIRECT_ADMS) {
+  test(`detectPopRedirect recognises: ${c.name}`, () => {
+    const { api } = loadClassifier({ withVastCore: true });
+    // Confirm it stays classified as markup — detectPopRedirect is additive,
+    // never a replacement for classify()'s own decision.
+    const cls = api.classify(c.adm);
+    assert.equal(cls.kind, 'markup', 'must still classify as markup so the iframe still mounts');
+    const got = api.detectPopRedirect(cls.body);
+    assert.ok(got, 'expected a pop-redirect match');
+    assert.equal(got.url, c.url);
+  });
+}
+
+test('detectPopRedirect does not false-fire on a real banner with an embedded click-tracker', () => {
+  const { api } = loadClassifier({ withVastCore: true });
+  const banner =
+    '<div style="width:300px;height:250px"><a onclick="window.open(\'https://tracker.example.test/click\')"><img src="https://cdn.example.test/creative.png"></a></div>';
+  assert.equal(api.classify(banner).kind, 'markup');
+  assert.equal(
+    api.detectPopRedirect(banner),
+    null,
+    'a banner with real visible markup around the click-tracker must not match — only a body that IS exactly one <script> tag may',
+  );
+});
+
+test('detectPopRedirect does not fire on a bare-URL body (classify() already named that kind "url" before this ever runs)', () => {
+  const { api } = loadClassifier({ withVastCore: true });
+  const bareUrl = 'https://advertiser.example.test/offers/bare';
+  assert.equal(api.classify(bareUrl).kind, 'url');
+  assert.equal(api.detectPopRedirect(bareUrl), null);
+});
+
+test('detectPopRedirect does not fire on a script with no redirect call', () => {
+  const { api } = loadClassifier({ withVastCore: true });
+  assert.equal(api.detectPopRedirect('<script>console.log("hi");</script>'), null);
+});
+
+test('detectPopRedirect never rewrites the body it was given (it only reads it)', () => {
+  const { api } = loadClassifier({ withVastCore: true });
+  const adm = POP_REDIRECT_ADMS[0].adm;
+  const before = adm;
+  api.detectPopRedirect(adm);
+  assert.equal(adm, before);
+});
+
+// ── DEF-245 sync pin: the reimplementation must not drift from Core ──────
+// detectPopRedirect is a from-scratch, public/**-only reimplementation of 3
+// of the 4 grammars packages/core/non-iab-formats.js:admLooksLikePop
+// recognises (bare-URL excluded — see detectPopRedirect's own doc comment
+// for why). There is no automated mirror for this file (unlike
+// vast-shape.js), so this test is the drift guard: every fixture the browser
+// classifier is proven against above must ALSO be judged a pop by Core's own
+// admLooksLikePop, on the exact <script>...</script> body.
+test('sync pin: every detectPopRedirect fixture is also recognised by packages/core/non-iab-formats.js:admLooksLikePop', () => {
+  const core = require(path.join(ROOT, 'packages/core/non-iab-formats.js'));
+  for (const c of POP_REDIRECT_ADMS) {
+    assert.equal(
+      core.admLooksLikePop(c.adm),
+      true,
+      `Core's admLooksLikePop must also call "${c.name}" a pop adm, or the two have drifted`,
+    );
+  }
+});

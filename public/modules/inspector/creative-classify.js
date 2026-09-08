@@ -248,5 +248,64 @@
     return !!result && result.kind === 'markup';
   }
 
-  window.OrtbtoolsCreativeClassify = { classify, isFrameable, KINDS, MAX_DECODE_INPUT };
+  /**
+   * DEF-245 — does `body` look like a pop/clickunder redirect script, and if
+   * so what URL does it redirect to? Additive only: this never changes what
+   * `classify()` returns (kind stays 'markup' for these bodies, exactly as
+   * before), so the iframe the render path mounts for 'markup' still exists,
+   * still executes the script, and still produces the sandbox refusal — this
+   * is asked SEPARATELY, only to decide whether to also show identity text
+   * beside that iframe.
+   *
+   * Deliberately net-new and confined to public/**, not an import: this is a
+   * from-scratch reimplementation of 3 of the 4 grammars
+   * `admLooksLikePop`/`extractPopLandingHost` recognise in
+   * packages/core/non-iab-formats.js — window.open(...), location.(href|
+   * replace|assign) = ..., and (top|parent).location = ... . The bare-URL
+   * grammar is deliberately excluded: a bare-URL body never reaches this
+   * function, because `classify()` already names it kind 'url' before
+   * anything calls this. There is no public/core mirror of
+   * non-iab-formats.js to import instead of reimplementing (unlike
+   * vast-shape.js, which IS mirrored to public/core/vast-shape.js — see that
+   * file's own comment on why the pop/push heuristics were left out of the
+   * mirror). KEEP THESE TWO REGEXES IN SYNC BY HAND with
+   * packages/core/non-iab-formats.js:admLooksLikePop and
+   * :extractPopLandingHost — tests/creative-preview-classify.test.js pins
+   * this function's behaviour against a shared fixture list (including the
+   * `top.location.href = '...'` case, which only the SECOND regex's
+   * alternation actually resolves the URL for) so a hand-edit that drifts
+   * from Core shows up as a failing test instead of a silent divergence.
+   *
+   * @param {string} body the SAME body classify() was given (pre-decode — a
+   *   pop redirect script is never base64-wrapped in the fixtures this closes)
+   * @returns {{url: string}|null}
+   */
+  function detectPopRedirect(body) {
+    const trimmed = String(body == null ? '' : body).trim();
+    // The whole body must be exactly one <script> tag and nothing else — a
+    // real banner with an embedded window.open click-tracker ALONGSIDE real
+    // visible markup must not false-fire this.
+    const scriptMatch = /^<script\b[^>]*>([\s\S]*)<\/script>\s*$/i.exec(trimmed);
+    if (!scriptMatch) return null;
+    const inner = scriptMatch[1];
+    const looksLikePop =
+      /window\.open\s*\(/i.test(inner) ||
+      /location\.(?:href|replace|assign)\s*[=(]/i.test(inner) ||
+      /(?:top|parent)\.location\s*[=.]/i.test(inner);
+    if (!looksLikePop) return null;
+    const urlMatch =
+      /(?:window\.open|(?:top|parent)\.location|location\.(?:href|replace|assign))\s*[=(]?\.?\s*\(?\s*['"`](https?:\/\/[^'"`]+)['"`]/i.exec(
+        inner,
+      );
+    if (!urlMatch) return null;
+    return { url: urlMatch[1] };
+  }
+
+  window.OrtbtoolsCreativeClassify = {
+    classify,
+    isFrameable,
+    detectPopRedirect,
+    KINDS,
+    MAX_DECODE_INPUT,
+  };
 })();

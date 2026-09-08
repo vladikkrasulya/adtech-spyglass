@@ -62,11 +62,11 @@
   "specNotes": [
     "packages/core/detect.js routes every JSON array unconditionally to TYPES.VENDOR_FEED (no shape check at the type-detection layer); packages/core/rules-feed.js then routes every array unconditionally to validatePushMaterialsFeed(), which checks the click role via click_url|link only — this card's clickurl (no separator) satisfies neither alias, so feed.push.click_url_required (ERROR) fires per element even though price/title/image/icon are all recognised by their own alias pairs.",
     "packages/core/format-detect.js detectFeedFormat() iterates every array element independently and unions the tags; its hasClick set includes clickurl, so FORMATS.INPAGE is still tagged correctly for the whole array despite the per-element validation false positive — the same disagreement as the single-object sibling case, now doubled (one false error per card).",
-    "public/ortbtools.app.js's Inspector has no bid/material selector; only the first array element is ever measured for creative preview (specs/014-push-creative-preview Assumptions, and the existing known gap DEF-201 'Inspector cannot select every returned bid or feed material'), so this case's second card's preview is unreachable through the UI regardless of the clickurl alias question."
+    "DEF-201 closed 2026-09-08: the Inspector now offers a bid/material selector whenever a response carries more than one candidate, so this case's second card is reachable through the UI like the first."
   ],
   "notes": [
     "No request side exists for this scenario, for the same reason as the single-object sibling case.",
-    "The second card's selection-unavailability is the pre-existing, differently-caused DEF-201 gap; it is folded into this case's own knownGap.matches.browser (see report.js precedent in pop-ppcmate-json-multi.json) rather than declared as a second knownGap, since one case may declare only one."
+    "DEF-181 (clickurl alias, packages/core + this file's Inspector) and DEF-201 (bid/material selector) are both closed as of 2026-09-08; this case carries no knownGap and is expected to pass normatively."
   ],
   "expect": {
     "response": {
@@ -84,18 +84,10 @@
       "mediaPlays": "n/a",
       "marker": "A quiet morning by the lake",
       "limitation": "Remote creative assets are blocked by the preview content policy.",
-      "capabilityGap": "findPushMaterial()'s isMat() test requires click_url or link on every candidate material; neither card's clickurl key satisfies it, so the front-end never recognises either card as a push-style material and shows the empty state instead of a card."
+      "capabilityGap": null
     },
     "http": {
       "status": 200
-    }
-  },
-  "knownGap": {
-    "id": "DEF-201",
-    "layers": ["browser"],
-    "note": "The in-page card feed array now types and previews its first card; the second material of this two-card feed cannot be selected or inspected (recorded capability gap DEF-201).",
-    "matches": {
-      "browser": ["^browser\\.selection: unavailable material\\[\\d+\\]$"]
     }
   }
 }

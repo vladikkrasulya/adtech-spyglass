@@ -231,13 +231,5 @@
     "http": {
       "status": 200
     }
-  },
-  "knownGap": {
-    "id": "DEF-201",
-    "layers": ["browser"],
-    "note": "The audit must account for every returned creative. The current first-bid/material preview cannot expose subsequent creatives; report this capability gap explicitly.",
-    "matches": {
-      "browser": ["^browser\\.selection:\\ unavailable\\ seat\\[1\\]\\.bid\\[0\\]$"]
-    }
   }
 }

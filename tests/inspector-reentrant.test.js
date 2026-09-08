@@ -372,6 +372,10 @@ test('static: the in-flight analyze is aborted on unmount and its render paths g
 // the file where a careless edit would remove it.
 
 const I18N = fs.readFileSync(path.join(ROOT, 'public/i18n.js'), 'utf8');
+const DIALECT_LABEL_I18N = fs.readFileSync(
+  path.join(ROOT, 'public/modules/inspector/dialect-label.i18n.js'),
+  'utf8',
+);
 
 test('static: the response pane sends its raw bytes, with the same pretty-print bookkeeping as the request pane', () => {
   // The request pane keeps `_rawBeforePretty` across the pretty-print that
@@ -386,6 +390,32 @@ test('static: the response pane sends its raw bytes, with the same pretty-print 
     'rawResBytes must fall back to the stash once the pane holds our own pretty-print',
   );
   assert.match(APP, /bidResRaw: rawResBytes/, 'the analyze body must carry the response bytes');
+});
+
+test('static: DEF-205 — an explicit paste starts new lexical provenance instead of reusing stale pretty-print bytes', () => {
+  // Pre-fix, raw-byte provenance was decided by TEXTUAL EQUALITY with the
+  // last pretty-print (`_prettyPrintedReq`/`_prettyPrintedRes`): re-pasting
+  // clean JSON that happened to equal the previous pretty-print output kept
+  // the OLD `_rawBeforePretty*` bytes — and their duplicate-key findings —
+  // instead of validating what was actually just pasted.
+  //
+  // Fix has two halves. (1) The shared keyboard 'input' listener on
+  // #bidReq/#bidRes nulls both the pretty-print marker and its raw-bytes
+  // stash for that pane, so typing/pasting always starts fresh provenance.
+  assert.match(
+    APP,
+    /el\.addEventListener\('input', \(\) => \{[\s\S]{0,900}?if \(id === 'bidReq'\) \{\s*_prettyPrintedReq = null;\s*_rawBeforePretty = null;\s*\} else \{\s*_prettyPrintedRes = null;\s*_rawBeforePrettyRes = null;\s*\}/,
+    'the keyboard input listener must null both the pretty-print marker and its raw-bytes stash for the edited pane',
+  );
+  // (2) setEditorValue — the sole funnel for every programmatic write — nulls
+  // the pretty-print marker (never the raw-bytes stash, which the
+  // pretty-print call site sets on the line BEFORE calling setEditorValue and
+  // would otherwise be wiped by us on the very next line).
+  assert.match(
+    APP,
+    /function setEditorValue\(id, text\) \{\s*const el = \$\(id\);\s*if \(!el\) return;[\s\S]{0,900}?if \(id === 'bidReq'\) _prettyPrintedReq = null;\s*else if \(id === 'bidRes'\) _prettyPrintedRes = null;/,
+    'setEditorValue must null the pretty-print marker for the pane it writes, before writing',
+  );
 });
 
 test('static: a JSON root that is not a plain object is rejected before anything dereferences it', () => {
@@ -433,6 +463,26 @@ test('static: a failed analysis clears the results panel instead of leaving the 
   // then analyses a broken one, and requires the page to keep nothing from
   // the first. What survives here is the part static analysis can honestly
   // see — that the catch calls the reset at all.
+});
+
+test('static: DEF-200 — a structured HTTP failure (429 or any other non-empty_payload error) clears the previous successful result, not just the toast', () => {
+  // Pre-fix, the `!r.ok || j.success === false` branch only toasted and
+  // touched stEntity/statusDot/statusText — the previous successful
+  // verdict, its findings, its preview and window.__ortbtoolsLast all
+  // stayed on screen describing bytes that had just failed to re-analyze.
+  // empty_payload is deliberately excluded: invalidateIfPayloadChanged()
+  // already clears results on the 'input' event that produces it, before
+  // this response ever lands.
+  assert.match(
+    APP,
+    /if \(!r\.ok \|\| j\.success === false\) \{[\s\S]{0,80}?const code = j && j\.code;/,
+    'expected the structured-failure branch to still read the response code',
+  );
+  assert.match(
+    APP,
+    /if \(!r\.ok \|\| j\.success === false\) \{[\s\S]{0,600}?code === 'empty_payload'\)[\s\S]{0,400}?toast\(t\('toast\.nothing_to_analyze'\), 'info'\);[\s\S]{0,150}?\} else \{[\s\S]{0,500}?if \(!ctx\.signal\.aborted\) clearResultsForError\(errMsg\);/,
+    'every non-empty_payload structured failure (429 included) must call clearResultsForError, guarded the same way as the network-throw catch',
+  );
 });
 
 test('static: response-only analysis does not accuse a request that was never sent', () => {
@@ -560,6 +610,62 @@ test('static: shell-boot no longer force-reloads onto the inspector (mitigation 
   // The recovery wrapper still uses the registry, without forcing a reload.
   assert.match(SHELL, /activateSection\('inspector'/, 'inspector uses the recovery wrapper');
   assert.match(SHELL, /await registry\.activate\(id, root\)/, 'wrapper mounts through registry');
+});
+
+test('static: DEF-260 — the rendered creative iframe carries an accessible name', () => {
+  // Both iframe-creation sites previously set only `sandbox`, so the frame
+  // had content but no name assistive tech could read. `title` is read
+  // directly into the AX name computation.
+  assert.match(
+    APP,
+    /iframe\.setAttribute\('sandbox', 'allow-scripts'\);[\s\S]{0,600}?iframe\.title = t\('creative\.frame\.title\.native', \{ w: nw, h: nh \}\);/,
+    'the native creative iframe must get a localized, dimensioned title',
+  );
+  assert.match(
+    APP,
+    /iframe\.setAttribute\('sandbox', 'allow-scripts'\);[\s\S]{0,600}?iframe\.title = t\('creative\.frame\.title\.banner', \{ w: bw, h: bh \}\);/,
+    'the banner/markup creative iframe must get a localized, dimensioned title',
+  );
+  for (const locale of ['en', 'uk', 'ru']) {
+    for (const key of ['creative.frame.title.banner', 'creative.frame.title.native']) {
+      assert.match(
+        DIALECT_LABEL_I18N,
+        new RegExp(`'${key.replace('.', '\\.')}':[\\s\\S]{0,200}?${locale}:`),
+        `${key} must exist in ${locale}`,
+      );
+    }
+  }
+});
+
+test('static: DEF-201 — the bid/material selector is wired into analyze, resets, and the click dispatcher', () => {
+  // Behavioural correctness (which bid resolves which adm) is covered by
+  // tests/creative-resolution.test.js, which extracts and RUNS the real
+  // resolveCreativeAt/creativeCandidatesFor against real corpus fixtures.
+  // What only static source inspection can see is that the three call sites
+  // stay wired together: the default render offers the strip, a failed/
+  // cleared analysis tears it down (or it points at data that no longer
+  // exists — the exact class of bug DEF-200 exists to close), and the
+  // delegated dispatcher still routes clicks on it to a real repaint.
+  assert.match(
+    APP,
+    /reRenderPreview\(\);[\s\S]{0,600}?renderCreativeBidSelector\(creativeCandidatesFor\(res\), 0, 0\);/,
+    'the default render must offer a selector for every returned bid/material',
+  );
+  assert.match(
+    APP,
+    /if \(\$\('creativePreview'\)\) setAdPreview\(null, \{\}, null\);[\s\S]{0,400}?clearCreativeBidSelector\(\);/,
+    'resetAnalysisArtifacts must tear the selector down along with everything else it owns',
+  );
+  assert.match(
+    APP,
+    /case 'select-creative-bid': \{[\s\S]{0,700}?resolveCreativeAt\(last\.req, last\.res, seatIndex, bidIndex\)/,
+    'the delegated dispatcher must resolve the clicked bid/material',
+  );
+  assert.match(
+    APP,
+    /case 'select-creative-bid': \{[\s\S]{0,900}?_currentPreviewAdm = resolved\.adm;[\s\S]{0,200}?reRenderPreview\(\);/,
+    'selecting a bid must repaint through the SAME preview state the default render uses, not a side channel',
+  );
 });
 
 // ── RUNTIME: secondary async guard shape ────────────────────────────────────

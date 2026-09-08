@@ -117,10 +117,7 @@
         "^browser\\.request:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
         "^browser\\.response:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
         "^browser\\.crosscheck:\\ expected\\ no\\ crosscheck\\ findings,\\ got\\ crosscheck\\.no_request\\[crit\\]@req$",
-        "^browser\\.format\\.formats:\\ expected\\ \\[push\\],\\ got\\ \\[\\]$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ push,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ partial,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"A\\ small\\ garden\\ project\"\\ absent$"
+        "^browser\\.format\\.formats:\\ expected\\ \\[push\\],\\ got\\ \\[\\]$"
       ]
     }
   }

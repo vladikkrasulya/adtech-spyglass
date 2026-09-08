@@ -27,8 +27,7 @@
         "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots.",
         "Coverage-closure cases extend this existing group; exact additional signatures and measured browser evidence are recorded per case, not counted as independent new defects."
       ],
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json",
-      "relatedBrowserDefects": ["DEF-202"]
+      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
     },
     "DEF-107": {
       "id": "DEF-107",
@@ -53,8 +52,7 @@
         "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots.",
         "Reviewed decoder signatures are host-independent; reserved fixture host substitution is not the reason for no_decoder. Existing registry only admits clickunder /feed and authenticated /search or /link contracts."
       ],
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json",
-      "relatedBrowserDefects": ["DEF-201", "DEF-203"]
+      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
     },
     "DEF-108": {
       "id": "DEF-108",
@@ -70,8 +68,7 @@
       "notes": [
         "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots."
       ],
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json",
-      "relatedBrowserDefects": ["DEF-201", "DEF-202"]
+      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
     },
     "DEF-109": {
       "id": "DEF-109",
@@ -127,144 +124,6 @@
         "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots."
       ],
       "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
-    },
-    "DEF-200": {
-      "id": "DEF-200",
-      "title": "Structured HTTP error leaves the previous successful analysis visible",
-      "category": "stale-ui",
-      "severity": "high",
-      "source": "specs/020-ad-format-verification-matrix/spec.md FR-007; specs/012-creative-preview-repair/contracts/creative-preview.md",
-      "code": [
-        "public/ortbtools.app.js:4310",
-        "public/ortbtools.app.js:4399",
-        "public/ortbtools.app.js:4649"
-      ],
-      "expected": "After an earlier successful analysis, a structured 429 failure for the same input must invalidate the old successful verdict and stored analysis.",
-      "actual": "All 12 locale/theme/viewport combinations retain the previous successful analysis after a controlled HTTP429 success:false response. Network-error and clear flows subsequently pass.",
-      "cases": [
-        "ux-en-light-desktop",
-        "ux-en-light-mobile",
-        "ux-en-dark-desktop",
-        "ux-en-dark-mobile",
-        "ux-uk-light-desktop",
-        "ux-uk-light-mobile",
-        "ux-uk-dark-desktop",
-        "ux-uk-dark-mobile",
-        "ux-ru-light-desktop",
-        "ux-ru-light-mobile",
-        "ux-ru-dark-desktop",
-        "ux-ru-dark-mobile"
-      ],
-      "matches": {
-        "ux": [
-          "^ux\\.http-error: successful analysis remains claimed after structured 429$",
-          "^ux\\.raw-input: clean pasted request retains prior duplicate-key provenance$"
-        ]
-      },
-      "reviewedAt": "2026-09-07",
-      "evidence": "/tmp/ortbtools-corpus-browser-agent-ux8/ux.jsonl",
-      "screenshots": "/tmp/ortbtools-corpus-browser-agent-ux8/screenshots/*-http-error.png",
-      "relatedBrowserDefects": ["DEF-205"],
-      "note": "Two separately documented, exactly pinned UX deviations: stale successful results after structured429 (DEF200) and stale raw input provenance after explicit clean repaste (DEF205)."
-    },
-    "DEF-201": {
-      "id": "DEF-201",
-      "title": "Inspector cannot select every returned bid or feed material",
-      "category": "preview-capability",
-      "severity": "medium",
-      "source": "specs/020-ad-format-verification-matrix/spec.md US2 and FR-006; specs/012-creative-preview-repair/contracts/creative-preview.md",
-      "code": ["public/ortbtools.app.js:3233", "public/ortbtools.app.js:4033"],
-      "expected": "The audit must account for every returned creative. The current first-bid/material preview cannot expose subsequent creatives; report this capability gap explicitly.",
-      "actual": "See exact browser-layer signatures and recorded observation artifact.",
-      "cases": [
-        "audio-web-26-multi-imp-reversed",
-        "bn-banner-26-multiimp-multiseat",
-        "pop-adon3-over-multi",
-        "pop-ppcmate-json-multi",
-        "push-ppcmate-multi",
-        "video-ctv-26-dynamic-pod",
-        "push-x-kadam-array-alias-mixed",
-        "state-partial",
-        "inpage-x-card-feed-array"
-      ],
-      "reviewedAt": "2026-09-07",
-      "evidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json",
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
-    },
-    "DEF-202": {
-      "id": "DEF-202",
-      "title": "Documented vendor response wrappers and clickunder creative have no preview",
-      "category": "vendor-preview-support",
-      "severity": "medium",
-      "source": "tests/corpus/assets/sources.json; sourceIds on each referenced case",
-      "code": ["public/ortbtools.app.js:3234", "public/ortbtools.app.js:4040"],
-      "expected": "Documented response creatives retain their wire wrappers; a visible card or inert destination should be available, or absence reported as an unsupported preview capability.",
-      "actual": "See exact browser-layer signatures and recorded observation artifact.",
-      "cases": [
-        "inpage-exads-wrapper",
-        "pop-adon3-over-multi",
-        "pop-adon3-under",
-        "pop-exads-wrapper",
-        "pop-kadam-clickunder",
-        "pop-x-feed-bid-redirect",
-        "pop-x-feed-linkfeed-get",
-        "push-adon3-string-cpc",
-        "push-exads-icon-cpc"
-      ],
-      "reviewedAt": "2026-09-07",
-      "evidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json",
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
-    },
-    "DEF-203": {
-      "id": "DEF-203",
-      "title": "PPCmate pop material is presented as a notification instead of an inert destination",
-      "category": "vendor-preview-support",
-      "severity": "medium",
-      "source": "https://kb.ppcmate.com/kb/references-and-guidelines/how-to-create-a-pop-endpoint-xml-feed",
-      "code": ["public/ortbtools.app.js:3234", "public/ortbtools.app.js:4040"],
-      "expected": "A documented pop placement should expose its inert destination. Generic push-material heuristics must not silently claim notification rendering as pop creative coverage.",
-      "actual": "See exact browser-layer signatures and recorded observation artifact.",
-      "cases": ["pop-ppcmate-json-material", "pop-ppcmate-json-multi"],
-      "reviewedAt": "2026-09-07",
-      "evidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
-    },
-    "DEF-205": {
-      "id": "DEF-205",
-      "title": "Repasting clean JSON equal to the last pretty-print retains old duplicate-key bytes",
-      "category": "stale-input-provenance",
-      "severity": "high",
-      "source": "https://www.rfc-editor.org/rfc/rfc8259#section-4; specs/020-ad-format-verification-matrix/spec.md FR-007",
-      "code": [
-        "public/ortbtools.app.js:3921",
-        "public/ortbtools.app.js:3992",
-        "public/ortbtools.app.js:4290"
-      ],
-      "expected": "Explicitly pasting clean request text starts new lexical provenance even when the parsed object equals the previous pretty-print. Validation must use the newly pasted bytes.",
-      "actual": "In all12 explicit UX sequences, duplicate id is initially observed; after pasting clean pretty JSON, duplicate id remains and submitted bidReqRaw differs from the clean pasted text.",
-      "cases": [
-        "ux-en-light-desktop",
-        "ux-en-light-mobile",
-        "ux-en-dark-desktop",
-        "ux-en-dark-mobile",
-        "ux-uk-light-desktop",
-        "ux-uk-light-mobile",
-        "ux-uk-dark-desktop",
-        "ux-uk-dark-mobile",
-        "ux-ru-light-desktop",
-        "ux-ru-light-mobile",
-        "ux-ru-dark-desktop",
-        "ux-ru-dark-mobile"
-      ],
-      "matches": {
-        "ux": ["^ux\\.raw-input: clean pasted request retains prior duplicate-key provenance$"]
-      },
-      "reviewedAt": "2026-09-07",
-      "evidence": "/tmp/ortbtools-corpus-browser-agent-ux8/ux.jsonl",
-      "screenshots": "/tmp/ortbtools-corpus-browser-agent-ux8/screenshots/*-raw-input.png",
-      "notes": [
-        "The explicit duplicate→clean sequence runs in every UX combination. Independent corpus cases use fresh pages; the isolated response duplicate-price case carries no order-dependent known gap.",
-        "Observed rawInput metrics: seedDuplicateObserved=true, cleanDuplicateObserved=true, submittedRawEqualsCleanPaste=false."
-      ]
     }
   }
 }

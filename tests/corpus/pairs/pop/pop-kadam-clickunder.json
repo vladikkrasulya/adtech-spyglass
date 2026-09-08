@@ -86,17 +86,5 @@
     "format": {
       "formats": ["pops"]
     }
-  },
-  "knownGap": {
-    "id": "DEF-202",
-    "layers": ["browser"],
-    "note": "Documented response creatives retain their wire wrappers; a visible card or inert destination should be available, or absence reported as an unsupported preview capability.",
-    "matches": {
-      "browser": [
-        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ url,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ inert\\-text,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"https://advertiser\\.example\\.test/offers/pop\\-kadam\\-clickunder\\-a\"\\ absent$"
-      ]
-    }
   }
 }

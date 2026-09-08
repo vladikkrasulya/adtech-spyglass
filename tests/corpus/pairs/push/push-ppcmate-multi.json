@@ -106,8 +106,7 @@
       "core": ["^request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$"],
       "http": ["^request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$"],
       "browser": [
-        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$",
-        "^browser\\.selection:\\ unavailable\\ material\\[1\\]$"
+        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$"
       ]
     }
   }

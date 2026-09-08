@@ -110,10 +110,7 @@
       "browser": [
         "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$",
         "^browser\\.response:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
-        "^browser\\.format\\.formats:\\ expected\\ \\[push\\],\\ got\\ \\[\\]$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ push,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ partial,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"Simple\\ tools\\ for\\ a\\ garden\"\\ absent$"
+        "^browser\\.format\\.formats:\\ expected\\ \\[push\\],\\ got\\ \\[\\]$"
       ]
     }
   }

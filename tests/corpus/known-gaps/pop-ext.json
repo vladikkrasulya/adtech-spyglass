@@ -41,7 +41,8 @@
       "reviewedAt": "2026-09-07",
       "notes": [
         "kind and rendered are measured correctly per case (markup / empty); only the identity/marker assertion fails, since the destination text never appears in document.body.innerText or an image alt.",
-        "A bare-URL pop adm (pop-x-openrtb-adtype-popup-bare-url) does NOT hit this gap — it classifies as kind=url and is shown as inert text, so its destination is visible and the identity check passes without a known-gap entry."
+        "A bare-URL pop adm (pop-x-openrtb-adtype-popup-bare-url) does NOT hit this gap — it classifies as kind=url and is shown as inert text, so its destination is visible and the identity check passes without a known-gap entry.",
+        "2026-09-08 (feature 027): the redirect script is now detected and an inert destination note is built, but the caption still does not reach the measured on-screen identity. The sandbox refusal is correct and unchanged; the record stays open on the identity half only."
       ]
     }
   }

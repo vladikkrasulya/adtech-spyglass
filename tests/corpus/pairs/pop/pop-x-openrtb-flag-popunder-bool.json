@@ -47,8 +47,14 @@
         "secure": 0,
         "bidfloor": 0.001,
         "bidfloorcur": "USD",
-        "banner": { "w": 1, "h": 1 },
-        "ext": { "popunder": 1, "fcap": 5 }
+        "banner": {
+          "w": 1,
+          "h": 1
+        },
+        "ext": {
+          "popunder": 1,
+          "fcap": 5
+        }
       }
     ],
     "site": {
@@ -61,7 +67,9 @@
       "ip": "192.0.2.44",
       "language": "en"
     },
-    "user": { "id": "synthetic-fixture-user" }
+    "user": {
+      "id": "synthetic-fixture-user"
+    }
   },
   "response": {
     "id": "pop-x-openrtb-flag-popunder-bool",
@@ -77,7 +85,9 @@
             "adomain": ["advertiser.example.test"],
             "crid": "pop-x-openrtb-flag-popunder-bool-creative",
             "nurl": "https://tracking.example.test/notice/pop-x-openrtb-flag-popunder-bool",
-            "ext": { "popunder": 1 }
+            "ext": {
+              "popunder": 1
+            }
           }
         ]
       }
@@ -101,7 +111,9 @@
           "id": "imp.non_standard_format",
           "path": "imp[0].ext.popunder",
           "level": "info",
-          "params": { "format": "popunder" }
+          "params": {
+            "format": "popunder"
+          }
         }
       ],
       "mustNot": ["imp.format_required", "imp.banner.size_required", "request.device_required"]
@@ -114,9 +126,18 @@
     },
     "crosscheck": {
       "must": [
-        { "id": "crosscheck.id_match", "level": "ok" },
-        { "id": "crosscheck.bid.impid_resolved", "level": "ok" },
-        { "id": "crosscheck.bid.above_floor", "level": "ok" },
+        {
+          "id": "crosscheck.id_match",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "level": "ok"
+        },
         {
           "id": "crosscheck.bid.pop.adomain_landing_match",
           "level": "ok",
@@ -143,15 +164,17 @@
       "limitation": "pop script has no visual body",
       "capabilityGap": "no landing-page preview"
     },
-    "http": { "status": 200 }
+    "http": {
+      "status": 200
+    }
   },
   "knownGap": {
     "id": "DEF-245",
     "layers": ["browser"],
-    "note": "A script-shaped pop adm (window.open/location redirect) renders correctly as inert markup with nothing visible — kind and rendered state are measured correctly — but the destination text never appears on screen, so the browser layer's per-bid identity/marker check cannot confirm which creative loaded.",
+    "note": "The redirect-script pop is detected and an inert destination note is built, but it does not reach the measured on-screen identity: the caption is appended beside a zero-footprint iframe and the harness still reads no visible marker. The sandbox refusal itself is correct and unchanged.",
     "matches": {
       "browser": [
-        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"https://advertiser\\.example\\.test/offers/pop-x-openrtb-flag-popunder-bool\"\\ absent$"
+        "^browser\\.bid\\[0,0\\]\\.identity: expected marker \"https:\\/\\/advertiser\\.example\\.test\\/offers\\/pop\\-x\\-openrtb\\-flag\\-popunder\\-bool\" absent$"
       ]
     }
   }

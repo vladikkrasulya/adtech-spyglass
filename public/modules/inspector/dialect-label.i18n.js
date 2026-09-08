@@ -436,6 +436,33 @@
         en: '… trimmed ({n} chars hidden)',
         ru: '… обрезано (скрыто {n} символов)',
       },
+      'creative.kind.pop_redirect': {
+        uk: 'Pop-скрипт — пісочниця блокує відкриття',
+        en: 'Pop script — the sandbox blocks it from opening',
+        ru: 'Pop-скрипт — песочница блокирует открытие',
+      },
+      // ── accessible names for the rendered creative frame (DEF-260) ──────
+      'creative.frame.title.banner': {
+        uk: 'Показаний банерний креатив, {w}×{h}',
+        en: 'Rendered banner creative, {w}×{h}',
+        ru: 'Показанный баннерный креатив, {w}×{h}',
+      },
+      'creative.frame.title.native': {
+        uk: 'Показаний native-креатив, {w}×{h}',
+        en: 'Rendered native creative, {w}×{h}',
+        ru: 'Показанный native-креатив, {w}×{h}',
+      },
+      // ── the bid/material selector strip (DEF-201) ────────────────────────
+      'creative.selector.group_label': {
+        uk: 'Повернуті креативи',
+        en: 'Returned creatives',
+        ru: 'Возвращённые креативы',
+      },
+      'creative.selector.item_label': {
+        uk: 'Креатив {n} з {total}',
+        en: 'Creative {n} of {total}',
+        ru: 'Креатив {n} из {total}',
+      },
       'creative.macros.unresolved': {
         uk: 'Нерозвʼязані макроси в розмітці: {list}. Вони лишились літералами — аукціону не було.',
         en: 'Unresolved macros in the markup: {list}. They stay literal — no auction took place.',

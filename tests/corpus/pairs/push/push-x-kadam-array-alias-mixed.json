@@ -105,18 +105,28 @@
       "mediaPlays": "n/a",
       "marker": "A quiet harbor at dawn",
       "limitation": null,
-      "capabilityGap": null
+      "capabilityGap": null,
+      "bids": [
+        {
+          "seatIndex": 0,
+          "bidIndex": 1,
+          "kind": "push",
+          "rendered": "partial",
+          "marker": "Icon-only evening reminder",
+          "limitation": "The icon is a remote https URL; the sealed preview frame allows img-src data: blob: only, so it is refused and the card renders without it. Contract behaviour (012), not a defect."
+        },
+        {
+          "seatIndex": 0,
+          "bidIndex": 2,
+          "kind": "push",
+          "rendered": "partial",
+          "marker": "A hillside vineyard row",
+          "limitation": "The hero image is a remote https URL, refused by the same frame policy; the card renders its text without the picture."
+        }
+      ]
     },
     "http": {
       "status": 200
-    }
-  },
-  "knownGap": {
-    "id": "DEF-201",
-    "layers": ["browser"],
-    "note": "The Inspector previews only the first push material of an array; materials [1] and [2] of this three-item feed cannot be selected or inspected (recorded capability gap DEF-201).",
-    "matches": {
-      "browser": ["^browser\\.selection: unavailable material\\[\\d+\\]$"]
     }
   }
 }

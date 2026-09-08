@@ -217,13 +217,5 @@
     "http": {
       "status": 200
     }
-  },
-  "knownGap": {
-    "id": "DEF-201",
-    "layers": ["browser"],
-    "note": "The Inspector previews only the first bid; seat[0].bid[1] of this two-bid dynamic pod cannot be selected or inspected (recorded capability gap DEF-201). The optional-device errors this case used to carry under DEF-100 were resolved by 021.",
-    "matches": {
-      "browser": ["^browser\\.selection: unavailable seat\\[0\\]\\.bid\\[1\\]$"]
-    }
   }
 }

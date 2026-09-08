@@ -28,16 +28,10 @@ const DEVICE = { ip: '203.0.113.1', ua: 'Mozilla/5.0 (compatible; ortbtools-a11y
 // No exception is inferred from an observed failure during execution.
 /** @type {Record<string, {id:string, matches:string[], note?:string}>} */
 const KNOWN_GAPS = Object.freeze({
-  'names-desktop': {
-    id: 'DEF-260',
-    note: 'The creative iframe is present but has no accessible name.',
-    matches: ['^a11y: creative frame or its accessible title is missing$'],
-  },
-  'state-partial': {
-    id: 'DEF-201',
-    note: 'The second returned bid cannot be selected for inspection.',
-    matches: ['^partial: second bid is unavailable for inspection$'],
-  },
+  // DEF-260 (names-desktop) and DEF-201 (state-partial) closed: the creative
+  // iframe now carries a localized accessible name, and a second returned
+  // bid is selectable for inspection. Both records retired together with
+  // tests/corpus/known-gaps/ux-a11y.json's DEF-260 entry.
 });
 /** @type {{schemaVersion:number, scenarios:any[], findings:any[], meta:Record<string,any>}} */
 const evidence = { schemaVersion: 1, scenarios: [], findings: [], meta: {} };

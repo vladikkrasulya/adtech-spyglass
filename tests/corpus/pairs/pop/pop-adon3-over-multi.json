@@ -115,11 +115,7 @@
       "browser": [
         "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$",
         "^browser\\.response:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
-        "^browser\\.format\\.formats:\\ expected\\ \\[pops\\],\\ got\\ \\[\\]$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ url,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ inert\\-text,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"https://advertiser\\.example\\.test/offers/pop\\-adon3\\-over\\-multi\\-0\"\\ absent$",
-        "^browser\\.selection:\\ unavailable\\ material\\[1\\]$"
+        "^browser\\.format\\.formats:\\ expected\\ \\[pops\\],\\ got\\ \\[\\]$"
       ]
     }
   }

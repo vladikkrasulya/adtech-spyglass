@@ -111,10 +111,7 @@
         "^browser\\.request:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
         "^browser\\.response:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
         "^browser\\.crosscheck:\\ expected\\ no\\ crosscheck\\ findings,\\ got\\ crosscheck\\.no_request\\[crit\\]@req$",
-        "^browser\\.format\\.formats:\\ expected\\ \\[pops\\],\\ got\\ \\[\\]$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ url,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ inert\\-text,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"https://advertiser\\.example\\.test/offers/pop\\-exads\\-wrapper\"\\ absent$"
+        "^browser\\.format\\.formats:\\ expected\\ \\[pops\\],\\ got\\ \\[\\]$"
       ]
     }
   }

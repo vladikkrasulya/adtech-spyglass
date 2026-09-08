@@ -87,7 +87,7 @@
   "knownGap": {
     "id": "DEF-107",
     "layers": ["core", "http", "browser"],
-    "note": "Publicly documented vendor URL request contracts should be decoded consistently with their feed responses; fixture host and token values are synthetic.",
+    "note": "Publicly documented vendor URL request contracts should be decoded consistently with their feed responses; fixture host and token values are synthetic. The pop material itself now resolves to an inert destination (DEF-203 closed by 027), but with no request decoder the format stays untagged and the destination marker is not reached.",
     "matches": {
       "core": [
         "^request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$",
@@ -98,10 +98,9 @@
         "^format\\.formats:\\ expected\\ \\[pops\\],\\ got\\ \\[\\]$"
       ],
       "browser": [
-        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$",
-        "^browser\\.format\\.formats:\\ expected\\ \\[pops\\],\\ got\\ \\[\\]$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ url,\\ got\\ push$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ inert\\-text,\\ got\\ full$"
+        "^browser\\.request: findings above warning: request\\.url\\.no_decoder\\[error\\]@$",
+        "^browser\\.format\\.formats: expected \\[pops\\], got \\[\\]$",
+        "^browser\\.bid\\[0,0\\]\\.identity: expected marker \"Original fixture destination\" absent$"
       ]
     }
   }

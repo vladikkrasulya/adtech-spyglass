@@ -6006,6 +6006,30 @@ body:has(.app-footer) .toast-container {
   max-width: 100%;
 }
 
+/* ── 7b. `.creative-bid-selector` — DEF-201, reach every returned creative ─
+   Same seam as `.creative-actions`: a sibling AFTER `.preview-safe`, never a
+   child of `.preview-container` (fixed-size, overflow:hidden — anything
+   appended inside it is a second flex item that pushes the frame sideways).
+   Rendered only when the response carries more than one bid/material;
+   mounted right after the preview so the column reads frame → which
+   creative → explanation → controls. */
+.creative-bid-selector {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+.creative-bid-selector:empty {
+  display: none;
+}
+.creative-bid-selector button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-contrast, #fff);
+  border-color: var(--accent);
+}
+
 /* ── 8. `.creative-notes` — where the preview explains itself ─────────────
    The frame refuses every https sub-resource by design, so a CDN-hosted
    banner renders empty and what is left on screen — alt text, click URLs the

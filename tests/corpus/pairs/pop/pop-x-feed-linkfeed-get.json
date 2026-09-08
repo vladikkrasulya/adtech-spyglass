@@ -70,7 +70,9 @@
       "type": "Link-Feed Response",
       "status": "clean"
     },
-    "crosscheck": { "empty": true },
+    "crosscheck": {
+      "empty": true
+    },
     "format": {
       "formats": ["pops"],
       "contexts": ["web"]
@@ -80,21 +82,11 @@
       "rendered": "inert-text",
       "mediaPlays": "n/a",
       "marker": "https://advertiser.example.test/offers/pop-x-feed-linkfeed-get",
-      "limitation": "documented response wrapper is not recognized by the preview's creative-lookup walk",
-      "capabilityGap": "no inert-destination preview for this wrapper shape"
+      "limitation": "A pop wrapper carries a destination, not markup: the preview resolves it and shows it as inert text with an explanation. It is never navigated to or rendered — the sealed frame's contract, not a lookup failure.",
+      "capabilityGap": null
     },
-    "http": { "status": 200 }
-  },
-  "knownGap": {
-    "id": "DEF-202",
-    "layers": ["browser"],
-    "note": "Documented response creatives retain their wire wrappers; a visible card or inert destination should be available, or absence reported as an unsupported preview capability.",
-    "matches": {
-      "browser": [
-        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ url,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ inert\\-text,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"https://advertiser\\.example\\.test/offers/pop-x-feed-linkfeed-get\"\\ absent$"
-      ]
+    "http": {
+      "status": 200
     }
   }
 }
