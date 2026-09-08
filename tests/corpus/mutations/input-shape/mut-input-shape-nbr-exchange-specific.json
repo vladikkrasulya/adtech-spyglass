@@ -38,12 +38,25 @@
       "maxLevel": "warning",
       "status": "clean",
       "must": [
-        { "id": "response.no_bid", "level": "info", "path": "nbr", "params": { "nbr": 700 } }
+        {
+          "id": "response.no_bid",
+          "level": "info",
+          "path": "nbr",
+          "params": {
+            "nbr": 700
+          }
+        }
       ],
-      "mustNot": ["expected.response.nbr_code_unassigned"]
+      "mustNot": ["response.nbr_code_unassigned"]
     },
     "crosscheck": {
-      "must": [{ "id": "crosscheck.id_match", "path": "id", "level": "ok" }],
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        }
+      ],
       "mustNot": ["crosscheck.no_response"]
     },
     "http": {
