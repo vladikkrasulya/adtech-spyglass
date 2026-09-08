@@ -244,21 +244,11 @@
   "knownGap": {
     "id": "DEF-151",
     "layers": ["core", "http", "browser"],
-    "note": "Normative expectations are unchanged. Core, real HTTP and browser separately reproduced these exact deviations during coverage closure on 2026-09-08.",
+    "note": "026 resolves structured Native response presence and required-asset crosscheck. DEF-151 remains open for AdCOM Native format recognition and actual creative preview in peer-owned files; the retained signatures cover only those original deviations.",
     "matches": {
-      "core": [
-        "^response: findings above warning: response\\.30\\.bid\\.display\\.markup_required\\[error\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad\\.display$",
-        "^crosscheck: missing crosscheck\\.bid\\.native_complete @ openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad \\[ok\\] — got crosscheck\\.auction\\.summary\\[ok\\]@auction, crosscheck\\.cur_allowed\\[ok\\]@openrtb\\.response\\.cur, crosscheck\\.id_match\\[ok\\]@openrtb\\.response\\.id, crosscheck\\.bid\\.impid_resolved\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.item, crosscheck\\.bid\\.above_floor\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
-        "^format\\.formats: expected \\[native\\], got \\[banner\\]$"
-      ],
-      "http": [
-        "^response: findings above warning: response\\.30\\.bid\\.display\\.markup_required\\[error\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad\\.display$",
-        "^crosscheck: missing crosscheck\\.bid\\.native_complete @ openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad \\[ok\\] — got crosscheck\\.auction\\.summary\\[ok\\]@auction, crosscheck\\.cur_allowed\\[ok\\]@openrtb\\.response\\.cur, crosscheck\\.id_match\\[ok\\]@openrtb\\.response\\.id, crosscheck\\.bid\\.impid_resolved\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.item, crosscheck\\.bid\\.above_floor\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
-        "^format\\.formats: expected \\[native\\], got \\[banner\\]$"
-      ],
+      "core": ["^format\\.formats: expected \\[native\\], got \\[banner\\]$"],
+      "http": ["^format\\.formats: expected \\[native\\], got \\[banner\\]$"],
       "browser": [
-        "^browser\\.response:\\ findings\\ above\\ warning:\\ response\\.30\\.bid\\.display\\.markup_required\\[error\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad\\.display$",
-        "^browser\\.crosscheck:\\ missing\\ crosscheck\\.bid\\.native_complete\\ @\\ openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad\\ \\[ok\\]\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@openrtb\\.response\\.cur,\\ crosscheck\\.id_match\\[ok\\]@openrtb\\.response\\.id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.item,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
         "^browser\\.format\\.formats:\\ expected\\ \\[native\\],\\ got\\ \\[banner\\]$",
         "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ native,\\ got\\ empty$",
         "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ full,\\ got\\ empty$",

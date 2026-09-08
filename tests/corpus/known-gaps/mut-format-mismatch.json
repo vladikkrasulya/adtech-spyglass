@@ -1,29 +1,4 @@
 {
   "schemaVersion": 1,
-  "gaps": {
-    "DEF-195": {
-      "id": "DEF-195",
-      "title": "Response bid.mtype is never validated for enum range or for consistency against the offered impression's media types",
-      "category": "false-negative",
-      "severity": "high",
-      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#list_markuptypes",
-      "code": [
-        "packages/core/rules-response.js",
-        "packages/core/format-detect.js:69-75,314",
-        "packages/core/crosscheck.js"
-      ],
-      "expected": "OpenRTB 2.6's Markup Types list defines exactly 1=Banner, 2=Video, 3=Audio, 4=Native. A value outside that range should be flagged, and a value inside the range that contradicts the offered impression's declared media objects (e.g. mtype=2 on an impression with no imp.video) should be flagged by crosscheck.",
-      "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
-      "cases": [
-        "mut-format-mismatch-mtype-invalid-enum",
-        "mut-format-mismatch-mtype-video-banner-only"
-      ],
-      "reviewedAt": "2026-09-08",
-      "notes": [
-        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots.",
-        "rules-response.js has zero references to `mtype` (confirmed by grep); format-detect.js's MTYPE_TO_FORMAT is a plain lookup object used only for the format-detection/tagging axis — an unmatched key (e.g. 5) is silently skipped there with no finding produced anywhere.",
-        "crosscheck.js never reads bid.mtype either (confirmed by grep), so even a value inside the documented range that contradicts the impression's actual offered media objects (mtype=2 with no imp.video present) produces no consistency finding."
-      ]
-    }
-  }
+  "gaps": {}
 }

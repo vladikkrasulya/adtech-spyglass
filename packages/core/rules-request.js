@@ -254,6 +254,9 @@ function validateRequest(req, ctx) {
   // COPPA — `regs.coppa=1` means the user is a child under 13. When set,
   // most exchanges require non-PII (no precise geo, no device.dnt, no
   // user.id/buyeruid). We surface the inconsistency.
+  if (req.regs && req.regs.coppa !== undefined && req.regs.coppa !== 0 && req.regs.coppa !== 1) {
+    findings.push(F('regs.coppa_invalid', LEVELS.ERROR, 'regs.coppa'));
+  }
   if (req.regs && req.regs.coppa === 1) {
     const userObj = req.user || {};
     const hasUid = isStr(userObj.id) || isStr(userObj.buyeruid);
@@ -385,7 +388,7 @@ function validateRequest(req, ctx) {
   // long enough for that finding to be returned.
   const imps = Array.isArray(req.imp) ? req.imp : [];
   imps.forEach((imp, i) => {
-    findings.push(...validateImp(imp, i));
+    findings.push(...validateImp(imp, i, dialect));
   });
 
   // ── Non-IAB ad-format detection (pop / clickunder / pushunder / push) ────
@@ -568,7 +571,7 @@ function detectNonStandardFormats(req) {
   return findings;
 }
 
-function validateImp(imp, i) {
+function validateImp(imp, i, dialect) {
   const findings = [];
   const p = `imp[${i}]`;
   const num = i + 1;
@@ -591,7 +594,17 @@ function validateImp(imp, i) {
   }
 
   const hasFormat = !!(imp.banner || imp.video || imp.native || imp.audio);
-  if (!hasFormat) findings.push(F('imp.format_required', LEVELS.ERROR, p, { num }));
+  // EXADS explicitly uses instl=1 for popunder inventory without a standard
+  // media object. Only its selected dialect gets this exception; a supplied
+  // malformed media field must not be reinterpreted as an omitted field.
+  const exadsPop =
+    dialect &&
+    dialect.name === 'ext-rtb' &&
+    imp.instl === 1 &&
+    ['banner', 'video', 'native', 'audio'].every((key) => imp[key] === undefined);
+  if (!hasFormat && !exadsPop) {
+    findings.push(F('imp.format_required', LEVELS.ERROR, p, { num }));
+  }
 
   if (imp.banner) {
     // Same tolerance as the imp-level coercion above, one level down. A

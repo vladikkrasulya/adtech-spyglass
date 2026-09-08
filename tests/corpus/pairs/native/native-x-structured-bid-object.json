@@ -207,25 +207,5 @@
     "http": {
       "status": 200
     }
-  },
-  "knownGap": {
-    "id": "DEF-150",
-    "layers": ["core", "http", "browser"],
-    "note": "Core's schema (rules-response.js) and crosscheck.js both key markup-presence/native-completeness off bid.adm only, so a bid that legitimately carries its markup via bid.native (object) gets a false-positive response.bid.payload_missing warning and never receives a crosscheck.bid.native_complete verdict.",
-    "matches": {
-      "core": [
-        "^response: forbidden finding present response\\.bid\\.payload_missing → response\\.bid\\.payload_missing\\[warning\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$",
-        "^crosscheck: missing crosscheck\\.bid\\.native_complete @ seatbid\\[0\\]\\.bid\\[0\\]\\.adm \\[ok\\] — got crosscheck\\.auction\\.summary\\[ok\\]@auction, crosscheck\\.cur_allowed\\[ok\\]@cur, crosscheck\\.id_match\\[ok\\]@id, crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid, crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price$"
-      ],
-      "http": [
-        "^response: forbidden finding present response\\.bid\\.payload_missing → response\\.bid\\.payload_missing\\[warning\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$",
-        "^crosscheck: missing crosscheck\\.bid\\.native_complete @ seatbid\\[0\\]\\.bid\\[0\\]\\.adm \\[ok\\] — got crosscheck\\.auction\\.summary\\[ok\\]@auction, crosscheck\\.cur_allowed\\[ok\\]@cur, crosscheck\\.id_match\\[ok\\]@id, crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid, crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price$"
-      ],
-      "browser": [
-        "^browser\\.row:\\ forbidden\\ response\\ response\\.bid\\.payload_missing$",
-        "^browser\\.response:\\ forbidden\\ finding\\ present\\ response\\.bid\\.payload_missing\\ →\\ response\\.bid\\.payload_missing\\[warning\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$",
-        "^browser\\.crosscheck: missing crosscheck\\.bid\\.native_complete @ seatbid\\[0\\]\\.bid\\[0\\]\\.adm \\[ok\\].*$"
-      ]
-    }
   }
 }

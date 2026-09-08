@@ -73,22 +73,6 @@
       "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json",
       "relatedBrowserDefects": ["DEF-201", "DEF-202"]
     },
-    "DEF-109": {
-      "id": "DEF-109",
-      "title": "EXADS OpenRTB popunder impression without standard media object is rejected",
-      "category": "vendor-support",
-      "severity": "medium",
-      "source": "https://docs.exads.com/docs/rtb-publishers/open-rtb/bid-request/open-rtb-publishers-request-2p5/",
-      "code": ["packages/core/rules-request.js"],
-      "expected": "The EXADS documented popunder extension permits instl-only impression shape and URL adm; generic IAB media rules need dialect awareness.",
-      "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
-      "cases": ["pop-exads-openrtb-url-adm"],
-      "reviewedAt": "2026-09-07",
-      "notes": [
-        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots."
-      ],
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
-    },
     "DEF-200": {
       "id": "DEF-200",
       "title": "Structured HTTP error leaves the previous successful analysis visible",

@@ -2,7 +2,7 @@
 
 **Input**: [spec.md](./spec.md), [plan.md](./plan.md), research, data model and contract.
 
-**Organization**: Ordered wave delivery with independently isolated implementation where ownership permits. Tests are explicitly required by the accepted task. A checked task records completed evidence, not intention.
+**Organization**: Ordered wave delivery with independently isolated implementation where ownership permits. Tests are explicitly required by the accepted task. A checked task records completed evidence, not intention. Delivery checkboxes describe the source tree before its own final commit; post-commit T024 status is recorded by PR #83 checks and the external immutable delivery receipt. T017/T023/T025 remain open until the peer-owned DEF-151 observations pass.
 
 ## Phase 1: Setup
 
@@ -26,7 +26,7 @@
 - [x] T008 [US1] Add all wave A finding messages in `packages/core/messages/{en,uk,ru}.json` and reference entries in `packages/core/spec-refs.json`; keep emitted severities statically discoverable.
 - [x] T009 [US1] Bind only affected unbound fixture `expected.*` ID symbols to implemented public IDs, preserving payloads/levels/paths/parameters; retire proven wave A signatures in `tests/corpus/known-gaps.json`, `tests/corpus/known-gaps/` and affected case metadata; preserve independent residual deviations and record resolutions in `specs/020-ad-format-verification-matrix/defects.md`.
 - [x] T010 [US1] Update wave A contract/version records in `specs/000-platform-baseline/contracts/{core-validator,locales-versioning}.md`, `packages/core/package.json`, `packages/cli/package.json`, `package-lock.json`, `specs/README.md` and `specs/ROADMAP.md`; reserve Core 0.45.0 and record the partial fourteen-group scope honestly.
-- [ ] T011 [US1] Run settled focused/corpus/full gates with private Chrome process isolation; stage the explicit wave A allowlist, commit, push once and record the hosted SHA/result in external evidence and `specs/026-validation-crosscheck/verification.md`.
+- [x] T011 [US1] Run settled focused/corpus/full gates with private Chrome process isolation; stage the explicit wave A allowlist, commit, push once and record the hosted SHA/result in external evidence and `specs/026-validation-crosscheck/verification.md`.
 
 ## Phase 4: User Story 2 — Wave B (P2)
 
@@ -34,20 +34,20 @@
 
 **Independent Test**: Fourteen wave B cases satisfy their scoped semantic expectations. DEF-151 is retired only after observable recognition/preview dependencies also satisfy its existing expectations.
 
-- [ ] T012 [US2] Add failing public-boundary cases for supplied/omitted `mtype`, structured 2.x/3.0 Native, duplicate seats, blank markup, `nbr`, COPPA and pop forms in `tests/validation-semantics-crosscheck.test.js` or a separately owned wave B test file.
-- [ ] T013 [US2] Repair DEF-195/190/198/301 response checks in `packages/core/rules-response.js` and `packages/core/rules-response-30.js`, preserving omitted-versus-invalid distinctions and existing IDs.
-- [ ] T014 [US2] Repair DEF-151/150 Native presence and asset semantics in `packages/core/rules-response-30.js`, `packages/core/rules-response.js`, `packages/core/crosscheck.js` and `packages/core/helpers.js` as needed, reusing one owning semantic helper instead of parallel copies.
-- [ ] T015 [US2] Repair DEF-197/109 in `packages/core/rules-request.js` and DEF-170 in `packages/core/rules/pop-response/index.js`, keeping the ordinary IAB baseline and supplied invalid-content diagnostics.
-- [ ] T016 [US2] Add wave B finding text/reference parity in `packages/core/messages/{en,uk,ru}.json` and `packages/core/spec-refs.json`; extend Core, HTTP and CLI public-boundary regression evidence in the owned `tests/` files.
+- [x] T012 [US2] Add failing public-boundary cases for supplied/omitted `mtype`, structured 2.x/3.0 Native, duplicate seats, blank markup, `nbr`, COPPA and pop forms in `tests/validation-semantics-crosscheck.test.js` or a separately owned wave B test file.
+- [x] T013 [US2] Repair DEF-195/190/198/301 response checks in `packages/core/rules-response.js` and `packages/core/rules-response-30.js`, preserving omitted-versus-invalid distinctions and existing IDs.
+- [x] T014 [US2] Repair DEF-151/150 Native presence and asset semantics in `packages/core/rules-response-30.js`, `packages/core/rules-response.js`, `packages/core/crosscheck.js` and `packages/core/helpers.js` as needed, reusing one owning semantic helper instead of parallel copies.
+- [x] T015 [US2] Repair DEF-197/109 in `packages/core/rules-request.js` and DEF-170 in `packages/core/rules/pop-response/index.js`, keeping the ordinary IAB baseline and supplied invalid-content diagnostics.
+- [x] T016 [US2] Add wave B finding text/reference parity in `packages/core/messages/{en,uk,ru}.json` and `packages/core/spec-refs.json`; extend Core, HTTP and CLI public-boundary regression evidence in the owned `tests/` files.
 - [ ] T017 [US2] Coordinate the separate DEF-151 recognition/preview owners and prove all existing five-case expectations at applicable layers before retiring that record; record evidence and any unresolved ownership dependency in `specs/026-validation-crosscheck/verification.md` without editing peer runtime files unilaterally.
-- [ ] T018 [US2] Apply the bounded wave B patch after the wave A commit/push if implemented in the independent scratch worktree; rerun affected public-boundary tests and inventory the exact integrated changes in external `2026-09-08-026-validation-crosscheck/` evidence.
-- [ ] T019 [US2] Retire only verified wave B signatures/metadata in `tests/corpus/known-gaps.json`, `tests/corpus/known-gaps/` and affected fixtures, binding unbound IDs only as in T009; retain independent deviations and append chronological resolutions in `specs/020-ad-format-verification-matrix/defects.md`.
+- [x] T018 [US2] Apply the bounded wave B patch after the wave A commit/push if implemented in the independent scratch worktree; rerun affected public-boundary tests and inventory the exact integrated changes in external `2026-09-08-026-validation-crosscheck/` evidence.
+- [x] T019 [US2] Retire only verified wave B signatures/metadata in `tests/corpus/known-gaps.json`, `tests/corpus/known-gaps/` and affected fixtures, binding unbound IDs only as in T009; retain independent deviations and append chronological resolutions in `specs/020-ad-format-verification-matrix/defects.md`.
 
 ## Phase 5: Delivery and Convergence
 
-- [ ] T020 Compare the complete real `loadCorpus()` output with the retained baseline; prove unchanged payloads, normative semantic requirements and unrelated signatures, with only explicit selected ID bindings and proven retirements in `tests/corpus/`.
-- [ ] T021 Reconcile Core 0.45.0, CLI Core range and lock by actual readback; complete `specs/000-platform-baseline/contracts/{core-validator,locales-versioning}.md`, `specs/README.md`, `specs/ROADMAP.md` and `specs/026-validation-crosscheck/verification.md` for the settled scope.
-- [ ] T022 Run settled `npm run ci` with private Chrome isolation plus package and Docker smoke gates; record exact outcomes and any retries in `specs/026-validation-crosscheck/verification.md` and external evidence.
+- [x] T020 Compare the complete real `loadCorpus()` output with the retained baseline; prove unchanged payloads, normative semantic requirements and unrelated signatures, with only explicit selected ID bindings and proven retirements in `tests/corpus/`.
+- [x] T021 Reconcile Core 0.45.0, CLI Core range and lock by actual readback; complete `specs/000-platform-baseline/contracts/{core-validator,locales-versioning}.md`, `specs/README.md`, `specs/ROADMAP.md` and `specs/026-validation-crosscheck/verification.md` for the settled scope.
+- [x] T022 Run settled `npm run ci` with private Chrome isolation plus package and Docker smoke gates; record exact outcomes and any retries in `specs/026-validation-crosscheck/verification.md` and external evidence.
 - [ ] T023 Run convergence against `specs/026-validation-crosscheck/{spec,plan,tasks}.md`; implement and verify any remaining buildable tasks until the feature is complete, retaining all independent unresolved defects.
 - [ ] T024 Stage only the explicit authored wave B allowlist, commit and push the branch once with the mandatory gate intact; wait for hosted CI on that SHA and record delivery receipt in external evidence and `specs/026-validation-crosscheck/verification.md`. Main integration remains with the maintainer.
 
@@ -88,3 +88,7 @@ Deliver US1 as the valuable first increment, preserving wave B's known deviation
 | SC-002 — Unrelated corpus preservation            | T003, T009, T019, T020                   |
 | SC-003 — Localized deterministic meaning          | T008, T016, T022                         |
 | SC-004 — Two verified branch deliveries           | T011, T021, T022, T023, T024             |
+
+## Phase 6: Convergence
+
+- [ ] T025 Complete the owner-approved AdCOM Native recognition and preview repair in `packages/core/format-detect.js` and the owning Inspector Native input adapter, preserving the active creative-selection implementation; prove all five unchanged DEF-151 cases through Core, HTTP and actual browser image/identity checks before retiring its remaining record, per FR-007, FR-016, SC-001 and T017 (partial, HIGH). The assigned semantic files already satisfy presence and asset checks; the external owner proposal is prepared, and unilateral peer-runtime edits remain outside this round's file allocation.

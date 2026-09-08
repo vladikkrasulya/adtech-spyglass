@@ -1,22 +1,6 @@
 {
   "schemaVersion": 1,
   "gaps": {
-    "DEF-150": {
-      "id": "DEF-150",
-      "title": "Structured bid.native object is invisible to schema markup-presence and crosscheck native completeness",
-      "category": "missing-capability",
-      "severity": "medium",
-      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbid",
-      "code": ["packages/core/rules-response.js:140", "packages/core/crosscheck.js:443"],
-      "expected": "A bid that legitimately conveys its markup via a structured bid.native object (the documented, Inspector-supported SSP convention in public/ortbtools.app.js:4026-4034 and specs/014-push-creative-preview) must not be flagged as missing markup, and its native completeness must be verified the same way an adm-carried native bid's is.",
-      "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
-      "cases": ["native-x-structured-bid-object"],
-      "reviewedAt": "2026-09-07",
-      "notes": [
-        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots.",
-        "rules-response.js:140 gates its markup-presence check on `isStr(b.adm) || isStr(b.nurl)` only; crosscheck.js:443 gates the native crossmatch block on `imp.native && bid.adm` only. Neither reads bid.native at all, so both symptoms share one root cause."
-      ]
-    },
     "DEF-151": {
       "id": "DEF-151",
       "title": "OpenRTB 3.0 structured AdCOM native is rejected as missing display markup, detected as banner and omitted from native completeness",

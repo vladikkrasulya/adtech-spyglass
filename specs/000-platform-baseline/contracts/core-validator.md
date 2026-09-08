@@ -255,7 +255,7 @@ paired-media verdicts. On OpenRTB 2.x impressions, an offered `bid.mtype` select
 family; otherwise supported actual creative evidence selects an offered family, with a sole offered
 family as the fallback. Banner sizes, Native assets and video document checks apply only to that
 selected family. Merely offering several families no longer imposes all their constraints on one bid.
-The later wave B declaration-validation work is specified separately below.
+Wave B adds declaration validation and structured Native handling as specified below.
 
 The exported `inspectVastMedia()` helper is owned by `packages/core/rules-vast.js` and imported by
 crosscheck. Its bounded scan records the actual VAST/DAAST root and version, InLine/Wrapper form,
@@ -303,14 +303,87 @@ Core 0.45.0 release with CLI dependency `^0.45.0`; app 1.19.4 and CLI 0.1.3 reta
 versions. The [026 tasks](../../026-validation-crosscheck/tasks.md) record verification and delivery
 state rather than implying main integration or deployment.
 
-### Planned Wave B Boundary
+## Response Semantics and Structured Native (026 Wave B; Core 0.45.0)
 
-The [026 semantic contract](../../026-validation-crosscheck/contracts/validation-semantics.md#wave-b-response-and-supplied-fields)
-specifies the remaining declaration, structured Native, duplicate-seat, blank-markup, enum and
-bounded pop repairs. At the wave A boundary those requirements are planned, not part of this as-built
-claim. Their findings and verified behavior must be added here when the wave B implementation is
-integrated into this branch. DEF-151 also depends on separately owned recognition/preview observations
-and cannot be retired solely because its Core completeness check passes.
+OpenRTB 2.x `bid.mtype` is optional; a supplied value must be an integer from 1 through 4. A valid
+declaration whose family is absent from the matched impression produces a crosscheck contradiction.
+Invalid declarations are diagnosed by validation and do not acquire a made-up family in crosscheck.
+Repeated explicit string seat identities across separate SeatBid groups are errors in 2.x and 3.0;
+several bids in one group remain valid, and missing identities are not fabricated.
+
+The same owning helpers in `rules-response.js` serve both response versions' duplicate-seat and
+no-bid reason checks. Supplied integer `nbr` values outside 0–17 and the exchange-specific range
+500 and above receive an unassigned-code warning. Existing errors for supplied noninteger/wrong-type
+values remain separate, including null, booleans and numeric strings. Optional omission remains
+valid. Supplied 2.x `regs.coppa` must be exactly integer 0 or 1; other values are errors.
+
+A nonempty whitespace-only 2.x `adm` produces `response.bid.adm_blank`, including when a notice URL
+is also present. This warning distinguishes blank supplied content from usable markup without
+renaming the existing `response.bid.payload_missing` omission finding or changing its callers'
+compatibility contract. Existing supplied-type diagnostics elsewhere are not downgraded.
+
+### Supported Native Carriers and Paired Asset Checks
+
+The supported SSP convention `bid.native` satisfies the 2.x creative-presence check when it is an
+object. For crosscheck, an explicitly supplied `bid.native` takes precedence over `adm`, even if
+malformed; a notice URL does not hide that content. Native 1.x parsing accepts the bare asset object
+or one explicit object-valued `native` wrapper. Shared `nativePayloadInner()` rejects null, booleans,
+numbers, arrays and malformed/nested wrappers rather than normalizing them to an empty object. Those
+values cannot receive `crosscheck.bid.native_complete` even when every requested asset is optional.
+
+AdCOM `placement.display.nativefmt` and `media.ad.display.native` are projected into the existing
+paired asset checks: request `asset` becomes `assets` and `req` becomes `required`; response `asset`
+becomes `assets` and `image` becomes `img`. A Native-only display placement no longer manufactures a
+banner alternative. Explicit display dimensions or formats preserve the separate offered banner
+alternative. This in-memory crosscheck projection does not alter the caller payload or the
+currency-only 3.0 response-plugin projection established in 022.
+
+A structured AdCOM `display.native` object satisfies display creative presence without requiring a
+second `adm` or `curl`. A supplied non-object `display.native` reuses the existing
+`response.30.bid.native_invalid` error at that field, even if alternate markup is also present.
+Paired Native checks separately reject malformed request/response containers using the existing
+`native_invalid_request`/`native_invalid_adm` finding IDs. Absent response assets retain the existing
+required-ID missing-assets behavior. Request assets must be a nonempty array of objects with IDs;
+required asset identity, kind, nonblank title/data/image-URL content and applicable length/dimension
+checks govern the existing complete verdict. These are bounded existing fitness checks, not a claim
+of exhaustive Native schema conformance. Existing finding paths are preserved, including the 2.x
+bid `adm` path and the 3.0 Ad object path for the structured carrier.
+
+Native image URLs additionally accept the constrained embedded raster form
+`data:image/{png,jpeg,gif,webp};base64,` with a nonempty syntactically valid base64 body. The allowance
+is specific to the image field; navigation URL scheme checks are unchanged. It does not admit SVG,
+HTML, malformed/empty data bodies or data navigation URLs, fetch external assets, execute markup,
+change the browser sandbox or assert that image bytes have been decoded and verified.
+
+### Bounded Pop Exceptions
+
+Under the explicitly selected `ext-rtb` dialect, an EXADS `instl: 1` impression can omit all four
+standard media fields. The exception requires each field to be absent/undefined; a supplied malformed
+field is not reinterpreted as omitted, and the ordinary IAB dialect retains `imp.format_required`.
+A pop-tagged bid with absent/undefined `adm` and a valid notice URL passes the pop redirect check.
+The URL predicate is exported from its response-rule owner and imported by the pop plugin. Supplied
+bad inline content still receives the existing `bid.pop.adm_not_redirect` error even alongside a
+valid notice URL.
+
+Wave B adds eight finding IDs, each with en/uk/ru messages and specification references:
+
+| ID                                      | Level     | Path                           |
+| --------------------------------------- | --------- | ------------------------------ |
+| `response.bid.mtype_invalid_enum`       | `error`   | `seatbid[i].bid[j].mtype`      |
+| `crosscheck.bid.mtype_offered_mismatch` | `crit`    | `seatbid[i].bid[j].mtype`      |
+| `response.seatbid_seat_duplicated`      | `error`   | `seatbid[i].seat`              |
+| `response.30.seatbid_seat_duplicated`   | `error`   | 3.0 response `seatbid[i].seat` |
+| `response.bid.adm_blank`                | `warning` | `seatbid[i].bid[j].adm`        |
+| `response.nbr_code_unassigned`          | `warning` | `nbr`                          |
+| `response.30.nbr_code_unassigned`       | `warning` | 3.0 response `nbr`             |
+| `regs.coppa_invalid`                    | `error`   | `regs.coppa`                   |
+
+Together the two 026 waves add fifteen public IDs under Core 0.45.0. Existing malformed supplied
+`nbr` and AdCOM Native errors remain errors. The semantic fixes do not by themselves close DEF-151:
+its separately owned recognition and preview deviations remain in the exact corpus ledger until
+those observations pass. Current branch verification and delivery state belong in the
+[026 feature records](../../026-validation-crosscheck/tasks.md), not in a claim of full feature
+completion, main integration, package publication or deployment.
 
 ## CLI Contract
 

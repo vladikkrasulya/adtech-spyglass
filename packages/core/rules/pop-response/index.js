@@ -31,6 +31,7 @@ const { scanExtForFormatHints, isPopFormat, admLooksLikePop } = require('../../n
 // Pop-request's hint detector — reused so a paired request (ctx.req) that was
 // itself a pop slot marks the response as pop even if the bid omits ext hints.
 const { _requestHasPopHint } = require('../pop-request');
+const { isValidNoticeUrl } = require('../../rules-response');
 
 const F = makeFinding;
 
@@ -75,7 +76,11 @@ function validate(res, ctx) {
         !scanExtForFormatHints(bid.ext, 'bid[].ext', userDialect).some((h) => isPopFormat(h.format))
       )
         return;
-      if (!admLooksLikePop(bid.adm)) {
+      // OpenRTB permits markup to arrive through the win notice. The shared
+      // response URL predicate keeps this exception aligned with Core's notice
+      // validation. Supplied bad markup is never hidden behind a valid nurl.
+      const noticeOnly = bid.adm === undefined && isValidNoticeUrl(bid.nurl);
+      if (!noticeOnly && !admLooksLikePop(bid.adm)) {
         findings.push(F('bid.pop.adm_not_redirect', LEVELS.ERROR, `${path}.adm`, { sNum, bNum }));
       }
     });

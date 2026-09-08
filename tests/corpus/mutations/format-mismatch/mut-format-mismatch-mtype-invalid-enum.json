@@ -27,7 +27,7 @@
     "response": {
       "must": [
         {
-          "id": "expected.response.bid.mtype_invalid_enum",
+          "id": "response.bid.mtype_invalid_enum",
           "path": "seatbid[0].bid[0].mtype",
           "level": "error",
           "params": {
@@ -60,22 +60,6 @@
     },
     "browser": {
       "state": "success"
-    }
-  },
-  "knownGap": {
-    "id": "DEF-195",
-    "layers": ["core", "http", "browser"],
-    "note": "Response bid.mtype (OpenRTB 2.6 List: Markup Types, values 1=Banner, 2=Video, 3=Audio, 4=Native) is never validated by Core: MTYPE_TO_FORMAT in packages/core/format-detect.js silently ignores any value outside 1-4 for detection purposes, and rules-response.js contains no reference to mtype at all, so an out-of-range value such as 5 produces no finding of any kind.",
-    "matches": {
-      "core": [
-        "^response:\\ missing\\ required\\ finding\\ expected\\.response\\.bid\\.mtype_invalid_enum\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.mtype\\ \\[error\\]\\ params=\\{\"mtype\":5\\}\\ —\\ got\\ version\\.single_marker\\[info\\]@$"
-      ],
-      "http": [
-        "^response:\\ missing\\ required\\ finding\\ expected\\.response\\.bid\\.mtype_invalid_enum\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.mtype\\ \\[error\\]\\ params=\\{\"mtype\":5\\}\\ —\\ got\\ version\\.single_marker\\[info\\]@$"
-      ],
-      "browser": [
-        "^browser\\.response:\\ missing\\ required\\ finding\\ expected\\.response\\.bid\\.mtype_invalid_enum\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.mtype\\ \\[error\\]\\ params=\\{\"mtype\":5\\}\\ —\\ got\\ version\\.single_marker\\[info\\]@$"
-      ]
     }
   },
   "specNotes": [

@@ -67,6 +67,29 @@ function isValidNoticeUrl(value) {
   }
 }
 
+/** Both response versions use the same no-bid reason list and private range. */
+function isUnassignedNoBidReason(nbr) {
+  return Number.isInteger(nbr) && (nbr < 0 || (nbr > 17 && nbr < 500));
+}
+
+/**
+ * Multiple SeatBid objects describe different seats. Return each repeated
+ * explicit identity without inventing identities for absent or malformed seats.
+ * @param {unknown} seats
+ * @returns {Array<{index: number, seat: string}>}
+ */
+function duplicateSeats(seats) {
+  const seen = new Set();
+  const duplicates = [];
+  if (!Array.isArray(seats)) return duplicates;
+  seats.forEach((sb, index) => {
+    if (!isObj(sb) || !isStr(sb.seat)) return;
+    if (seen.has(sb.seat)) duplicates.push({ index, seat: sb.seat });
+    seen.add(sb.seat);
+  });
+  return duplicates;
+}
+
 function validateResponse(res, ctx) {
   const findings = [];
   const dialect = (ctx && ctx.dialect) || null;
@@ -82,6 +105,9 @@ function validateResponse(res, ctx) {
   // (021, ADR-016 — the audit recorded the empty-array ERROR as DEF-114.)
   const nbrInvalid = res.nbr !== undefined && !Number.isInteger(res.nbr);
   if (nbrInvalid) findings.push(F('response.nbr_invalid', LEVELS.ERROR, 'nbr'));
+  if (isUnassignedNoBidReason(res.nbr)) {
+    findings.push(F('response.nbr_code_unassigned', LEVELS.WARNING, 'nbr', { nbr: res.nbr }));
+  }
   const nbrPresent = Number.isInteger(res.nbr);
   const seatbidArr = Array.isArray(res.seatbid);
   if (!seatbidArr && !nbrPresent) {
@@ -115,6 +141,11 @@ function validateResponse(res, ctx) {
   // [null]` / `bid: [null]` coercions already inside the loops: same class of
   // defect, one level further out.
   const seats = Array.isArray(res.seatbid) ? res.seatbid : [];
+  for (const { index, seat } of duplicateSeats(seats)) {
+    findings.push(
+      F('response.seatbid_seat_duplicated', LEVELS.ERROR, `seatbid[${index}].seat`, { seat }),
+    );
+  }
   seats.forEach((sb, i) => {
     const sNum = i + 1;
     const sp = `seatbid[${i}]`;
@@ -140,7 +171,22 @@ function validateResponse(res, ctx) {
       if (!isNum(b.price)) {
         findings.push(F('response.bid.price_required', LEVELS.ERROR, `${bp}.price`, params));
       }
-      if (!isStr(b.adm) && !isStr(b.nurl)) {
+      if (b.mtype !== undefined && (!Number.isInteger(b.mtype) || b.mtype < 1 || b.mtype > 4)) {
+        findings.push(
+          F('response.bid.mtype_invalid_enum', LEVELS.ERROR, `${bp}.mtype`, {
+            ...params,
+            mtype: b.mtype,
+          }),
+        );
+      }
+      // A supplied whitespace string needs its own diagnosis, even when a
+      // notice URL is also present. Keep the existing absence finding distinct.
+      if (isStr(b.adm) && !b.adm.trim()) {
+        findings.push(F('response.bid.adm_blank', LEVELS.WARNING, `${bp}.adm`, params));
+      }
+      // Structured bid.native is an existing supported SSP carrier; this
+      // presence check does not replace the paired Native asset requirements.
+      if (!isStr(b.adm) && !isStr(b.nurl) && !isObj(b.native)) {
         // Vendor dialects can declare that they "claim" bids of a custom
         // shape (e.g. In-Page Push carries the creative in
         // bid.ext.{title,image,url} instead of adm/nurl). When a dialect
@@ -227,4 +273,4 @@ function validateResponse(res, ctx) {
   return findings;
 }
 
-module.exports = { validateResponse };
+module.exports = { validateResponse, isValidNoticeUrl, isUnassignedNoBidReason, duplicateSeats };

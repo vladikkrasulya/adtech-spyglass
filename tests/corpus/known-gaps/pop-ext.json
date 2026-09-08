@@ -1,25 +1,6 @@
 {
   "schemaVersion": 1,
   "gaps": {
-    "DEF-170": {
-      "id": "DEF-170",
-      "title": "Pop-response plugin rejects a spec-complete nurl-only bid that Core's own baseline rule already accepts",
-      "category": "false-positive",
-      "severity": "medium",
-      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#333-object-bid",
-      "code": [
-        "packages/core/rules/pop-response/index.js:76-80",
-        "packages/core/rules-response.js:140"
-      ],
-      "expected": "IAB OpenRTB 2.6 §4.3.3 marks Bid.adm OPTIONAL; a bid carrying only nurl (win notice URL) already satisfies Core's own baseline completeness rule (response.bid.payload_missing, which only warns when BOTH adm and nurl are absent). A pop-tagged bid in that exact shape should not be treated as an incomplete/broken creative just because it also carries a pop-family ext hint.",
-      "actual": "packages/core/rules/pop-response/index.js's admLooksLikePop check runs on bid.adm alone; an absent adm is treated as \"not a redirect\", producing bid.pop.adm_not_redirect (ERROR) regardless of a present, well-formed nurl. This is a stricter, internally inconsistent contract than Core's own baseline rule applied to the identical bid.",
-      "cases": ["pop-x-nurl-only-response"],
-      "reviewedAt": "2026-09-07",
-      "notes": [
-        "Reproduces the still-open item recorded historically in docs/cu-pops-audit-2026-05-12.md §2/§3 (\"No validation of bid.nurl for pop win tracking\") against current code.",
-        "The preview layer is NOT part of this gap: nurl/burl are documented as never read by the creative-preview path (public/ortbtools.app.js findAdm), so a nurl-only bid correctly renders the empty state; only the response-side validation ERROR is the deviation."
-      ]
-    },
     "DEF-245": {
       "id": "DEF-245",
       "title": "Script-shaped pop creatives (window.open / location redirect) render with no on-screen identity text",
