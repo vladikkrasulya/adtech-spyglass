@@ -27,7 +27,7 @@
         "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots.",
         "Coverage-closure cases extend this existing group; exact additional signatures and measured browser evidence are recorded per case, not counted as independent new defects."
       ],
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
+      "browserEvidence": "~/.local/share/ortbtools-research/2026-09-07-fable-020/browser-triage/browser-failures-admitted.json"
     },
     "DEF-107": {
       "id": "DEF-107",
@@ -52,7 +52,7 @@
         "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots.",
         "Reviewed decoder signatures are host-independent; reserved fixture host substitution is not the reason for no_decoder. Existing registry only admits clickunder /feed and authenticated /search or /link contracts."
       ],
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
+      "browserEvidence": "~/.local/share/ortbtools-research/2026-09-07-fable-020/browser-triage/browser-failures-admitted.json"
     },
     "DEF-108": {
       "id": "DEF-108",
@@ -68,7 +68,7 @@
       "notes": [
         "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots."
       ],
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
+      "browserEvidence": "~/.local/share/ortbtools-research/2026-09-07-fable-020/browser-triage/browser-failures-admitted.json"
     }
   }
 }

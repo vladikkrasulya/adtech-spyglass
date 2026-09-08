@@ -82,13 +82,14 @@ incomplete bump.
 
 Feature [023](../../023-audio-repair/contracts/audio-behavior.md) adds two audio MIME error IDs in en/uk/ru and corrects audio protocol detection. Its Core0.42.0 minor bump and CLI dependency `^0.42.0` move with workspace lock metadata; app1.19.4 and CLI0.1.3 retain their independent versions. The existing DAAST document preview reuses the inert text presentation and introduces no new localized control.
 
-Feature [026](../../026-validation-crosscheck/contracts/validation-semantics.md) reserves Core
-0.45.0 for validation semantics. Its implemented wave A adds seven media/seat crosscheck findings
-with equivalent en/uk/ru messages and narrows the existing Linear MediaFile requirement. CLI's Core
-dependency is `^0.45.0`, and the two workspace lock entries move with the manifests. App 1.19.4 and
-CLI 0.1.3 keep their independent versions. Wave B requirements remain planned until their bounded
-implementation and verification are recorded; this version change does not claim those repairs
-complete or a registry release.
+Feature [026](../../026-validation-crosscheck/contracts/validation-semantics.md) uses Core 0.45.0
+for both implemented semantic waves: seven media/seat crosscheck finding IDs in wave A and eight
+validation/declaration IDs in wave B. All fifteen additions carry equivalent en/uk/ru messages and
+specification references. Existing malformed-supplied-value findings retain their meaning and
+severity; reused Native findings do not become new public IDs. CLI's Core dependency is `^0.45.0`,
+and the workspace lock entries agree with the manifests. App 1.19.4 and CLI 0.1.3 keep their
+independent versions. DEF-151 still has separately owned recognition/preview deviations, so the
+version and semantic implementation do not imply complete feature closure or a registry release.
 
 Core 0.43.0 belongs to crash-repair PR #81 and Core 0.44.0 to recognition PR #82. The permanent brief amended the 026 reservation to 0.45.0 before delivery. After any branch
 reconciliation, read the actual Core version, CLI range and lock metadata: identical version edits

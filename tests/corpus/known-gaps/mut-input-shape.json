@@ -1,21 +1,4 @@
 {
   "schemaVersion": 1,
-  "gaps": {
-    "DEF-301": {
-      "id": "DEF-301",
-      "title": "A no-bid reason code outside both the canonical 0-17 list and the reserved 500+ exchange range is not distinguished from a real one",
-      "category": "media-constraint",
-      "severity": "low",
-      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/9af34fc79580f67f6abaf89b1e48d18398c9a697/OpenRTB%20v3.0%20FINAL.md#list_nobidreasoncodes",
-      "code": ["packages/core/rules-response.js"],
-      "expected": "Analogous to imp.video.protocols_unknown (Video.protocols values outside IAB List 5.8's 1-14 and the exchange-specific 500+ range get a WARNING), an nbr value outside the canonical 0-17 codes and the reserved 500+ exchange band should be distinguishable from a recognized code.",
-      "actual": "The exact reviewed deviations are pinned separately for each case and layer in knownGap.matches; response.no_bid fires identically for every numeric nbr value regardless of whether it falls in the canonical range, the reserved exchange range, or neither.",
-      "cases": ["mut-input-shape-nbr-unassigned-code"],
-      "reviewedAt": "2026-09-08",
-      "notes": [
-        "The exact reviewed deviation is pinned per case and layer in knownGap.matches; unrelated failures are not admitted as this gap.",
-        "mut-input-shape-nbr-exchange-specific is the positive control: nbr=700 (a valid exchange-specific code) must stay clean with no code-quality finding, confirming this gap is about a missing distinction, not about rejecting undefined codes outright."
-      ]
-    }
-  }
+  "gaps": {}
 }

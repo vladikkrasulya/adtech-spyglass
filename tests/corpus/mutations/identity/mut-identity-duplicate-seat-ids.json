@@ -39,7 +39,7 @@
     "response": {
       "must": [
         {
-          "id": "expected.response.seatbid_seat_duplicated",
+          "id": "response.seatbid_seat_duplicated",
           "path": "seatbid[1].seat",
           "level": "error",
           "params": {
@@ -96,22 +96,6 @@
     },
     "browser": {
       "state": "success"
-    }
-  },
-  "knownGap": {
-    "id": "DEF-190",
-    "layers": ["core", "http", "browser"],
-    "note": "SeatBid.seat identifies the buyer seat on whose behalf a bid is made (OpenRTB 2.6 §4.2.2); two SeatBid entries claiming the same seat conflate distinct bidders, but rules-response.js has no presence, type or uniqueness check for seatbid[].seat anywhere, so the collision validates cleanly.",
-    "matches": {
-      "core": [
-        "^response: missing required finding expected\\.response\\.seatbid_seat_duplicated @ seatbid\\[1\\]\\.seat \\[error\\] params=\\{\"seat\":\"synthetic-seat-a\"\\} — got version\\.single_marker\\[info\\]@$"
-      ],
-      "http": [
-        "^response: missing required finding expected\\.response\\.seatbid_seat_duplicated @ seatbid\\[1\\]\\.seat \\[error\\] params=\\{\"seat\":\"synthetic-seat-a\"\\} — got version\\.single_marker\\[info\\]@$"
-      ],
-      "browser": [
-        "^browser\\.response:\\ missing\\ required\\ finding\\ expected\\.response\\.seatbid_seat_duplicated\\ @\\ seatbid\\[1\\]\\.seat\\ \\[error\\]\\ params=\\{\"seat\":\"synthetic\\-seat\\-a\"\\}\\ —\\ got\\ version\\.single_marker\\[info\\]@$"
-      ]
     }
   },
   "specNotes": [

@@ -22,6 +22,7 @@ const { scanExtForFormatHints, isPopFormat, extractPopLandingHost } = require('.
 const { resolveDealFloor } = require('./rules/price-floor');
 
 const C = makeCross;
+const MARKUP_MEDIA = ['banner', 'video', 'audio', 'native'];
 
 function crosscheck(req, res, _ctx) {
   // _ctx.dialect is reserved for future dialect-aware crosscheck rules
@@ -476,9 +477,21 @@ function crosscheck(req, res, _ctx) {
     // otherwise use actual creative evidence, then an unambiguous sole offer.
     // The selected family's content checks still see contradictory markup.
     const media = inspectVastMedia(typeof bid.adm === 'string' ? bid.adm : '');
+    const declaredMedia = Number.isInteger(bid.mtype) ? MARKUP_MEDIA[bid.mtype - 1] : undefined;
+    const offeredMedia = MARKUP_MEDIA.filter((kind) => isObj(imp[kind]));
+    if (declaredMedia && !offeredMedia.includes(declaredMedia)) {
+      out.push(
+        C('crosscheck.bid.mtype_offered_mismatch', false, CROSS_LEVELS.CRIT, `${bp}.mtype`, {
+          ...baseParams,
+          mtype: bid.mtype,
+          offered: offeredMedia.join(', '),
+        }),
+      );
+    }
+    const nativeContent = nativeBidContent(bid);
     const selectedMedia = selectBidMedia(imp, bid, media);
     const bannerContentMismatch =
-      selectedMedia === 'banner' && bid.adm && (media.root || nativeMarkup(bid.adm));
+      selectedMedia === 'banner' && (media.root || nativeMarkup(nativeContent));
 
     // 3e. banner size
     if (selectedMedia === 'banner' && !bannerContentMismatch && (bid.w || bid.h)) {
@@ -511,8 +524,8 @@ function crosscheck(req, res, _ctx) {
     }
 
     // 3f. native asset crossmatch
-    if (selectedMedia === 'native' && bid.adm) {
-      const cm = nativeAssetCrosscheck(imp.native, bid.adm);
+    if (selectedMedia === 'native' && nativeContent !== undefined) {
+      const cm = nativeAssetCrosscheck(imp.native, nativeContent);
       if (cm.errorKey) {
         out.push(C(cm.errorKey, false, CROSS_LEVELS.WARN, `${bp}.${leaf.adm}`, baseParams));
       } else {
@@ -534,7 +547,7 @@ function crosscheck(req, res, _ctx) {
           // "Complete" only ever meant "the required ids are present". Say so
           // only when the assets under those ids are also usable — otherwise a
           // bid that renders blank collects a green tick.
-          const fitness = nativeAssetFitness(imp.native, bid.adm);
+          const fitness = nativeAssetFitness(imp.native, nativeContent);
           if (!fitness.length) {
             out.push(
               C(
@@ -667,17 +680,29 @@ function crosscheck(req, res, _ctx) {
 function nativeMarkup(adm) {
   try {
     const parsed = tryParseNativePayload(adm);
-    const inner = isObj(parsed) && isObj(parsed.native) ? parsed.native : parsed;
+    const inner = nativePayloadInner(parsed);
     return isObj(inner) && Array.isArray(inner.assets) ? inner : null;
   } catch {
     return null;
   }
 }
 
+/** Native 1.x accepts a bare asset object or one explicit native wrapper. */
+function nativePayloadInner(payload) {
+  if (!isObj(payload)) return null;
+  if (!Object.hasOwn(payload, 'native')) return payload;
+  const inner = payload.native;
+  return isObj(inner) && !Object.hasOwn(inner, 'native') ? inner : null;
+}
+
+/** The supported structured carrier is explicit, including when malformed. */
+function nativeBidContent(bid) {
+  return bid.native !== undefined ? bid.native : bid.adm;
+}
+
 function selectBidMedia(imp, bid, media) {
-  const kinds = ['banner', 'video', 'audio', 'native'];
-  const offered = kinds.filter((kind) => isObj(imp[kind]));
-  const declared = Number.isInteger(bid.mtype) ? kinds[bid.mtype - 1] : undefined;
+  const offered = MARKUP_MEDIA.filter((kind) => isObj(imp[kind]));
+  const declared = Number.isInteger(bid.mtype) ? MARKUP_MEDIA[bid.mtype - 1] : undefined;
   if (declared && offered.includes(declared)) return declared;
   let actual;
   if (media.root) {
@@ -687,7 +712,7 @@ function selectBidMedia(imp, bid, media) {
       (!media.hasVideoMedia && media.adTypeAudio)
         ? 'audio'
         : 'video';
-  } else if (nativeMarkup(bid.adm)) {
+  } else if (bid.native !== undefined || nativeMarkup(bid.adm)) {
     actual = 'native';
   } else if (typeof bid.adm === 'string' && bid.adm.trimStart().startsWith('<')) {
     actual = 'banner';
@@ -789,11 +814,10 @@ function crosscheckVideoMedia(video, bid, media, path, baseParams) {
  * `openrtb.response.seatbid[0].bid[0].media.display.adm` — where the data
  * really is — instead of at a 2.x path the pasted document does not contain.
  *
- * Deliberately NOT projected: native. AdCOM's `nativefmt`/`native` asset model
- * is a different shape from the 2.x `native.request` JSON string that
- * nativeAssetCrosscheck() parses, and a wrong mapping would produce confident
- * "missing required asset" CRITs on a correct payload. Silence beats a wrong
- * answer; a 3.0 native crosscheck is its own piece of work.
+ * Native is projected from DisplayPlacement.nativefmt / Display.native into
+ * the existing asset checks: asset → assets, request req → required, and
+ * response image → img. Paths still name the original AdCOM creative, and
+ * malformed supplied containers remain malformed through the projection.
  *
  * Mixed pairs (3.0 request + 2.x response, or the reverse) are projected side
  * by side and compared anyway: that pairing is itself a bug worth seeing, and
@@ -885,11 +909,34 @@ function projectItem30(item) {
     // alternatives — the same split 2.x makes between banner.w/h and
     // banner.format[].
     const d = placement.display;
-    out.banner = {
-      w: d.w,
-      h: d.h,
-      format: Array.isArray(d.displayfmt) ? d.displayfmt : undefined,
-    };
+    if (d.nativefmt !== undefined) {
+      const nativefmt = d.nativefmt;
+      out.native = {
+        request: isObj(nativefmt)
+          ? {
+              assets: Array.isArray(nativefmt.asset)
+                ? nativefmt.asset.map((asset) =>
+                    isObj(asset) ? { ...asset, required: asset.req } : asset,
+                  )
+                : nativefmt.asset,
+            }
+          : nativefmt,
+      };
+    }
+    // A Native-only display placement has no banner alternative. Keep the
+    // alternative when the sender actually supplies banner dimensions/formats.
+    if (
+      d.nativefmt === undefined ||
+      d.displayfmt !== undefined ||
+      d.w !== undefined ||
+      d.h !== undefined
+    ) {
+      out.banner = {
+        w: d.w,
+        h: d.h,
+        format: Array.isArray(d.displayfmt) ? d.displayfmt : undefined,
+      };
+    }
   }
   if (placement.video != null) out.video = placement.video;
   return out;
@@ -985,6 +1032,21 @@ function projectBid30(bid, path) {
     h: display ? display.h : undefined,
     ext: bid.ext,
   };
+  if (display && display.native !== undefined) {
+    const native = display.native;
+    projected.native = isObj(native)
+      ? {
+          ...native,
+          assets: Array.isArray(native.asset)
+            ? native.asset.map((asset) =>
+                isObj(asset)
+                  ? { ...asset, ...(asset.image !== undefined ? { img: asset.image } : {}) }
+                  : asset,
+              )
+            : native.asset,
+        }
+      : native;
+  }
   return {
     bid: projected,
     path: path,
@@ -993,7 +1055,12 @@ function projectBid30(bid, path) {
       price: 'price',
       cat: `${mediaPath}.cat`,
       adomain: `${mediaPath}.adomain`,
-      adm: admFrom ? `${mediaPath}.${admFrom}.adm` : mediaPath,
+      adm:
+        display && display.native !== undefined
+          ? mediaPath
+          : admFrom
+            ? `${mediaPath}.${admFrom}.adm`
+            : mediaPath,
     },
     sNum: 0,
     bNum: 0,
@@ -1046,8 +1113,14 @@ function nativeAssetCrosscheck(impNative, adm) {
   // `{assets}` shapes — some SSPs strip the envelope. Accept either so a
   // bare-shape payload doesn't get its assets treated as empty (which
   // would false-positive every required asset as missing).
-  const reqInner = (nativeReq && nativeReq.native) || nativeReq || {};
+  const reqInner = nativePayloadInner(nativeReq);
+  if (!isObj(reqInner) || !Array.isArray(reqInner.assets) || !reqInner.assets.length) {
+    return { errorKey: 'crosscheck.bid.native_invalid_request' };
+  }
   const requestedAssets = Array.isArray(reqInner.assets) ? reqInner.assets : [];
+  if (requestedAssets.some((asset) => !isObj(asset) || asset.id == null)) {
+    return { errorKey: 'crosscheck.bid.native_invalid_request' };
+  }
   const requiredIds = requestedAssets
     .filter((a) => a && a.required === 1 && a.id != null)
     .map((a) => Number(a.id));
@@ -1059,7 +1132,10 @@ function nativeAssetCrosscheck(impNative, adm) {
   } catch {
     return { errorKey: 'crosscheck.bid.native_invalid_adm' };
   }
-  const resInner = (nativeRes && nativeRes.native) || nativeRes || {};
+  const resInner = nativePayloadInner(nativeRes);
+  if (!isObj(resInner) || (resInner.assets !== undefined && !Array.isArray(resInner.assets))) {
+    return { errorKey: 'crosscheck.bid.native_invalid_adm' };
+  }
   const responseAssets = Array.isArray(resInner.assets) ? resInner.assets : [];
   const providedIds = responseAssets.filter((a) => a && a.id != null).map((a) => Number(a.id));
 
@@ -1086,8 +1162,8 @@ function nativeAssetKind(asset) {
 }
 
 /**
- * Only http(s) can be fetched or rendered. Anything else in a native URL is a
- * defect the renderer will happily interpolate into the markup.
+ * Only HTTP(S) navigation is supported. Image fields can additionally use the
+ * bounded embedded-raster form checked separately at their point of use.
  *
  * @param {unknown} url
  * @returns {string|null} The offending scheme, or null when acceptable.
@@ -1098,6 +1174,16 @@ function unsafeNativeScheme(url) {
   if (!match) return null;
   const scheme = `${match[1].toLowerCase()}:`;
   return scheme === 'http:' || scheme === 'https:' ? null : scheme;
+}
+
+/** RFC 2397 embedded raster data is an image source, never a navigation URL. */
+function isEmbeddedRasterImage(url) {
+  if (typeof url !== 'string') return false;
+  const value = url.trim();
+  const header = /^data:image\/(?:png|jpeg|gif|webp);base64,/i.exec(value);
+  if (!header) return false;
+  const body = value.slice(header[0].length);
+  return body.length > 0 && body.length % 4 === 0 && /^[A-Za-z0-9+/]+={0,2}$/.test(body);
 }
 
 /**
@@ -1127,14 +1213,15 @@ function nativeAssetFitness(impNative, adm) {
       typeof impNative.request === 'string'
         ? tryParseNativePayload(impNative.request)
         : impNative.request;
-    reqInner = (parsedReq && parsedReq.native) || parsedReq || {};
+    reqInner = nativePayloadInner(parsedReq);
     const parsedRes = typeof adm === 'string' ? tryParseNativePayload(adm) : adm;
-    resInner = (parsedRes && parsedRes.native) || parsedRes || {};
+    resInner = nativePayloadInner(parsedRes);
   } catch {
     // Parse failures are already reported by nativeAssetCrosscheck; saying it
     // twice would double every finding on a malformed payload.
     return issues;
   }
+  if (!reqInner || !resInner) return issues;
 
   const requested = new Map();
   for (const asset of Array.isArray(reqInner.assets) ? reqInner.assets : []) {
@@ -1172,7 +1259,7 @@ function nativeAssetFitness(impNative, adm) {
 
     if (gotKind === 'title') {
       const text = asset.title.text;
-      if (typeof text !== 'string' || text.length === 0) {
+      if (typeof text !== 'string' || text.trim().length === 0) {
         issues.push({ code: 'asset_empty', id, params: { kind: 'title' } });
       } else if (Number.isFinite(want.title && want.title.len) && text.length > want.title.len) {
         issues.push({
@@ -1185,7 +1272,7 @@ function nativeAssetFitness(impNative, adm) {
 
     if (gotKind === 'data') {
       const value = asset.data.value;
-      if (typeof value !== 'string' || value.length === 0) {
+      if (typeof value !== 'string' || value.trim().length === 0) {
         issues.push({ code: 'asset_empty', id, params: { kind: 'data' } });
       } else if (Number.isFinite(want.data && want.data.len) && value.length > want.data.len) {
         issues.push({
@@ -1198,10 +1285,10 @@ function nativeAssetFitness(impNative, adm) {
 
     if (gotKind === 'img') {
       const url = asset.img.url;
-      if (typeof url !== 'string' || url.length === 0) {
+      if (typeof url !== 'string' || url.trim().length === 0) {
         issues.push({ code: 'asset_empty', id, params: { kind: 'img' } });
       } else {
-        const scheme = unsafeNativeScheme(url);
+        const scheme = isEmbeddedRasterImage(url) ? null : unsafeNativeScheme(url);
         if (scheme) {
           issues.push({ code: 'unsafe_scheme', id, params: { field: 'img.url', scheme } });
         }

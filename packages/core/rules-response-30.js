@@ -13,6 +13,7 @@ const { isObj, isStr, isNum } = require('./helpers');
 const { LEVELS, makeFinding } = require('./findings');
 const { validateVast, isVastShape } = require('./rules-vast');
 const { detect30ResponseSignals } = require('./detect');
+const { isUnassignedNoBidReason, duplicateSeats } = require('./rules-response');
 
 const F = makeFinding;
 
@@ -92,6 +93,11 @@ function validateResponseBody30(resp, base, findings) {
   const hasSeatbid = Array.isArray(resp.seatbid);
   const nbrInvalid = resp.nbr !== undefined && !Number.isInteger(resp.nbr);
   if (nbrInvalid) findings.push(F('response.30.nbr_invalid', LEVELS.ERROR, at('nbr')));
+  if (isUnassignedNoBidReason(resp.nbr)) {
+    findings.push(
+      F('response.30.nbr_code_unassigned', LEVELS.WARNING, at('nbr'), { nbr: resp.nbr }),
+    );
+  }
   const hasNbr = Number.isInteger(resp.nbr);
   if (!hasSeatbid && !hasNbr) {
     findings.push(F('response.30.seatbid_or_nbr_required', LEVELS.ERROR, at('seatbid')));
@@ -103,6 +109,13 @@ function validateResponseBody30(resp, base, findings) {
 
   // R5. Per-seatbid → per-bid structural checks (id + item ref + price).
   //     3.0 bids carry `item` (the request item id) instead of 2.x `impid`.
+  for (const { index, seat } of duplicateSeats(resp.seatbid)) {
+    findings.push(
+      F('response.30.seatbid_seat_duplicated', LEVELS.ERROR, at(`seatbid[${index}].seat`), {
+        seat,
+      }),
+    );
+  }
   (resp.seatbid || []).forEach((sb, i) => {
     const sNum = i + 1;
     const sp = at(`seatbid[${i}]`);
@@ -227,7 +240,14 @@ function validateCreative30(media, creative, params, findings) {
       findings.push(F('response.30.bid.display_invalid', LEVELS.ERROR, `${cp}.display`, params));
     } else {
       const d = c.display;
-      if (!isStr(d.adm) && !isStr(d.curl)) {
+      // AdCOM Display.native is a structured alternative to adm/curl.
+      // Supplied malformed Native still fails even when alternate markup exists.
+      if (d.native !== undefined && !isObj(d.native)) {
+        findings.push(
+          F('response.30.bid.native_invalid', LEVELS.ERROR, `${cp}.display.native`, params),
+        );
+      }
+      if (!isStr(d.adm) && !isStr(d.curl) && !isObj(d.native)) {
         findings.push(
           F('response.30.bid.display.markup_required', LEVELS.ERROR, `${cp}.display`, params),
         );
