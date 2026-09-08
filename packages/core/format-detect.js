@@ -1,5 +1,14 @@
 'use strict';
 
+const { hasInpagePlacement, hasInpageCreative } = require('./dialects/inpage-push');
+const {
+  isExadsRequest,
+  isExadsResponse,
+  exadsRequestFormat,
+  exadsResponseFormat,
+} = require('./vendor-exads');
+const { isAdon3Response, adon3ResponseFormats } = require('./vendor-adon3');
+
 /**
  * Format Detection Engine — Phase 10.
  *
@@ -495,6 +504,15 @@ function detectFormat(payload, userDialect) {
   } else if (typeof payload === 'object') {
     /** @type {any} */
     const p = payload;
+    if (isExadsRequest(p)) {
+      const format = exadsRequestFormat(p);
+      if (format) formats.add(format);
+    } else if (isExadsResponse(p)) {
+      const format = exadsResponseFormat(p);
+      if (format) formats.add(format);
+    } else if (isAdon3Response(p)) {
+      for (const format of adon3ResponseFormats(p)) formats.add(format);
+    }
 
     // URL-style ad request canonicalised by decoders/request/*. Clickunder
     // feeds have no oRTB `imp` slot to inspect, so the declared URL format
@@ -506,11 +524,14 @@ function detectFormat(payload, userDialect) {
         formats.add(FORMATS.POPS);
       } else if (isPushFormat(declared)) {
         formats.add(FORMATS.PUSH);
+      } else if (['native', 'banner', 'inpage'].includes(declared)) {
+        formats.add(declared);
       }
     }
 
     // ── BidRequest path
     if (Array.isArray(p.imp)) {
+      if (hasInpagePlacement(p.ext)) formats.add(FORMATS.INPAGE);
       // Scan top-level req.ext for non-IAB hints first — some vendors put
       // request-wide `ext.adtype = "popunder"` instead of per-imp.
       for (const hint of scanExtForFormatHints(p.ext, 'ext', userDialect)) {
@@ -540,6 +561,7 @@ function detectFormat(payload, userDialect) {
           }
         }
         if (imp.native) formats.add(FORMATS.NATIVE);
+        if (hasInpagePlacement(imp.ext)) formats.add(FORMATS.INPAGE);
         // Non-IAB format hints (pop / popunder / clickunder / push / pushunder)
         // in vendor extensions. Add the corresponding FORMATS tag so the UI
         // and downstream rules see the same picture detectNonStandardFormats
@@ -566,6 +588,7 @@ function detectFormat(payload, userDialect) {
         if (!isObj(sb) || !Array.isArray(sb.bid)) continue;
         for (const bid of sb.bid) {
           if (!isObj(bid)) continue;
+          if (hasInpagePlacement(bid.ext) || hasInpageCreative(bid)) formats.add(FORMATS.INPAGE);
           const mt = MTYPE_TO_FORMAT[bid.mtype];
           if (mt) formats.add(mt);
           // Standalone Native detection: a Native 1.x `adm` JSON body carries
@@ -658,7 +681,18 @@ function detectFormat(payload, userDialect) {
       for (const it of Array.isArray(req30.item) ? req30.item : []) {
         if (!isObj(it) || !isObj(it.spec) || !isObj(it.spec.placement)) continue;
         const pm = it.spec.placement;
-        if (pm.display) formats.add(FORMATS.BANNER);
+        if (pm.display) {
+          const display = pm.display;
+          if (isObj(display.nativefmt)) formats.add(FORMATS.NATIVE);
+          // NativeFormat is a display subtype. A separately offered banner
+          // format still contributes banner on mixed display inventory.
+          if (
+            !isObj(display.nativefmt) ||
+            (Array.isArray(display.displayfmt) && display.displayfmt.length)
+          ) {
+            formats.add(FORMATS.BANNER);
+          }
+        }
         if (pm.audio) {
           formats.add(FORMATS.AUDIO);
           if (isObj(pm.audio) && Array.isArray(pm.audio.ctype)) {
@@ -706,7 +740,17 @@ function detectFormat(payload, userDialect) {
         for (const bid of sb.bid) {
           if (!isObj(bid) || !isObj(bid.media)) continue;
           const ad = isObj(bid.media.ad) ? bid.media.ad : bid.media;
-          if (ad.display) formats.add(FORMATS.BANNER);
+          if (ad.display) {
+            const display = ad.display;
+            if (isObj(display.native)) formats.add(FORMATS.NATIVE);
+            if (
+              !isObj(display.native) ||
+              (typeof display.adm === 'string' && display.adm.trim()) ||
+              (typeof display.curl === 'string' && display.curl.trim())
+            ) {
+              formats.add(FORMATS.BANNER);
+            }
+          }
           if (ad.audio) {
             formats.add(FORMATS.AUDIO);
             if (isObj(ad.audio)) {

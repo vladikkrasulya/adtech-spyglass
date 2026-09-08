@@ -1,7 +1,7 @@
 # Contract: Core Validator and CLI
 
 **Owner**: `packages/core/` and `packages/cli/`
-**Current versions**: Core `0.45.0`; CLI `0.1.3`
+**Current versions**: Core `0.46.0`; CLI `0.1.3`
 
 ## Public Core Surface
 
@@ -384,6 +384,99 @@ its separately owned recognition and preview deviations remain in the exact corp
 those observations pass. Current branch verification and delivery state belong in the
 [026 feature records](../../026-validation-crosscheck/tasks.md), not in a claim of full feature
 completion, main integration, package publication or deployment.
+
+## Vendor Carriers and Format Recognition (028; Core 0.46.0)
+
+Feature [028](../../028-vendor-request-dialects/spec.md) adds deterministic vendor inspection at the
+existing Core boundary. `TYPES.VENDOR_REQUEST` adds the `Vendor Feed Request` classification; EXADS
+validation resolves to `EXADS RTB Request` or `EXADS RTB Response`. Existing type constants and
+finding IDs are not renamed. Vendor classification does not establish an OpenRTB version or invent
+an impression, seat, bid floor or account currency.
+
+### Documented request and response carriers
+
+`vendor-exads.js` owns shared request/response recognition, validation and format roles. Required
+request strings are checked independently from supplied-invalid values; banner additionally requires
+size. The documented inpage type is supported. JSON `sub` is a finite nonnegative integer; GET
+represents it as a digit string. Invalid representation is an error, while the contradictory source
+length/leading-zero guidance remains a warning. Unsupported request type is guidance; supplied
+unsupported export serialization is an error. Missing pasted headers are not fabricated payload
+requirements.
+
+EXADS outer bids retain original `bid.*` paths. Supplied `value` must be a finite nonnegative number
+without JSON-string coercion; supplied `btype` is exactly 1 or 2. Omitted response fields not marked
+required by the source produce bounded guidance, while supplied invalid types remain errors.
+`nUrl` is notification evidence only; pop landing `url`, click `clickUrl`, icon and image roles stay
+separate. Account currency is not inferred and CPC is not converted into CPM. Empty/malformed JSON
+does not manufacture the documented HTTP 204 no-bid state.
+
+Recognition guards preserve any own `imp`, `seatbid` or `openrtb` marker, even if malformed. Core
+crosscheck returns an empty finding list only when both request and response are recognized EXADS
+carriers. Other unknown or malformed IAB pairs keep their existing findings. The HTTP analyzer uses
+this same Core behavior; there is no broad unknown-request exemption.
+
+The explicit decoder registry adds four families after existing decoder precedence:
+
+| Family            | Source-bound carrier and format evidence                                                                                                                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| PPCmate           | Root-path GET with publisher, address, user-agent and domain keys; feed ID is optional. Subscription timestamp and impression number provide push/pop evidence. JSON/XML format selects serialization, not inventory.    |
+| Kadam             | `/feed` with sid/ua/uid/pid and an IP-family key; skey is not universally required. Explicit Native/teaser and cu/pops formats are recognized. Missing subscription age or format does not identify inpage provisioning. |
+| EXADS             | `/rtb.php` plus the EXADS request field family; the same owning validator handles decoded GET values with transport-specific representation checks.                                                                      |
+| Provisional Adon3 | `/v1/feed/` plus one nonempty opaque segment and documented lowercase ip/ua keys; recognition does not establish origin or a finalized vendor protocol.                                                                  |
+
+These host-independent GET decoders reject userinfo/fragments and rely on the existing HTTP(S)
+registry boundary. They preserve the full URL, first raw encoded query values, duplicate-key
+precedence and repair/decode-damage warnings. `urlRequest.meta.vendorRequest` holds actual supplied
+first decoded values for the owning validator, without manufacturing absent keys. Supplied IPv4
+and IPv6 and page/domain context are retained without inventing a scheme. Ambiguous subtype evidence
+sets `meta.formatAmbiguous` and produces guidance; it does not inspect opaque keys or creative text.
+
+### Native/inpage meaning and provisional status
+
+Kadam Native material uses its documented `url`/`image`/`cpc` carrier. It does not require the unrelated
+push `click_url` field or become an IAB Native assets envelope. Supplied CPC remains finite,
+nonnegative and numeric. Missing title/image guidance remains distinct from supplied invalid values.
+Explicit Native URL-request intent supplies the paired Native tag; an isolated card need not prove a
+unique Native placement.
+
+The project inpage dialect exports its owning placement/card role helpers for format detection.
+Widget/zone hints and extension-card aliases add inpage evidence while retaining actual media tags,
+`imp.format_required` and the IAB control's payload warning. Nested AdCOM `display.nativefmt` and
+`media.ad.display.native` supply the supplemental DEF-151 Native recognition. A Native display
+container alone is not a banner; a separately offered display format or actual display markup/URL
+retains the genuine banner alternative. The 026 Native validation and asset crosscheck remain.
+
+Adon3 response inspection requires own `rid`, `cur` and `ads` carrier keys while preserving IAB
+precedence. It always returns the `Provisional Adon3 Response` label and the
+`feed.adon3.provisional_contract` warning. Request metadata independently retains
+`contractStatus: provisional-unsupported` with `request.url.provisional_contract`. Neither path
+certifies vendor conformance, supply provisioning or commercial crosscheck coverage. Existing
+finding filters do not turn the retained type/metadata into certification.
+
+Empty/malformed ad arrays, invalid rows, required URL/notice/price fields and supplied invalid typed
+values produce original-path errors. Adon3 prices remain decimal strings, including trailing zeros
+and values beyond binary-float precision; no numeric or currency conversion occurs. An explicit
+under/over pop role or title plus image/icon supports format evidence; a landing URL or opaque key
+alone does not. Unknown future string response pop types retain provisional status without a hard
+final-enum claim. The three source cases remain documented-reference examples, not vendor-valid
+coverage.
+
+### Additive findings and preserved delivery boundary
+
+New source-backed finding families are `request.exads.*`, `feed.exads.*`, `feed.adon3.*` and
+`feed.native.*`, plus `request.url.required_parameter_missing`, `request.url.parameter_invalid`,
+`request.url.format_ambiguous` and `request.url.provisional_contract`. Their literal severities,
+matching en/uk/ru messages and specification references form one contract; existing finding order,
+deduplication, public result envelopes and CLI exit policy remain. Core 0.46.0 and CLI dependency
+`^0.46.0` advance together; app 1.19.4 and CLI 0.1.3 keep their independent versions.
+
+No runtime network, payload persistence, model forwarding, asset fetching or preview sandbox change
+is introduced. Core/backend verification does not close the separately owned public preview work.
+The whole 256-case corpus remains the preservation boundary: only proven Core/HTTP deviations are
+narrowed, and browser records remain until an individual case has current complete browser proof.
+The two Kadam hidden-placement assertions and four peer-owned inpage preview contradictions retain
+explicit decision ownership. [028 verification](../../028-vendor-request-dialects/verification.md)
+records current gates; this contract does not claim hosted delivery, npm publication or deployment.
 
 ## CLI Contract
 

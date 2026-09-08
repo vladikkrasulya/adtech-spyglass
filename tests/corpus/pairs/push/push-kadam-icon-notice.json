@@ -88,17 +88,5 @@
     "format": {
       "formats": ["push"]
     }
-  },
-  "knownGap": {
-    "id": "DEF-107",
-    "layers": ["core", "http", "browser"],
-    "note": "Publicly documented vendor URL request contracts should be decoded consistently with their feed responses; fixture host and token values are synthetic.",
-    "matches": {
-      "core": ["^request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$"],
-      "http": ["^request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$"],
-      "browser": [
-        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$"
-      ]
-    }
   }
 }

@@ -65,6 +65,12 @@
  *                                       the operator's original text.
  * @property {Object} meta
  * @property {string} meta.detectedVariant
+ * @property {Object<string, string>} [meta.vendorRequest] First decoded query
+ *                                       values for the owning vendor validator.
+ * @property {boolean} [meta.formatAmbiguous] No unique inventory subtype is
+ *                                       established by the supplied fields.
+ * @property {string} [meta.contractStatus] Provisional inspection status, kept
+ *                                       independently of finding filtering.
  */
 
 /**

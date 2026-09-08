@@ -29,6 +29,7 @@ const { validateRequest30 } = require('./rules-request-30');
 const { validateResponse } = require('./rules-response');
 const { validateResponse30 } = require('./rules-response-30');
 const { validateFeedResponse } = require('./rules-feed');
+const { validateExadsRequest } = require('./vendor-exads');
 const { validateUrlRequest } = require('./rules-request-url');
 const { validateRawJson } = require('./rules-raw-json');
 const { validateUnknownFields } = require('./rules-unknown-fields');
@@ -446,6 +447,10 @@ function validate(payload, opts) {
       });
       if (responsePluginFindings.length) findings = findings.concat(responsePluginFindings);
     }
+  } else if (t === TYPES.VENDOR_REQUEST) {
+    const r = validateExadsRequest(payload);
+    findings = r.findings;
+    resolvedType = r.type;
   } else if (t === TYPES.VENDOR_FEED) {
     const r = validateFeedResponse(payload);
     findings = r.findings;

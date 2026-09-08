@@ -154,16 +154,5 @@
       }
     ]
   },
-  "knownGap": {
-    "id": "DEF-180",
-    "layers": ["core", "http", "browser"],
-    "note": "Normative expectations are unchanged. Core, real HTTP and browser separately reproduced these exact deviations during coverage closure on 2026-09-08.",
-    "matches": {
-      "core": ["^format\\.formats: expected \\[banner, inpage\\], got \\[banner\\]$"],
-      "http": ["^format\\.formats: expected \\[banner, inpage\\], got \\[banner\\]$"],
-      "browser": [
-        "^browser\\.format\\.formats:\\ expected\\ \\[banner,\\ inpage\\],\\ got\\ \\[banner\\]$"
-      ]
-    }
-  }
+  "knownGap": null
 }

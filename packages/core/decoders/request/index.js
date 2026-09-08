@@ -28,6 +28,10 @@ const DECODERS = [
   require('./url-clickunder-feed'),
   require('./url-search-feed'),
   require('./url-linkfeed'),
+  require('./url-ppcmate-feed'),
+  require('./url-kadam-feed'),
+  require('./url-exads-feed'),
+  require('./url-adon3-feed'),
 ];
 
 /**
