@@ -2,9 +2,9 @@
 
 The Core public API (`validate()`, `detectFormat()`, and the CLI and HTTP surfaces that wrap them) is
 a deterministic data-to-data contract (Constitution IV). This file records what this feature changes
-at that boundary. Core moves from 0.42.0 to 0.44.0 (0.43.0 is reserved by the concurrent
-[024](../../024-analyze-input-robustness/spec.md) analyze-boundary change; the two are coordinated at
-merge).
+at that boundary. Core moves from 0.42.0 to 0.44.0 (0.43.0 is reserved by the concurrent analyze-boundary change on
+pull request #81 — feature 024, which lands on its own branch — so the two Core bumps are coordinated
+at merge).
 
 ## What does not change
 
