@@ -1,7 +1,7 @@
 # Contract: Core Validator and CLI
 
 **Owner**: `packages/core/` and `packages/cli/`
-**Current versions**: Core `0.43.0`; CLI `0.1.3`
+**Current versions**: Core `0.44.0`; CLI `0.1.3`
 
 ## Public Core Surface
 
@@ -231,6 +231,22 @@ such shapes instead of returning `400 bad_request`, and a present scalar `bidRes
 `payload.invalid_root` with `crosscheck.no_response` — both recorded in
 [the HTTP API contract](./http-api.md) and the
 [024 public-boundary contract](../../024-analyze-input-robustness/contracts/analyze-input-boundary.md).
+
+## Format Detection and Feed Dispatch Alignment (025; Core 0.44.0)
+
+The feed key-role tables are aligned. `detectFeedFormat` treats `image_url`/`icon_url` as creative-slot
+aliases alongside `image`/`icon`, so a material validated under those aliases earns the same format
+tag (DEF-160). The `clickurl` click alias, already honoured by `format-detect.js`, is now also
+recognized by `detect.js`'s single-object classifier and `rules-feed.js`'s push-material click check
+(DEF-181). A materials array dispatches each element by shape through the shared
+`validateBidPriceMaterial(o, fp, findings)` contract, so a `bid_price`/`notification_url` element is
+validated as a bid-price shape with array-indexed paths instead of drawing push-material errors
+(DEF-161). A standalone Native 1.x `adm` body (a `native` wrapper or bare native root with an `assets`
+array or `assetsurl`) tags the format `native` when the bid declares no `mtype`; a bid that declares
+its media type is unchanged (DEF-460). No finding id, level or message changes. The same alias
+alignment incidentally corrects the response-format detection of the still-open DEF-107 Kadam cases,
+which stay recorded against their residual request-decoder gap. Recorded in the
+[025 public-boundary contract](../../025-format-detect-vendor-dialects/contracts/format-detection-boundary.md).
 
 ## CLI Contract
 
