@@ -154,6 +154,24 @@ The dialect vocabulary and the labelling resolution are a layered contract:
   RESERVED state no v1 path produces. The model prompt payload is frozen to the ADR-012 §6
   allowlist, asserted by test; `docs/PRIVACY.md` is unchanged.
 
+## Recommended-Field Levels (021, ADR-016; Core 0.39.0)
+
+A specification qualifier maps to a validator level: `required` → error, `recommended` → warning,
+`optional` → info, with two named exceptions recorded in ADR-016 — `device.ua`/`device.ip` (and
+their 3.0 mirrors) are warning on a site/app request because the client identity is what bidders
+key on, and info on a DOOH-only request; an empty `seatbid` array without `nbr` is an info-level
+no-bid. Concretely: `request.no_site_or_app`, `request.device_required`,
+`request.30.context.no_site_or_app` and `request.30.context.device_required` are warnings;
+`request.device.ip_required`/`ua_required` and `request.30.context.device.ip_required`/`ua_required`
+are warnings (info on DOOH-only); `response.seatbid_empty_no_nbr` and
+`response.30.seatbid_empty_no_nbr` are info. An absent 2.x `device` yields only
+`request.device_required`. Crosscheck reports only the id check for an empty `seatbid` array and
+`crosscheck.no_response` only when neither a `seatbid` array nor `nbr` exists. Wrong types
+(`request.30.context.device_invalid`) and the no-signal errors (`response.seatbid_or_nbr_required`,
+`response.30.seatbid_or_nbr_required`) stay errors. Ids are unchanged; the levels are pinned by
+`tests/validator.test.js`, `tests/rules-25-audit.test.js`, `tests/ortb30.test.js` and the 020
+corpus.
+
 ## CLI Contract
 
 The CLI supports `validate`, `crosscheck`, `detect`, `dialects`, `locales`, `help`, and `version`; it

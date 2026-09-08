@@ -186,21 +186,5 @@
     "http": {
       "status": 200
     }
-  },
-  "knownGap": {
-    "id": "DEF-100",
-    "layers": ["core", "http", "browser"],
-    "note": "Optional Device attributes may produce guidance; their omission must not invalidate otherwise valid requests.",
-    "matches": {
-      "core": [
-        "^request:\\ findings\\ above\\ warning:\\ request\\.device\\.ip_required\\[error\\]@device\\.ip,\\ request\\.device\\.ua_required\\[error\\]@device\\.ua$"
-      ],
-      "http": [
-        "^request:\\ findings\\ above\\ warning:\\ request\\.device\\.ip_required\\[error\\]@device\\.ip,\\ request\\.device\\.ua_required\\[error\\]@device\\.ua$"
-      ],
-      "browser": [
-        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.device\\.ip_required\\[error\\]@device\\.ip,\\ request\\.device\\.ua_required\\[error\\]@device\\.ua$"
-      ]
-    }
   }
 }

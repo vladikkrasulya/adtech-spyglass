@@ -149,21 +149,5 @@
     "http": {
       "status": 200
     }
-  },
-  "knownGap": {
-    "id": "DEF-103",
-    "layers": ["core", "http", "browser"],
-    "note": "A valid DOOH-only BidRequest does not require the optional Device object.",
-    "matches": {
-      "core": [
-        "^request:\\ findings\\ above\\ warning:\\ request\\.device_required\\[error\\]@device$"
-      ],
-      "http": [
-        "^request:\\ findings\\ above\\ warning:\\ request\\.device_required\\[error\\]@device$"
-      ],
-      "browser": [
-        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.device_required\\[error\\]@device$"
-      ]
-    }
   }
 }

@@ -54,28 +54,6 @@
       "state": "success"
     }
   },
-  "knownGap": {
-    "id": "DEF-114",
-    "layers": ["core", "http", "browser"],
-    "note": "No-bid BidResponse can have empty seatbid and optional nbr; its auction id is still meaningful and it must not be treated as a missing response.",
-    "matches": {
-      "core": [
-        "^response:\\ findings\\ above\\ warning:\\ response\\.seatbid_empty_no_nbr\\[error\\]@seatbid$",
-        "^crosscheck:\\ missing\\ crosscheck\\.id_match\\ @\\ id\\ \\[ok\\]\\ —\\ got\\ crosscheck\\.no_response\\[crit\\]@res$",
-        "^crosscheck:\\ forbidden\\ crosscheck\\.no_response\\ →\\ crosscheck\\.no_response\\[crit\\]@res$"
-      ],
-      "http": [
-        "^response:\\ findings\\ above\\ warning:\\ response\\.seatbid_empty_no_nbr\\[error\\]@seatbid$",
-        "^crosscheck:\\ missing\\ crosscheck\\.id_match\\ @\\ id\\ \\[ok\\]\\ —\\ got\\ crosscheck\\.no_response\\[crit\\]@res$",
-        "^crosscheck:\\ forbidden\\ crosscheck\\.no_response\\ →\\ crosscheck\\.no_response\\[crit\\]@res$"
-      ],
-      "browser": [
-        "^browser\\.response:\\ findings\\ above\\ warning:\\ response\\.seatbid_empty_no_nbr\\[error\\]@seatbid$",
-        "^browser\\.crosscheck:\\ missing\\ crosscheck\\.id_match\\ @\\ id\\ \\[ok\\]\\ —\\ got\\ crosscheck\\.no_response\\[crit\\]@res$",
-        "^browser\\.crosscheck:\\ forbidden\\ crosscheck\\.no_response\\ →\\ crosscheck\\.no_response\\[crit\\]@res$"
-      ]
-    }
-  },
   "specNotes": [
     "BidResponse.seatbid may be empty when no bids are offered; nbr is optional.",
     "Grounding: OpenRTB 2.6 section 4.1 treats a response without actual bids as no-bid and encourages a reason; the 4.2.1 BidResponse table requires seatbid only when bidding and leaves nbr optional. The 4.2.1 prose separately describes 204 or nbr-bearing examples. id_match is the application finding used to verify auction identity recognition, not an IAB-mandated identifier."

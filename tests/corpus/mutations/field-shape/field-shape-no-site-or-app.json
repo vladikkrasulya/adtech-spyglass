@@ -75,26 +75,6 @@
       "state": "success"
     }
   },
-  "knownGap": {
-    "id": "DEF-302",
-    "layers": ["core", "http", "browser"],
-    "note": "Core reports request.no_site_or_app as an ERROR although §3.2.1 only recommends site/app (false positive, same class as DEF-100 for device).",
-    "matches": {
-      "core": [
-        "^request:\\ findings\\ above\\ warning:\\ request\\.no_site_or_app\\[error\\]@site/app$",
-        "^request:\\ forbidden\\ finding\\ present\\ request\\.no_site_or_app\\ \\[error\\]\\ →\\ request\\.no_site_or_app\\[error\\]@site/app$"
-      ],
-      "http": [
-        "^request:\\ findings\\ above\\ warning:\\ request\\.no_site_or_app\\[error\\]@site/app$",
-        "^request:\\ forbidden\\ finding\\ present\\ request\\.no_site_or_app\\ \\[error\\]\\ →\\ request\\.no_site_or_app\\[error\\]@site/app$"
-      ],
-      "browser": [
-        "^browser\\.row:\\ forbidden\\ request\\ request\\.no_site_or_app$",
-        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.no_site_or_app\\[error\\]@site/app$",
-        "^browser\\.request:\\ forbidden\\ finding\\ present\\ request\\.no_site_or_app\\ \\[error\\]\\ →\\ request\\.no_site_or_app\\[error\\]@site/app$"
-      ]
-    }
-  },
   "specNotes": [
     "OpenRTB 2.6 section 3.2.1 recommends Site/App/DOOH context objects; it does not require a context object. Their mutual exclusivity is separate from presence. Removing Site leaves the Device object and bid resolution unchanged."
   ]

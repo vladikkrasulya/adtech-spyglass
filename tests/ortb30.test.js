@@ -271,9 +271,11 @@ test('validateResponse30: nbr-only no-bid → response.30.no_bid INFO', () => {
   assert.equal(m.params.nbr, 4);
 });
 
-test('validateResponse30: empty seatbid without nbr → seatbid_empty_no_nbr ERROR', () => {
+test('validateResponse30: empty seatbid without nbr → seatbid_empty_no_nbr INFO (a no-bid)', () => {
   const f = validateResponse30({ openrtb: { ver: '3.0', response: { id: 'r', seatbid: [] } } });
-  assert.ok(findById(f, 'response.30.seatbid_empty_no_nbr'));
+  const m = findById(f, 'response.30.seatbid_empty_no_nbr');
+  assert.ok(m);
+  assert.equal(m.level, 'info');
 });
 
 test('validateResponse30: per-bid id + item + price all required', () => {
@@ -623,4 +625,57 @@ test('samples: synthetic-ortb30-deep-response-errors.json fires expected deep re
   assert.ok(findById(r.findings, 'response.30.bid.display.markup_required'));
   assert.ok(findById(r.findings, 'vast.adtitle_missing')); // inside bid[2] VAST adm
   assert.ok(findById(r.findings, 'response.30.bid.media.format_required'));
+});
+
+// ── 021: recommended context objects are guidance, not errors (ADR-016) ────
+//
+// OpenRTB 3.0 only recommends request.context (R6); AdCOM 1.0 marks
+// Device.ua as recommended and Device.ip as optional. A missing object or
+// field inside the context can therefore never outrank the missing context
+// itself: WARNING at most, INFO on a DOOH-only context, ERROR only for a
+// wrong type.
+
+function ctxRequest(context) {
+  return {
+    openrtb: { ver: '3.0', request: { id: 'r1', item: [{ id: '1', spec: {} }], context } },
+  };
+}
+
+test('021: 3.0 context without device is a warning; ip/ua inside a site context are warnings', () => {
+  const noDevice = validateRequest30(ctxRequest({ site: { domain: 'a.com' } }));
+  assert.equal(findById(noDevice, 'request.30.context.device_required').level, 'warning');
+  assert.equal(findById(noDevice, 'request.30.context.device.ip_required'), undefined);
+
+  const bare = validateRequest30(ctxRequest({ site: { domain: 'a.com' }, device: {} }));
+  assert.equal(findById(bare, 'request.30.context.device.ip_required').level, 'warning');
+  assert.equal(findById(bare, 'request.30.context.device.ua_required').level, 'warning');
+  // The item stub draws its own placement error; the context family must not.
+  assert.deepEqual(
+    bare.filter((f) => f.level === 'error' && f.id.startsWith('request.30.context.')),
+    [],
+  );
+});
+
+test('021: 3.0 DOOH-only context drops ip/ua to info; a channel-less context is a warning', () => {
+  const dooh = validateRequest30(ctxRequest({ dooh: { id: 'screen-1' }, device: {} }));
+  assert.equal(findById(dooh, 'request.30.context.device.ip_required').level, 'info');
+  assert.equal(findById(dooh, 'request.30.context.device.ua_required').level, 'info');
+  assert.equal(findById(dooh, 'request.30.context.no_site_or_app'), undefined);
+
+  const noChannel = validateRequest30(
+    ctxRequest({ device: { ua: 'Mozilla/5.0', ip: '203.0.113.9' } }),
+  );
+  assert.equal(findById(noChannel, 'request.30.context.no_site_or_app').level, 'warning');
+});
+
+test('021: a 3.0 device of the wrong type is still an error', () => {
+  const f = validateRequest30(ctxRequest({ site: { domain: 'a.com' }, device: 'phone' }));
+  assert.equal(findById(f, 'request.30.context.device_invalid').level, 'error');
+  assert.equal(findById(f, 'request.30.context.device_required'), undefined);
+});
+
+test('021: 3.0 empty seatbid without nbr rolls up clean through validate()', () => {
+  const r = validate({ openrtb: { ver: '3.0', response: { id: 'r', seatbid: [] } } });
+  assert.equal(r.status, 'clean');
+  assert.equal(findById(r.findings, 'response.30.seatbid_empty_no_nbr').level, 'info');
 });

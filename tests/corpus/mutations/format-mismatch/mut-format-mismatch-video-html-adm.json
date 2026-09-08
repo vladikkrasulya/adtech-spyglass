@@ -87,6 +87,6 @@
   "knownGap": null,
   "specNotes": [
     "This case demonstrates a format-mismatch check that already works: crosscheck.js gates its VAST check on imp.video && bid.adm and reports crosscheck.bid.video_not_vast (WARN) whenever the returned adm is not VAST-shaped, independent of anything else in the payload.",
-    "device.ua/device.ip are patched in only to keep the request clean of the unrelated optional-Device deviation already recorded for this base pair as DEF-100; this case is scoped to the video/HTML content-type question."
+    "device.ua/device.ip are patched in only to keep the request clean of the unrelated optional-Device deviation formerly recorded for this base pair as DEF-100 (resolved by 021 on 2026-09-08: warnings now); this case is scoped to the video/HTML content-type question."
   ]
 }

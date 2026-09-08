@@ -1,41 +1,9 @@
 {
   "schemaVersion": 1,
   "gaps": {
-    "DEF-100": {
-      "id": "DEF-100",
-      "title": "Optional Device IP and UA are treated as mandatory for valid media requests",
-      "category": "false-positive",
-      "severity": "medium",
-      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectdevice",
-      "code": ["packages/core/rules-request.js:259", "packages/core/rules-request-30.js"],
-      "expected": "Optional Device attributes may produce guidance; their omission must not invalidate otherwise valid requests.",
-      "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
-      "cases": [
-        "video-ctv-26-dynamic-pod",
-        "video-inapp-26-rewarded-portrait",
-        "video-web-25-inline-vast2",
-        "video-web-26-companion-vast3",
-        "video-web-26-outstream-wrapper",
-        "video-x-inapp-26-interstitial-skippable",
-        "video-x-web-42-wrapper-companion",
-        "native-x-prebid-zeroclickfraud",
-        "field-shape-device-missing",
-        "cover-context-banner-30-dooh",
-        "cover-context-audio-30-dooh",
-        "cover-context-video-30-dooh"
-      ],
-      "reviewedAt": "2026-09-08",
-      "notes": [
-        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots.",
-        "Coverage-closure cases extend this existing group; exact additional signatures and measured browser evidence are recorded per case, not counted as independent new defects.",
-        "AdCOM Device.ip/ua are optional too; 3.0 DOOH variants reproduce the same false mandatory-field behavior under request.30.context.device.* findings."
-      ],
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json",
-      "relatedBrowserDefects": ["DEF-201"]
-    },
     "DEF-101": {
       "id": "DEF-101",
-      "title": "Valid audio fixtures receive optional-device errors, video MIME warnings and video format tags",
+      "title": "Valid audio fixtures receive video MIME warnings and video format tags",
       "category": "audio-validation",
       "severity": "high",
       "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectaudio",
@@ -65,7 +33,8 @@
       "reviewedAt": "2026-09-08",
       "notes": [
         "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots.",
-        "Coverage-closure cases extend this existing group; exact additional signatures and measured browser evidence are recorded per case, not counted as independent new defects."
+        "Coverage-closure cases extend this existing group; exact additional signatures and measured browser evidence are recorded per case, not counted as independent new defects.",
+        "2026-09-08 (021): the optional-device ERRORs that used to accompany these cases were resolved by ADR-016; the recorded signatures now carry only the audio-specific deviations."
       ],
       "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json",
       "relatedBrowserDefects": ["DEF-201"]
@@ -80,22 +49,6 @@
       "expected": "Audio protocols 9 and 10 negotiate DAAST 1.0 inline/Wrapper and must yield the DAAST protocol family.",
       "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps. Browser (extension case audio-x-daast-inline-podcast): a <DAAST> document is classified as markup and framed as HTML text because no DAAST detector exists; expected the inert audio-document text view.",
       "cases": ["audio-daast-26-request-only", "audio-x-daast-inline-podcast"],
-      "reviewedAt": "2026-09-07",
-      "notes": [
-        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots."
-      ],
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
-    },
-    "DEF-103": {
-      "id": "DEF-103",
-      "title": "DOOH-only request without optional Device object is rejected",
-      "category": "false-positive",
-      "severity": "medium",
-      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidrequest",
-      "code": ["packages/core/rules-request.js:259"],
-      "expected": "A valid DOOH-only BidRequest does not require the optional Device object.",
-      "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
-      "cases": ["banner-dooh-26-screen"],
       "reviewedAt": "2026-09-07",
       "notes": [
         "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots."
@@ -297,23 +250,6 @@
       "reviewedAt": "2026-09-07",
       "notes": [
         "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots."
-      ],
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
-    },
-    "DEF-114": {
-      "id": "DEF-114",
-      "title": "Valid no-bid empty seatbid without optional nbr is rejected",
-      "category": "no-bid",
-      "severity": "medium",
-      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidresponse",
-      "code": ["packages/core/rules-response.js:90", "packages/core/crosscheck.js"],
-      "expected": "No-bid BidResponse can have empty seatbid and optional nbr; its auction id is still meaningful and it must not be treated as a missing response.",
-      "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
-      "cases": ["nobid-empty-seatbid"],
-      "reviewedAt": "2026-09-07",
-      "notes": [
-        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots.",
-        "Independent review checked section 4.1 plus the 4.2.1 field table; the 4.2.1 prose alone lists 204/nbr-bearing examples and is not the sole basis for the empty-seatbid oracle."
       ],
       "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
     },

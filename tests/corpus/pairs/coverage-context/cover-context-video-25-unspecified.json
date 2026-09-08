@@ -170,21 +170,5 @@
     "http": {
       "status": 200
     }
-  },
-  "knownGap": {
-    "id": "DEF-302",
-    "layers": ["core", "http", "browser"],
-    "note": "Normative expectations are unchanged. Core, real HTTP and browser separately reproduced these exact deviations during coverage closure on 2026-09-08.",
-    "matches": {
-      "core": [
-        "^request: findings above warning: request\\.device_required\\[error\\]@device, request\\.device\\.ip_required\\[error\\]@device\\.ip, request\\.device\\.ua_required\\[error\\]@device\\.ua, request\\.no_site_or_app\\[error\\]@site/app$"
-      ],
-      "http": [
-        "^request: findings above warning: request\\.device_required\\[error\\]@device, request\\.device\\.ip_required\\[error\\]@device\\.ip, request\\.device\\.ua_required\\[error\\]@device\\.ua, request\\.no_site_or_app\\[error\\]@site/app$"
-      ],
-      "browser": [
-        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.device_required\\[error\\]@device,\\ request\\.device\\.ip_required\\[error\\]@device\\.ip,\\ request\\.device\\.ua_required\\[error\\]@device\\.ua,\\ request\\.no_site_or_app\\[error\\]@site/app$"
-      ]
-    }
   }
 }

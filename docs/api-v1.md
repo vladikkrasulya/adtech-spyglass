@@ -76,15 +76,15 @@ finding text and now receives English.
       "confidence": 0.3, // 0..1
       "signals": [], // field-level evidence for the detection
     },
-    "status": "errors", // "invalid" | "errors" | "warnings" | "clean"
+    "status": "warnings", // "invalid" | "errors" | "warnings" | "clean"
     "findings": [
       {
         "id": "request.device_required", // stable rule id
-        "level": "error", // "error" | "warning" | "info" | "question"
+        "level": "warning", // "error" | "warning" | "info" | "question"
         "path": "device", // JSON path into the payload ('' = root)
         "params": {}, // values interpolated into msg
         "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3218-object-device", // URL or null
-        "msg": "No device block. …", // localized human message
+        "msg": "No device object. …", // localized human message
       },
     ],
   },

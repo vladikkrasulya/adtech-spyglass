@@ -19,9 +19,12 @@ const { run, EXIT_OK, EXIT_FINDINGS, EXIT_USAGE } = require('../packages/cli/lib
 const BIN = path.join(__dirname, '..', 'packages', 'cli', 'bin', 'ortbtools.js');
 
 // Minimal-but-parseable payloads. The request is deliberately incomplete so
-// validate yields errors (deterministic exit-1 material); the pair is
-// consistent so crosscheck yields warn/ok only (deterministic exit-0).
-const REQ = { id: '1', imp: [{ id: '1', banner: { w: 300, h: 250 } }], at: 1 };
+// validate yields errors (deterministic exit-1 material): the sizeless banner
+// is an ERROR (imp.banner.size_required), while the missing site/app and
+// device are only WARNINGs since 021 — §3.2.1 lists them as recommended. The
+// pair is consistent so crosscheck yields warn/ok only (deterministic
+// exit-0): the size check only fires for a bid that declares w/h.
+const REQ = { id: '1', imp: [{ id: '1', banner: {} }], at: 1 };
 const RES = {
   id: '1',
   seatbid: [{ bid: [{ id: 'b1', impid: '1', price: 1.2, adm: '<div></div>' }] }],
@@ -47,6 +50,7 @@ test('validate: incomplete request → findings printed, exit 1', () => {
   assert.strictEqual(code, EXIT_FINDINGS);
   const out = io.outLines.join('\n');
   assert.match(out, /BidRequest/);
+  assert.match(out, /imp\.banner\.size_required/);
   assert.match(out, /request\.device_required/);
   assert.match(out, /\d+ finding\(s\)/);
 });

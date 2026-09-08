@@ -83,7 +83,7 @@
     "OpenRTB object-model requirements require at least one Banner, Video, Audio or Native object. A widget/zone extension alone does not satisfy that baseline requirement; imp.format_required is an expected error under both the IAB baseline and the current response-focused inpage-push dialect. The vendor format-tag/preview gap is separate from this correct diagnostic."
   ],
   "notes": [
-    "Uses a minimal App object (id/name/bundle) per the pattern already established in the audio in-app corpus, with device.ua/ip supplied so this case does not additionally exercise the unrelated optional-Device-attributes gap (DEF-100)."
+    "Uses a minimal App object (id/name/bundle) per the pattern already established in the audio in-app corpus, with device.ua/ip supplied so this case does not additionally exercise the unrelated optional-Device-attributes gap (DEF-100, resolved by 021 on 2026-09-08: those findings are warnings now)."
   ],
   "expect": {
     "request": {

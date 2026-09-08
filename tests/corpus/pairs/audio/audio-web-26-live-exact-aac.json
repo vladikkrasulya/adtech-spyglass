@@ -176,18 +176,15 @@
     "note": "Audio VAST and audio MediaFiles must remain valid and be identified as audio; optional request Device attributes do not invalidate the pair.",
     "matches": {
       "core": [
-        "^request:\\ findings\\ above\\ warning:\\ request\\.device\\.ip_required\\[error\\]@device\\.ip,\\ request\\.device\\.ua_required\\[error\\]@device\\.ua$",
         "^response:\\ forbidden\\ finding\\ present\\ vast\\.mediafile_type_invalid\\ →\\ vast\\.mediafile_type_invalid\\[warning\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$",
         "^format\\.formats:\\ expected\\ \\[audio\\],\\ got\\ \\[audio,\\ video\\]$"
       ],
       "http": [
-        "^request:\\ findings\\ above\\ warning:\\ request\\.device\\.ip_required\\[error\\]@device\\.ip,\\ request\\.device\\.ua_required\\[error\\]@device\\.ua$",
         "^response:\\ forbidden\\ finding\\ present\\ vast\\.mediafile_type_invalid\\ →\\ vast\\.mediafile_type_invalid\\[warning\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$",
         "^format\\.formats:\\ expected\\ \\[audio\\],\\ got\\ \\[audio,\\ video\\]$"
       ],
       "browser": [
         "^browser\\.row:\\ forbidden\\ response\\ vast\\.mediafile_type_invalid$",
-        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.device\\.ip_required\\[error\\]@device\\.ip,\\ request\\.device\\.ua_required\\[error\\]@device\\.ua$",
         "^browser\\.response:\\ forbidden\\ finding\\ present\\ vast\\.mediafile_type_invalid\\ →\\ vast\\.mediafile_type_invalid\\[warning\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$",
         "^browser\\.format\\.formats:\\ expected\\ \\[audio\\],\\ got\\ \\[audio,\\ video\\]$"
       ]

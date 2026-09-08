@@ -16,30 +16,6 @@
         "Normative assertion authored from the OpenRTB 2.6 §3.2.3 Regs field table before execution; the known-gap signature documents the observed absence of any finding, not an expected output snapshot.",
         "packages/core/crosscheck.js never reads regs.coppa at all, so this is a request-validation-only gap, confirmed by the case's own crosscheck assertions passing cleanly (identical to the unmodified base pair)."
       ]
-    },
-    "DEF-302": {
-      "id": "DEF-302",
-      "title": "Request without site or app is rejected although OpenRTB marks both as recommended",
-      "category": "false-positive",
-      "severity": "medium",
-      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3.2.1",
-      "code": ["packages/core/rules-request.js"],
-      "expected": "OpenRTB 2.5/2.6 §3.2.1 lists site and app as recommended; a request carrying neither remains valid and may receive guidance, not an error.",
-      "actual": "Core emits request.no_site_or_app at ERROR and the request status becomes errors.",
-      "cases": [
-        "field-shape-no-site-or-app",
-        "cover-context-video-25-unspecified",
-        "cover-context-native-26-unspecified",
-        "cover-context-banner-25-unspecified",
-        "cover-context-video-26-unspecified",
-        "cover-context-native-25-unspecified",
-        "cover-context-banner-26-unspecified"
-      ],
-      "reviewedAt": "2026-09-08",
-      "notes": [
-        "Same class as DEF-100 (optional Device treated as mandatory).",
-        "Coverage-closure cases extend this existing group; exact additional signatures and measured browser evidence are recorded per case, not counted as independent new defects."
-      ]
     }
   }
 }

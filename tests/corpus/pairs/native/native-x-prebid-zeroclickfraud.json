@@ -100,7 +100,7 @@
     "The response adm declares native ver 1.2 while the request declared ver 1.1 on the same fixture — a genuine, faithful-to-source version drift from the real adapter, not an authoring mistake; neither side's version is asserted here.",
     "No imp.bidfloor is present in the source fixture (a real, common vendor shape) — crosscheck.js defaults the floor to 0 and still emits crosscheck.bid.no_floor_set (WARN) once per imp; the numeric compare still runs against that defaulted floor.",
     "No image asset is returned (asset 1 is optional and omitted) — a title+description text-only card is the intended complete creative, not a failed image load.",
-    "The source fixture's device object carries only ip, no ua — a real, common vendor shape (OpenRTB 2.5/2.6 §3.2.18 device.ua is optional). packages/core/rules-request.js unconditionally requires device.ua at ERROR for any non-DOOH request; this is the same underlying cause already recorded as DEF-100 for video/audio pairs, extended here to native. See knownGap.",
+    "The source fixture's device object carries only ip, no ua — a real, common vendor shape (OpenRTB 2.5/2.6 §3.2.18 device.ua is optional). packages/core/rules-request.js used to require device.ua at ERROR for any non-DOOH request (DEF-100); resolved by 021 on 2026-09-08 — the finding is a warning now and this case passes normatively.",
     "Browser assertions are proposed observables; this corpus has not been run in a browser for this case.",
     "Do not infer rendering from analysis.status or iframe existence alone.",
     "Inspect intended click target without following it."
@@ -172,22 +172,6 @@
     },
     "http": {
       "status": 200
-    }
-  },
-  "knownGap": {
-    "id": "DEF-100",
-    "layers": ["core", "http", "browser"],
-    "note": "The fixture's real device object carries only ip, no ua; rules-request.js requires device.ua unconditionally at ERROR for any non-DOOH request even though OpenRTB §3.2.18 makes it optional. Same recorded cause as the video/audio DEF-100 cases, now also observed on a native pair.",
-    "matches": {
-      "core": [
-        "^request: findings above warning: request\\.device\\.ua_required\\[error\\]@device\\.ua$"
-      ],
-      "http": [
-        "^request: findings above warning: request\\.device\\.ua_required\\[error\\]@device\\.ua$"
-      ],
-      "browser": [
-        "^browser\\.request: findings above warning: request\\.device\\.ua_required\\[error\\]@device\\.ua$"
-      ]
     }
   }
 }

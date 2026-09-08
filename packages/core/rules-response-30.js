@@ -85,8 +85,10 @@ function validateResponseBody30(resp, base, findings) {
     findings.push(F('response.30.id_required', LEVELS.ERROR, at('id')));
   }
 
-  // R4. seatbid[] — same role as 2.x. Empty seatbid + nbr is no-bid.
-  //     Both missing → ERROR (no signal at all).
+  // R4. seatbid[] — same role as 2.x. OpenRTB 3.0 Object: Response types
+  //     seatbid as "1+ required if a bid is to be made" and nbr as optional,
+  //     so an empty seatbid is a no-bid whether or not a reason travels with
+  //     it: INFO either way. Both missing → ERROR (no signal at all). (021)
   const hasSeatbid = Array.isArray(resp.seatbid);
   const hasNbr = isNum(resp.nbr);
   if (!hasSeatbid && !hasNbr) {
@@ -94,7 +96,7 @@ function validateResponseBody30(resp, base, findings) {
   } else if (hasNbr && (!hasSeatbid || !resp.seatbid.length)) {
     findings.push(F('response.30.no_bid', LEVELS.INFO, at('nbr'), { nbr: resp.nbr }));
   } else if (hasSeatbid && !resp.seatbid.length) {
-    findings.push(F('response.30.seatbid_empty_no_nbr', LEVELS.ERROR, at('seatbid')));
+    findings.push(F('response.30.seatbid_empty_no_nbr', LEVELS.INFO, at('seatbid')));
   }
 
   // R5. Per-seatbid → per-bid structural checks (id + item ref + price).

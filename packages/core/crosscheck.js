@@ -38,11 +38,13 @@ function crosscheck(req, res, _ctx) {
   if (!resView) {
     return [C('crosscheck.no_response', false, CROSS_LEVELS.CRIT, 'res')];
   }
-  // No-bid response (oRTB §3.3.1: just `id` + `nbr` reason code) still
-  // carries the request id and that id MUST match — a no-bid for the
-  // wrong request id is a real exchange bug. Run the id check FIRST,
-  // then early-return on no-bid so the rest of crosscheck (bcat / badv /
-  // floor compare) doesn't run against an absent seatbid.
+  // No-bid response (oRTB 2.6 §4.1: an empty response, or a BidResponse
+  // carrying just `id` + an `nbr` reason code; §4.2.1 types seatbid as "1+
+  // required if a bid is to be made") still carries the request id and that
+  // id MUST match — a no-bid for the wrong request id is a real exchange
+  // bug. Run the id check FIRST, then early-return on no-bid so the rest of
+  // crosscheck (bcat / badv / floor compare) doesn't run against an absent
+  // seatbid.
   const idFinding =
     resView.id === reqView.id
       ? C('crosscheck.id_match', true, CROSS_LEVELS.OK, `${resView.base}id`, { id: reqView.id })
@@ -52,11 +54,16 @@ function crosscheck(req, res, _ctx) {
         });
 
   const seatbid = resView.seatbid;
-  if (typeof resView.nbr === 'number' && (!Array.isArray(seatbid) || !seatbid.length)) {
-    return [idFinding];
-  }
   if (!Array.isArray(seatbid) || !seatbid.length) {
-    return [C('crosscheck.no_response', false, CROSS_LEVELS.CRIT, 'res')];
+    // An empty seatbid array is a no-bid in its own right, with or without
+    // an `nbr` reason (021 — the audit recorded the old CRIT as DEF-114).
+    // Only a response that carries neither a seatbid array nor an nbr has no
+    // bid signal at all; that is the one case crosscheck calls "no response",
+    // matching the validator's response.seatbid_or_nbr_required.
+    const noBidSignal = typeof resView.nbr === 'number' || Array.isArray(seatbid);
+    return noBidSignal
+      ? [idFinding]
+      : [C('crosscheck.no_response', false, CROSS_LEVELS.CRIT, 'res')];
   }
 
   // 1. id match (already computed above, push now so order matches pre-fix)

@@ -174,16 +174,9 @@
     "layers": ["core", "http", "browser"],
     "note": "Audio VAST and audio MediaFiles must remain valid and be identified as audio; optional request Device attributes do not invalidate the pair.",
     "matches": {
-      "core": [
-        "^request:\\ findings\\ above\\ warning:\\ request\\.device\\.ip_required\\[error\\]@device\\.ip,\\ request\\.device\\.ua_required\\[error\\]@device\\.ua$",
-        "^format\\.formats:\\ expected\\ \\[audio\\],\\ got\\ \\[audio,\\ video\\]$"
-      ],
-      "http": [
-        "^request:\\ findings\\ above\\ warning:\\ request\\.device\\.ip_required\\[error\\]@device\\.ip,\\ request\\.device\\.ua_required\\[error\\]@device\\.ua$",
-        "^format\\.formats:\\ expected\\ \\[audio\\],\\ got\\ \\[audio,\\ video\\]$"
-      ],
+      "core": ["^format\\.formats:\\ expected\\ \\[audio\\],\\ got\\ \\[audio,\\ video\\]$"],
+      "http": ["^format\\.formats:\\ expected\\ \\[audio\\],\\ got\\ \\[audio,\\ video\\]$"],
       "browser": [
-        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.device\\.ip_required\\[error\\]@device\\.ip,\\ request\\.device\\.ua_required\\[error\\]@device\\.ua$",
         "^browser\\.format\\.formats:\\ expected\\ \\[audio\\],\\ got\\ \\[audio,\\ video\\]$"
       ]
     }

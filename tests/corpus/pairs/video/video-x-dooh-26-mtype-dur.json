@@ -106,7 +106,7 @@
   },
   "specNotes": [
     "packages/core/rules-request.js downgrades device.ip_required/device.ua_required from ERROR to INFO whenever the request is DOOH-only (channels.length===1 && 'dooh'); this case exercises that path for a video bid rather than banner-dooh-26-screen's display bid, so no known gap is recorded here.",
-    "device MUST still be present as an object — an entirely absent device still triggers request.device_required (DEF-103); this case supplies a bare {devicetype:8} object precisely to avoid that unrelated failure while still testing the ip/ua downgrade.",
+    "device MUST still be present as an object — an entirely absent device triggered request.device_required at error level when this case was authored (DEF-103, resolved by 021 on 2026-09-08: warning now); this case supplies a bare {devicetype:8} object precisely to avoid that unrelated failure while still testing the ip/ua downgrade.",
     "mtype=2 and bid.dur=12 both fall inside imp.video.minduration/maxduration (10-15); neither field is validated by packages/core/rules-response.js today (no finding either way).",
     "Validity describes protocol structure and declared constraints; generated media bytes must be checked against declared MIME/duration before playback tests.",
     "Current Inspector contract displays VAST as inert XML; text visibility must not be counted as creative rendering or media playback.",

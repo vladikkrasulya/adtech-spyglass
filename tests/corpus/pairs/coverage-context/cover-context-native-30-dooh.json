@@ -247,19 +247,16 @@
     "note": "Normative expectations are unchanged. Core, real HTTP and browser separately reproduced these exact deviations during coverage closure on 2026-09-08.",
     "matches": {
       "core": [
-        "^request: findings above warning: request\\.30\\.context\\.device\\.ip_required\\[error\\]@openrtb\\.request\\.context\\.device\\.ip, request\\.30\\.context\\.device\\.ua_required\\[error\\]@openrtb\\.request\\.context\\.device\\.ua$",
         "^response: findings above warning: response\\.30\\.bid\\.display\\.markup_required\\[error\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad\\.display$",
         "^crosscheck: missing crosscheck\\.bid\\.native_complete @ openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad \\[ok\\] — got crosscheck\\.auction\\.summary\\[ok\\]@auction, crosscheck\\.cur_allowed\\[ok\\]@openrtb\\.response\\.cur, crosscheck\\.id_match\\[ok\\]@openrtb\\.response\\.id, crosscheck\\.bid\\.impid_resolved\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.item, crosscheck\\.bid\\.above_floor\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
         "^format\\.formats: expected \\[native\\], got \\[banner\\]$"
       ],
       "http": [
-        "^request: findings above warning: request\\.30\\.context\\.device\\.ip_required\\[error\\]@openrtb\\.request\\.context\\.device\\.ip, request\\.30\\.context\\.device\\.ua_required\\[error\\]@openrtb\\.request\\.context\\.device\\.ua$",
         "^response: findings above warning: response\\.30\\.bid\\.display\\.markup_required\\[error\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad\\.display$",
         "^crosscheck: missing crosscheck\\.bid\\.native_complete @ openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad \\[ok\\] — got crosscheck\\.auction\\.summary\\[ok\\]@auction, crosscheck\\.cur_allowed\\[ok\\]@openrtb\\.response\\.cur, crosscheck\\.id_match\\[ok\\]@openrtb\\.response\\.id, crosscheck\\.bid\\.impid_resolved\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.item, crosscheck\\.bid\\.above_floor\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
         "^format\\.formats: expected \\[native\\], got \\[banner\\]$"
       ],
       "browser": [
-        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.30\\.context\\.device\\.ip_required\\[error\\]@openrtb\\.request\\.context\\.device\\.ip,\\ request\\.30\\.context\\.device\\.ua_required\\[error\\]@openrtb\\.request\\.context\\.device\\.ua$",
         "^browser\\.response:\\ findings\\ above\\ warning:\\ response\\.30\\.bid\\.display\\.markup_required\\[error\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad\\.display$",
         "^browser\\.crosscheck:\\ missing\\ crosscheck\\.bid\\.native_complete\\ @\\ openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad\\ \\[ok\\]\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@openrtb\\.response\\.cur,\\ crosscheck\\.id_match\\[ok\\]@openrtb\\.response\\.id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.item,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
         "^browser\\.format\\.formats:\\ expected\\ \\[native\\],\\ got\\ \\[banner\\]$",

@@ -144,13 +144,13 @@ test('empty imp[] is error "request.imp_required"', () => {
   assert.ok(findById(findings, 'request.imp_required'));
 });
 
-test('missing site AND app is error "request.no_site_or_app"', () => {
+test('missing site AND app is warning "request.no_site_or_app" (§3.2.1: recommended)', () => {
   const req = validRequest();
   delete req.site;
   delete req.app;
   const { findings, status } = validate(req);
-  assert.equal(status, 'errors');
-  assert.ok(findById(findings, 'request.no_site_or_app'));
+  assert.equal(status, 'warnings');
+  assert.equal(findById(findings, 'request.no_site_or_app').level, 'warning');
 });
 
 test('both site AND app present is warning "request.site_and_app_both"', () => {
@@ -733,12 +733,15 @@ test('crosscheck: non-pop bid does NOT trigger adomain_landing_* check', () => {
   assert.ok(!findings.some((f) => f.id.startsWith('crosscheck.bid.pop.')));
 });
 
-test('crosscheck: empty seatbid returns single crit (crosscheck.no_response)', () => {
+test('crosscheck: empty seatbid is a no-bid — single ok id check, no crosscheck.no_response', () => {
+  // oRTB 2.6 §4.2.1 requires seatbid entries only "if a bid is to be made";
+  // an empty array is a valid no-bid, so only the id check applies (021).
   const req = validRequest();
   const res = { id: 'req-1', seatbid: [] };
   const findings = crosscheck(req, res);
   assert.equal(findings.length, 1);
-  assert.equal(findings[0].id, 'crosscheck.no_response');
+  assert.equal(findings[0].id, 'crosscheck.id_match');
+  assert.equal(findings[0].ok, true);
 });
 
 test('crosscheck findings carry localized msg', () => {
@@ -1244,4 +1247,83 @@ test('013 US2: linkTtl draws no findings (FR-008)', () => {
   for (const f of r.findings) {
     assert.ok(!String(f.path).includes('linkTtl'), `finding on linkTtl: ${f.id}`);
   }
+});
+
+// ── 021: recommended fields are guidance, not errors (ADR-016) ────────────
+//
+// oRTB 2.6 §3.2.1 lists site/app/device as "recommended"; §3.2.18 types
+// device.ua/ip as optional strings; §4.2.1 requires seatbid entries only "if a
+// bid is to be made" and leaves nbr optional. None of these omissions may roll
+// the verdict up to `errors`.
+
+test('021: absent device is one warning, not an error cascade (§3.2.1: recommended)', () => {
+  const req = validRequest();
+  delete req.device;
+  const { findings, status } = validate(req);
+  assert.equal(status, 'warnings');
+  assert.equal(findById(findings, 'request.device_required').level, 'warning');
+  for (const id of [
+    'request.device.ip_required',
+    'request.device.ua_required',
+    'request.device.language_missing',
+  ]) {
+    assert.equal(findById(findings, id), undefined, `${id} must not restate the absent object`);
+  }
+});
+
+test('021: device without ip/ua on a site request is warning-level guidance (§3.2.18: optional)', () => {
+  const req = validRequest();
+  delete req.device.ip;
+  delete req.device.ua;
+  const { findings, status } = validate(req);
+  assert.equal(status, 'warnings');
+  assert.equal(findById(findings, 'request.device.ip_required').level, 'warning');
+  assert.equal(findById(findings, 'request.device.ua_required').level, 'warning');
+});
+
+test('021: a request with neither channel nor device is still valid — warnings only', () => {
+  const req = validRequest();
+  delete req.site;
+  delete req.device;
+  const { findings, status } = validate(req);
+  assert.equal(status, 'warnings');
+  assert.deepEqual(
+    findings.filter((f) => f.level === 'error').map((f) => f.id),
+    [],
+  );
+  assert.equal(findById(findings, 'request.no_site_or_app').level, 'warning');
+  assert.equal(findById(findings, 'request.device_required').level, 'warning');
+});
+
+test('021: empty seatbid without nbr is a no-bid — info, clean, crosscheck keeps the id check', () => {
+  const req = validRequest();
+  const res = { id: req.id, seatbid: [] };
+  const v = validate(res);
+  assert.equal(v.type, TYPES.ORTB_RESPONSE);
+  assert.equal(v.status, 'clean');
+  assert.equal(findById(v.findings, 'response.seatbid_empty_no_nbr').level, 'info');
+  assert.equal(findById(v.findings, 'response.seatbid_or_nbr_required'), undefined);
+  assert.deepEqual(
+    crosscheck(req, res).map((c) => c.id),
+    ['crosscheck.id_match'],
+  );
+});
+
+test('021: an empty-seatbid no-bid for the wrong request id is still an id mismatch', () => {
+  const req = validRequest();
+  const cross = crosscheck(req, { id: 'someone-else', seatbid: [] });
+  assert.deepEqual(
+    cross.map((c) => c.id),
+    ['crosscheck.id_mismatch'],
+  );
+  assert.equal(cross[0].ok, false);
+});
+
+test('021: a response with neither seatbid nor nbr keeps the no-signal error and no_response', () => {
+  const req = validRequest();
+  const res = { id: req.id, cur: 'USD' };
+  assert.deepEqual(
+    crosscheck(req, res).map((c) => c.id),
+    ['crosscheck.no_response'],
+  );
 });

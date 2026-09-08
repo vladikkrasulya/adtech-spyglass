@@ -174,7 +174,7 @@ test('client-hints: severity is warning, never error', () => {
 });
 
 test('client-hints: returns empty array when device is missing entirely', () => {
-  // The legacy rules already flag this as request.device_required (error).
+  // The legacy rules already flag this as request.device_required (warning since 021).
   // Plugin shouldn't pile on with phantom warnings about missing sua etc.
   const findings = clientHints.validate({});
   assert.deepEqual(findings, []);

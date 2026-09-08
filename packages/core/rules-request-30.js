@@ -111,8 +111,16 @@ function validateContext30(context, findings) {
       }),
     );
   } else if (channels.length === 0) {
-    findings.push(F('request.30.context.no_site_or_app', LEVELS.ERROR, bp));
+    // AdCOM 1.0 describes site/app/dooh as the way to qualify inventory, and
+    // OpenRTB 3.0 only recommends the context object itself (R6 above), so a
+    // context without a channel cannot outrank a missing context: guidance,
+    // one grade down from the 2.x rule's old ERROR. (021, ADR-016.)
+    findings.push(F('request.30.context.no_site_or_app', LEVELS.WARNING, bp));
   }
+  // A DOOH-only context relaxes the client-identity checks the same way the
+  // 2.x rule does (rules-request.js): a screen has no browser agent and its
+  // egress address says nothing about the audience in front of it.
+  const doohOnly = channels.length === 1 && channels[0] === 'dooh';
 
   // 2. site
   if (context.site) {
@@ -134,18 +142,37 @@ function validateContext30(context, findings) {
     }
   }
 
-  // 4. device
+  // 4. device — AdCOM 1.0 Object: Device marks `ua` as recommended and `ip`
+  //    as a plain optional string; the object itself is one of the
+  //    recommended context objects. Absence is guidance (WARNING), a wrong
+  //    type is still a defect (ERROR). DOOH-only contexts drop the two
+  //    client-identity findings to INFO. (021, ADR-016 — DEF-100 3.0 variants.)
   if (!context.device) {
-    findings.push(F('request.30.context.device_required', LEVELS.ERROR, `${bp}.device`));
+    findings.push(F('request.30.context.device_required', LEVELS.WARNING, `${bp}.device`));
   } else if (!isObj(context.device)) {
     findings.push(F('request.30.context.device_invalid', LEVELS.ERROR, `${bp}.device`));
   } else {
     const dev = context.device;
+    // The level stays inline at each call site: severity-registry.js reads
+    // `cond ? LEVELS.A : LEVELS.B` as the union of both branches, but cannot
+    // follow a variable.
     if (!dev.ip && !dev.ipv6) {
-      findings.push(F('request.30.context.device.ip_required', LEVELS.ERROR, `${bp}.device.ip`));
+      findings.push(
+        F(
+          'request.30.context.device.ip_required',
+          doohOnly ? LEVELS.INFO : LEVELS.WARNING,
+          `${bp}.device.ip`,
+        ),
+      );
     }
     if (!isStr(dev.ua)) {
-      findings.push(F('request.30.context.device.ua_required', LEVELS.ERROR, `${bp}.device.ua`));
+      findings.push(
+        F(
+          'request.30.context.device.ua_required',
+          doohOnly ? LEVELS.INFO : LEVELS.WARNING,
+          `${bp}.device.ua`,
+        ),
+      );
     }
     if (dev.geo) {
       if (!isObj(dev.geo)) {

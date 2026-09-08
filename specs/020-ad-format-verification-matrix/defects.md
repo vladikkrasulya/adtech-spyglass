@@ -505,3 +505,10 @@ Product contract: [HTTP API errors](../../docs/api-v1.md) (`POST /api/analyze`: 
 - **DEF-193 (retired)**: `SeatBid.group=1` applies to the bids in that seat's group; it does not require bidding on every impression offered by the request. The partial-group case is a positive control. See [SeatBid](https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectseatbid).
 - **DEF-196 (retired)**: Native 1.2 §4.1 explicitly describes exchange compatibility with a direct JSON object. `field-shape-native-request-object` is a positive compatibility case; the product has no separate strict wire-type profile. An optional diagnostic for a future strict profile would be a proposal, not this audit's product defect. The former Native 1.2 “§3.2.9” reference was incorrect. See [Native request structure](https://github.com/InteractiveAdvertisingBureau/Native-Ads/blob/dd45d0733d96710981541ea213f4452952f41c40/OpenRTB-Native-Ads-Specification-Final-1.2.md#4-1).
 - **DEF-199 (merged into DEF-303)**: both IDs described the same oversized-body transport failure and the same `encoding-request-body-oversized` case. Only DEF-303 is active.
+
+## Resolutions
+
+Product fixes are recorded here by pointer only; the audit text above is left as written.
+
+- **DEF-100, DEF-103, DEF-302 (resolved 2026-09-08 by [021](../021-recommended-fields-guidance/spec.md), ADR-016, Core 0.39.0)**: the 2.x and 3.0 request rules now treat the distribution channel and the Device object as recommended (warning) and `ip`/`ua` as optional guidance (warning on site/app, info on DOOH-only). Their 20 cases pass normatively; the ledger records are removed. The device lines were also removed from the recorded signatures of seven DEF-101 cases and one DEF-151 case, whose remaining deviations are unchanged.
+- **DEF-114 (resolved 2026-09-08 by 021)**: an empty `seatbid` array without `nbr` is an info-level no-bid on both protocol lines, and crosscheck keeps only the id check for it. Its case passes normatively; the record is removed.

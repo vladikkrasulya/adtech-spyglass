@@ -20,7 +20,8 @@ const B = require('./corpus/lib/browser');
 
 const PIXEL_PNG =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
-// Avoid the separately recorded optional-device validation defect DEF-100.
+// A complete device keeps the fixture free of the device guidance findings (warnings since 021),
+// so the scenarios measure accessibility rather than validator output.
 const DEVICE = { ip: '203.0.113.1', ua: 'Mozilla/5.0 (compatible; ortbtools-a11y-audit)' };
 
 // Populate only after reproducing and reviewing the exact browser evidence.

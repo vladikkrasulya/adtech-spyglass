@@ -76,7 +76,13 @@ function validateRequest(req, ctx) {
   // site+app collision).
   const channels = ['site', 'app', 'dooh'].filter((k) => req[k]);
   if (channels.length === 0) {
-    findings.push(F('request.no_site_or_app', LEVELS.ERROR, 'site/app'));
+    // oRTB 2.6 §3.2.1 lists `site` and `app` as "object; recommended" and
+    // `dooh` as a plain "object" — none of the three is required, so a
+    // request without a channel is spec-valid. It is still the single most
+    // useful thing a bidder is missing (where does the creative render?), so
+    // the finding stays, one grade down: guidance, not a rejection. (021,
+    // ADR-016 — the audit recorded the ERROR as DEF-302.)
+    findings.push(F('request.no_site_or_app', LEVELS.WARNING, 'site/app'));
   } else if (channels.length > 1) {
     // oRTB §3.2.1: "site OR app, never both". Some SSPs reject; others
     // silently pick one and discard the other's targeting context.
@@ -255,57 +261,71 @@ function validateRequest(req, ctx) {
   }
 
   // ── Device ───────────────────────────────────────────────────────────────
-  const dev = req.device || {};
-  if (!isObj(req.device)) findings.push(F('request.device_required', LEVELS.ERROR, 'device'));
-  // `ip` and `ua` are how a bidder reaches a *client*: geo and fraud scoring
-  // off the address, browser and OS off the agent string. A DOOH panel has
-  // neither in the sense those checks assume. The spec hedges on the agent
-  // itself (§3.2.18 device.ua: "can be omitted if the device is not a
-  // browser"), and a roadside billboard's egress IP says nothing about the
-  // audience standing in front of it — `dooh.venuetype` and `device.geo` are
-  // what carry that, and the 2.6 DOOH samples send exactly those.
   //
-  // So the level moves rather than the rule: on a DOOH-only request these
-  // drop to INFO. Dropping the checks entirely would lose the signal for an
-  // operator who did mean to send an address; leaving them at ERROR is what
-  // made every spec-shaped DOOH request roll up to "errors" and hid the
-  // findings that were actually about the payload.
-  if (!dev.ip && !dev.ipv6) {
-    findings.push(
-      F('request.device.ip_required', doohOnly ? LEVELS.INFO : LEVELS.ERROR, 'device.ip'),
-    );
-  }
-  if (!isStr(dev.ua)) {
-    findings.push(
-      F('request.device.ua_required', doohOnly ? LEVELS.INFO : LEVELS.ERROR, 'device.ua'),
-    );
-  }
-  if (dev.geo && dev.geo.country && !ISO_3166_ALPHA3.test(dev.geo.country)) {
-    findings.push(
-      F('request.device.geo.country_invalid', LEVELS.WARNING, 'device.geo.country', {
-        country: dev.geo.country,
-      }),
-    );
-  }
-  if (dev.language && !ISO_639_ALPHA2.test(dev.language)) {
-    findings.push(
-      F('request.device.language_invalid', LEVELS.WARNING, 'device.language', {
-        language: dev.language,
-      }),
-    );
-  } else if (!dev.language) {
-    findings.push(F('request.device.language_missing', LEVELS.INFO, 'device.language'));
-  }
-  if (isObj(req.device) && 'ifa' in req.device) {
-    if (!isStr(dev.ifa) || !dev.ifa.length) {
-      findings.push(F('request.device.ifa_invalid', LEVELS.ERROR, 'device.ifa'));
+  // oRTB 2.6 §3.2.1 lists `device` as "object; recommended" — the same
+  // qualifier as `site`/`app`, one grade below `imp`'s "required". A request
+  // without it is spec-valid, so its absence is guidance (WARNING), never a
+  // rejection. Inside the object, §3.2.18 types `ua` and `ip` as plain
+  // optional strings; the only normative lean on them is the compatibility
+  // note that "exchanges are recommended to always populate `ua`". They stay
+  // WARNING for a site/app request because they are the two client-identity
+  // signals bidders actually key on (geo, fraud scoring, browser/OS), and
+  // drop to INFO for a DOOH-only request (below). When the whole object is
+  // absent only `request.device_required` fires: the per-field findings
+  // would restate the same omission three times. (021, ADR-016 — the audit
+  // recorded the ERRORs as DEF-100 and DEF-103.)
+  if (!isObj(req.device)) {
+    findings.push(F('request.device_required', LEVELS.WARNING, 'device'));
+  } else {
+    const dev = req.device;
+    // `ip` and `ua` are how a bidder reaches a *client*: geo and fraud scoring
+    // off the address, browser and OS off the agent string. A DOOH panel has
+    // neither in the sense those checks assume. The spec hedges on the agent
+    // itself (§3.2.18 device.ua: "can be omitted if the device is not a
+    // browser"), and a roadside billboard's egress IP says nothing about the
+    // audience standing in front of it — `dooh.venuetype` and `device.geo` are
+    // what carry that, and the 2.6 DOOH samples send exactly those.
+    //
+    // So the level moves rather than the rule: on a DOOH-only request these
+    // drop to INFO. Dropping the checks entirely would lose the signal for an
+    // operator who did mean to send an address.
+    if (!dev.ip && !dev.ipv6) {
+      findings.push(
+        F('request.device.ip_required', doohOnly ? LEVELS.INFO : LEVELS.WARNING, 'device.ip'),
+      );
     }
-  }
-  if (isObj(req.device) && 'lmt' in req.device) {
-    if (dev.lmt === 1) {
-      findings.push(F('request.device.lmt_enabled', LEVELS.INFO, 'device.lmt'));
-    } else if (dev.lmt !== 0) {
-      findings.push(F('request.device.lmt_invalid', LEVELS.ERROR, 'device.lmt'));
+    if (!isStr(dev.ua)) {
+      findings.push(
+        F('request.device.ua_required', doohOnly ? LEVELS.INFO : LEVELS.WARNING, 'device.ua'),
+      );
+    }
+    if (dev.geo && dev.geo.country && !ISO_3166_ALPHA3.test(dev.geo.country)) {
+      findings.push(
+        F('request.device.geo.country_invalid', LEVELS.WARNING, 'device.geo.country', {
+          country: dev.geo.country,
+        }),
+      );
+    }
+    if (dev.language && !ISO_639_ALPHA2.test(dev.language)) {
+      findings.push(
+        F('request.device.language_invalid', LEVELS.WARNING, 'device.language', {
+          language: dev.language,
+        }),
+      );
+    } else if (!dev.language) {
+      findings.push(F('request.device.language_missing', LEVELS.INFO, 'device.language'));
+    }
+    if ('ifa' in dev) {
+      if (!isStr(dev.ifa) || !dev.ifa.length) {
+        findings.push(F('request.device.ifa_invalid', LEVELS.ERROR, 'device.ifa'));
+      }
+    }
+    if ('lmt' in dev) {
+      if (dev.lmt === 1) {
+        findings.push(F('request.device.lmt_enabled', LEVELS.INFO, 'device.lmt'));
+      } else if (dev.lmt !== 0) {
+        findings.push(F('request.device.lmt_invalid', LEVELS.ERROR, 'device.lmt'));
+      }
     }
   }
 

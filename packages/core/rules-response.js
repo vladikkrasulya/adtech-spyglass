@@ -73,11 +73,13 @@ function validateResponse(res, ctx) {
 
   if (!isStr(res.id)) findings.push(F('response.id_required', LEVELS.ERROR, 'id'));
 
-  // oRTB §3.3.1 — a no-bid response is `{ id, nbr }` (no seatbid). It is
-  // a perfectly valid shape and used in production whenever the exchange
-  // can't or won't bid. Surface as INFO with the human-readable reason.
-  // If both seatbid AND nbr are absent, that's still ERROR
-  // (response.seatbid_or_nbr_required).
+  // oRTB 2.6 §4.1 — a no-bid is an empty response or a BidResponse carrying
+  // just `id` + an `nbr` reason code; §4.2.1 types `seatbid` as "1+ required
+  // if a bid is to be made" and `nbr` as optional. So `{ id, nbr }` and
+  // `{ id, seatbid: [] }` are both valid production no-bids: INFO, with the
+  // reason when one travels. If both seatbid AND nbr are absent there is no
+  // bid signal at all — that stays ERROR (response.seatbid_or_nbr_required).
+  // (021, ADR-016 — the audit recorded the empty-array ERROR as DEF-114.)
   const nbrPresent = isNum(res.nbr);
   const seatbidArr = Array.isArray(res.seatbid);
   if (!seatbidArr && !nbrPresent) {
@@ -85,9 +87,8 @@ function validateResponse(res, ctx) {
   } else if (nbrPresent && (!seatbidArr || !res.seatbid.length)) {
     findings.push(F('response.no_bid', LEVELS.INFO, 'nbr', { nbr: res.nbr }));
   } else if (seatbidArr && !res.seatbid.length) {
-    // Empty seatbid array WITHOUT nbr is structurally invalid — the spec
-    // says "use nbr to signal no-bid", an empty array is a bug.
-    findings.push(F('response.seatbid_empty_no_nbr', LEVELS.ERROR, 'seatbid'));
+    // Empty seatbid array without nbr: a no-bid that does not say why.
+    findings.push(F('response.seatbid_empty_no_nbr', LEVELS.INFO, 'seatbid'));
   }
 
   // Array.isArray, not `|| []` — on both `seatbid` and `bid` below.

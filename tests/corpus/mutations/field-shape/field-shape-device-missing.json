@@ -83,32 +83,6 @@
       "state": "success"
     }
   },
-  "knownGap": {
-    "id": "DEF-100",
-    "layers": ["core", "http", "browser"],
-    "note": "Same recorded cause as DEF-100: optional Device attributes are treated as mandatory (request.device_required at ERROR).",
-    "matches": {
-      "core": [
-        "^request: findings above warning: request\\.device_required\\[error\\]@device, request\\.device\\.ip_required\\[error\\]@device\\.ip, request\\.device\\.ua_required\\[error\\]@device\\.ua$",
-        "^request: forbidden finding present request\\.device_required \\[error\\] → request\\.device_required\\[error\\]@device$",
-        "^request: forbidden finding present request\\.device\\.ip_required \\[error\\] → request\\.device\\.ip_required\\[error\\]@device\\.ip$",
-        "^request: forbidden finding present request\\.device\\.ua_required \\[error\\] → request\\.device\\.ua_required\\[error\\]@device\\.ua$"
-      ],
-      "http": [
-        "^request: findings above warning: request\\.device_required\\[error\\]@device, request\\.device\\.ip_required\\[error\\]@device\\.ip, request\\.device\\.ua_required\\[error\\]@device\\.ua$",
-        "^request: forbidden finding present request\\.device_required \\[error\\] → request\\.device_required\\[error\\]@device$",
-        "^request: forbidden finding present request\\.device\\.ip_required \\[error\\] → request\\.device\\.ip_required\\[error\\]@device\\.ip$",
-        "^request: forbidden finding present request\\.device\\.ua_required \\[error\\] → request\\.device\\.ua_required\\[error\\]@device\\.ua$"
-      ],
-      "browser": [
-        "^browser\\.request: findings above warning: request\\.device_required\\[error\\]@device, request\\.device\\.ip_required\\[error\\]@device\\.ip, request\\.device\\.ua_required\\[error\\]@device\\.ua$",
-        "^browser\\.request: forbidden finding present request\\.device_required \\[error\\] → request\\.device_required\\[error\\]@device$",
-        "^browser\\.request: forbidden finding present request\\.device\\.ip_required \\[error\\] → request\\.device\\.ip_required\\[error\\]@device\\.ip$",
-        "^browser\\.request: forbidden finding present request\\.device\\.ua_required \\[error\\] → request\\.device\\.ua_required\\[error\\]@device\\.ua$",
-        "^browser\\.row: forbidden request request\\.device(\\.ip|\\.ua)?_required$"
-      ]
-    }
-  },
   "specNotes": [
     "Device.ip/device.ua only relax to INFO on a DOOH-only request (no site/app); this fixture keeps its site channel, so a missing Device object produces three independent ERROR findings, not one.",
     "Crosscheck never reads Device at all, so bid resolution and the floor/size verdicts are unaffected."

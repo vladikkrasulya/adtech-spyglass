@@ -211,22 +211,25 @@ test('dooh alongside site is still flagged as an ambiguous channel', () => {
   assert.equal(findById(findings, 'request.no_site_or_app'), undefined);
 });
 
-test('dooh alongside site keeps the strict device rules — a real client is claimed', () => {
+test('dooh alongside site keeps the client-identity rules at their site/app level', () => {
+  // A real client is claimed, so ip/ua stay at the site/app grade (WARNING
+  // since 021 — §3.2.18 types both as optional) rather than the DOOH INFO.
   const req = validRequest();
   req.dooh = { id: 'panel-42' };
   delete req.device.ip;
   delete req.device.ua;
   const { findings } = validate(req);
-  assert.equal(findById(findings, 'request.device.ip_required').level, 'error');
-  assert.equal(findById(findings, 'request.device.ua_required').level, 'error');
+  assert.equal(findById(findings, 'request.device.ip_required').level, 'warning');
+  assert.equal(findById(findings, 'request.device.ua_required').level, 'warning');
 });
 
-test('no channel at all is still an error, and site+app still collide', () => {
+test('no channel at all is still reported, and site+app still collide', () => {
   // The rewrite from two booleans to a channel filter must not lose either of
-  // the two answers the old shape already gave.
+  // the two answers the old shape already gave. (021 moved the missing-channel
+  // answer to WARNING — §3.2.1 lists site/app as recommended.)
   const none = validRequest();
   delete none.site;
-  assert.ok(findById(validate(none).findings, 'request.no_site_or_app'));
+  assert.equal(findById(validate(none).findings, 'request.no_site_or_app').level, 'warning');
 
   const both = validRequest();
   both.app = { bundle: 'com.example.app' };

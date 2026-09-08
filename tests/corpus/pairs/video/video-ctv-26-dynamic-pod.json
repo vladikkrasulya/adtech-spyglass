@@ -219,20 +219,11 @@
     }
   },
   "knownGap": {
-    "id": "DEF-100",
-    "layers": ["core", "http", "browser"],
-    "note": "Optional Device attributes may produce guidance; their omission must not invalidate otherwise valid requests.",
+    "id": "DEF-201",
+    "layers": ["browser"],
+    "note": "The Inspector previews only the first bid; seat[0].bid[1] of this two-bid dynamic pod cannot be selected or inspected (recorded capability gap DEF-201). The optional-device errors this case used to carry under DEF-100 were resolved by 021.",
     "matches": {
-      "core": [
-        "^request:\\ findings\\ above\\ warning:\\ request\\.device\\.ip_required\\[error\\]@device\\.ip,\\ request\\.device\\.ua_required\\[error\\]@device\\.ua$"
-      ],
-      "http": [
-        "^request:\\ findings\\ above\\ warning:\\ request\\.device\\.ip_required\\[error\\]@device\\.ip,\\ request\\.device\\.ua_required\\[error\\]@device\\.ua$"
-      ],
-      "browser": [
-        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.device\\.ip_required\\[error\\]@device\\.ip,\\ request\\.device\\.ua_required\\[error\\]@device\\.ua$",
-        "^browser\\.selection:\\ unavailable\\ seat\\[0\\]\\.bid\\[1\\]$"
-      ]
+      "browser": ["^browser\\.selection: unavailable seat\\[0\\]\\.bid\\[1\\]$"]
     }
   }
 }
