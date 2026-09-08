@@ -2,7 +2,7 @@
 
 The Core public API (`validate()`, `crosscheck()`, `extractAllCategories()`) and the HTTP surface
 that wraps them (`POST /api/analyze`) are deterministic data-to-data contracts (Constitution IV).
-This file records what this feature changes at that boundary. Core moves from 0.41.0 to 0.42.0.
+This file records what this feature changes at that boundary. Core moves from 0.42.0 to 0.43.0.
 
 ## What does not change
 

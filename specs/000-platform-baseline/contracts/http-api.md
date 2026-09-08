@@ -44,7 +44,7 @@ probe/CSP instrumentation; details of that selection and the 1 MiB UTF-8 window 
 [the frontend contract](./frontend-modules.md).
 
 `POST /api/analyze` stays inside its envelope for malformed-but-parseable and oversized input
-([024](../../024-analyze-input-robustness/spec.md), Core 0.42.0). A response whose `seatbid` or `bid`
+([024](../../024-analyze-input-robustness/spec.md), Core 0.43.0). A response whose `seatbid` or `bid`
 is a non-array value keeps the `200` success envelope with the validator's structured findings rather
 than crashing the category decode into `400 bad_request`. A present scalar `bidRes` (a non-null,
 non-object value) is validated as a response — `payload.invalid_root` with `crosscheck.no_response` —

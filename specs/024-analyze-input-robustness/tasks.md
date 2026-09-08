@@ -52,7 +52,7 @@ handler, the browser bundle, the 020 corpus and the governing contracts.
 ## Phase 5: Ledger, versions and delivery
 
 - [x] T010 Retire DEF-115, DEF-204, DEF-300 and DEF-303 from the ledger (tests/corpus/known-gaps.json and the mut-input-shape and mut-encoding-limits shards) and remove the knownGap block from their six case files; survey every remaining recorded deviation with deviationVerdict() and confirm each still matches exactly, with nothing re-pinned and no record hiding a second deviation (FR-006).
-- [x] T011 Bump packages/core to 0.42.0 with the CLI dependency range and package-lock.json; record the malformed-shape, scalar-response and oversized-body rules in specs/000-platform-baseline/contracts/http-api.md and core-validator.md and a Resolutions entry in the 020 defect report (FR-005, FR-007).
+- [x] T011 Bump packages/core to 0.43.0 with the CLI dependency range and package-lock.json; record the malformed-shape, scalar-response and oversized-body rules in specs/000-platform-baseline/contracts/http-api.md and core-validator.md and a Resolutions entry in the 020 defect report (FR-005, FR-007).
 - [x] T012 Run the corpus layers (core, http, browser), the no-change guards (spec-refs, i18n-audit, validator), prettier, eslint and tsc; then rebase onto main, run `npm run ci`, commit the authored paths and push under the standing authorization; wait for the hosted run (FR-006, FR-007).
 
 ## Evidence
