@@ -13,6 +13,7 @@
 const { isObj } = require('./helpers');
 const { CROSS_LEVELS, makeCross } = require('./findings');
 const { isVastShape } = require('./format-detect');
+const { inspectVastMedia } = require('./rules-vast');
 const { scanExtForFormatHints, isPopFormat, extractPopLandingHost } = require('./non-iab-formats');
 // resolveDealFloor() is the same PMP-deal-floor match rules/price-floor's own
 // resolveFloor() uses (feature 022 / DEF-104) — a matched Deal.bidfloor
@@ -129,6 +130,34 @@ function crosscheck(req, res, _ctx) {
 
   const bcat = Array.isArray(reqView.bcat) ? new Set(reqView.bcat) : new Set();
   const badv = Array.isArray(reqView.badv) ? new Set(reqView.badv) : new Set();
+  // Restrictions identify buyers, not individual bids. Diagnose once at the
+  // explicit SeatBid identity and preserve exact, case-sensitive seat strings.
+  const allowedSeats = Array.isArray(reqView.wseat)
+    ? reqView.wseat.filter((seat) => typeof seat === 'string' && seat.length > 0)
+    : [];
+  const blockedSeats = Array.isArray(reqView.bseat)
+    ? reqView.bseat.filter((seat) => typeof seat === 'string' && seat.length > 0)
+    : [];
+  seatbid.forEach((seat, index) => {
+    if (!isObj(seat) || typeof seat.seat !== 'string' || !seat.seat.trim()) return;
+    const path = `${resView.base}seatbid[${index}].seat`;
+    if (allowedSeats.length && !allowedSeats.includes(seat.seat)) {
+      out.push(
+        C('crosscheck.seat.not_allowed', false, CROSS_LEVELS.CRIT, path, {
+          seat: seat.seat,
+          wseat: allowedSeats,
+        }),
+      );
+    }
+    if (blockedSeats.includes(seat.seat)) {
+      out.push(
+        C('crosscheck.seat.not_allowed', false, CROSS_LEVELS.CRIT, path, {
+          seat: seat.seat,
+          bseat: blockedSeats,
+        }),
+      );
+    }
+  });
   let totalBids = 0;
   let bidsAboveFloor = 0;
   const winningByImp = new Map();
@@ -443,8 +472,16 @@ function crosscheck(req, res, _ctx) {
       }
     }
 
+    // Offered media are alternatives. Prefer an offered mtype declaration;
+    // otherwise use actual creative evidence, then an unambiguous sole offer.
+    // The selected family's content checks still see contradictory markup.
+    const media = inspectVastMedia(typeof bid.adm === 'string' ? bid.adm : '');
+    const selectedMedia = selectBidMedia(imp, bid, media);
+    const bannerContentMismatch =
+      selectedMedia === 'banner' && bid.adm && (media.root || nativeMarkup(bid.adm));
+
     // 3e. banner size
-    if (imp.banner && (bid.w || bid.h)) {
+    if (selectedMedia === 'banner' && !bannerContentMismatch && (bid.w || bid.h)) {
       const formatList = Array.isArray(imp.banner.format)
         ? imp.banner.format.filter(isObj) // R4: drop null entries in banner.format
         : [];
@@ -474,7 +511,7 @@ function crosscheck(req, res, _ctx) {
     }
 
     // 3f. native asset crossmatch
-    if (imp.native && bid.adm) {
+    if (selectedMedia === 'native' && bid.adm) {
       const cm = nativeAssetCrosscheck(imp.native, bid.adm);
       if (cm.errorKey) {
         out.push(C(cm.errorKey, false, CROSS_LEVELS.WARN, `${bp}.${leaf.adm}`, baseParams));
@@ -550,7 +587,7 @@ function crosscheck(req, res, _ctx) {
 
     // 3g. video VAST. Sniff via the canonical helper so this file and
     //     rules-vast.js share the same anchored regex.
-    if (imp.video && bid.adm) {
+    if (selectedMedia === 'video' && bid.adm) {
       const isVast = isVastShape(String(bid.adm));
       out.push(
         C(
@@ -561,6 +598,47 @@ function crosscheck(req, res, _ctx) {
           baseParams,
         ),
       );
+      if (isVast) {
+        out.push(...crosscheckVideoMedia(imp.video, bid, media, `${bp}.${leaf.adm}`, baseParams));
+      }
+    }
+    if (bannerContentMismatch) {
+      out.push(
+        C(
+          'crosscheck.bid.banner_not_banner',
+          false,
+          CROSS_LEVELS.WARN,
+          `${bp}.${leaf.adm}`,
+          baseParams,
+        ),
+      );
+    }
+    if (selectedMedia === 'audio' && bid.adm) {
+      if (!media.root) {
+        out.push(
+          C(
+            'crosscheck.bid.audio_not_vast',
+            false,
+            CROSS_LEVELS.WARN,
+            `${bp}.${leaf.adm}`,
+            baseParams,
+          ),
+        );
+      } else if (
+        !media.hasAudioMedia &&
+        (media.hasVideoMedia ||
+          (media.hasInLine && media.hasNonLinear && !media.linears.some((linear) => linear.inline)))
+      ) {
+        out.push(
+          C(
+            'crosscheck.bid.audio_media_mismatch',
+            false,
+            CROSS_LEVELS.CRIT,
+            `${bp}.${leaf.adm}`,
+            baseParams,
+          ),
+        );
+      }
     }
   }
 
@@ -582,6 +660,110 @@ function crosscheck(req, res, _ctx) {
     }),
   );
 
+  return out;
+}
+
+/** A structured Native creative, not arbitrary JSON or an HTML string. */
+function nativeMarkup(adm) {
+  try {
+    const parsed = tryParseNativePayload(adm);
+    const inner = isObj(parsed) && isObj(parsed.native) ? parsed.native : parsed;
+    return isObj(inner) && Array.isArray(inner.assets) ? inner : null;
+  } catch {
+    return null;
+  }
+}
+
+function selectBidMedia(imp, bid, media) {
+  const kinds = ['banner', 'video', 'audio', 'native'];
+  const offered = kinds.filter((kind) => isObj(imp[kind]));
+  const declared = Number.isInteger(bid.mtype) ? kinds[bid.mtype - 1] : undefined;
+  if (declared && offered.includes(declared)) return declared;
+  let actual;
+  if (media.root) {
+    actual =
+      media.root === 'daast' ||
+      (media.hasAudioMedia && !media.hasVideoMedia) ||
+      (!media.hasVideoMedia && media.adTypeAudio)
+        ? 'audio'
+        : 'video';
+  } else if (nativeMarkup(bid.adm)) {
+    actual = 'native';
+  } else if (typeof bid.adm === 'string' && bid.adm.trimStart().startsWith('<')) {
+    actual = 'banner';
+  }
+  if (actual && offered.includes(actual)) return actual;
+  return offered.length === 1 ? offered[0] : null;
+}
+
+/** Compare only observable VAST facts; an unresolved Wrapper supplies no media facts. */
+function crosscheckVideoMedia(video, bid, media, path, baseParams) {
+  const out = [];
+  const allowedMimes = Array.isArray(video.mimes)
+    ? video.mimes
+        .filter((mime) => typeof mime === 'string' && mime.trim())
+        .map((mime) => mime.trim().toLowerCase())
+    : [];
+  const incompatible = media.linears.filter(
+    (linear) =>
+      linear.inline &&
+      linear.mimes.length &&
+      allowedMimes.length &&
+      !linear.mimes.some((mime) => allowedMimes.includes(mime)),
+  );
+  if (incompatible.length) {
+    out.push(
+      C('crosscheck.bid.video_mime_mismatch', false, CROSS_LEVELS.CRIT, path, {
+        ...baseParams,
+        returned: [...new Set(incompatible.flatMap((linear) => linear.mimes))],
+        allowed: allowedMimes,
+      }),
+    );
+  }
+  const min =
+    typeof video.minduration === 'number' && Number.isFinite(video.minduration)
+      ? video.minduration
+      : null;
+  const max =
+    typeof video.maxduration === 'number' && Number.isFinite(video.maxduration)
+      ? video.maxduration
+      : null;
+  const durations = media.linears
+    .filter((linear) => linear.inline)
+    .flatMap((linear) => linear.durations);
+  const badDurations = durations.filter(
+    (duration) => (min !== null && duration < min) || (max !== null && duration > max),
+  );
+  if (badDurations.length) {
+    out.push(
+      C('crosscheck.bid.video_duration_mismatch', false, CROSS_LEVELS.CRIT, path, {
+        ...baseParams,
+        durations: badDurations,
+        min: min === null ? '−∞' : min,
+        max: max === null ? '+∞' : max,
+      }),
+    );
+  }
+  const allowedProtocols = Array.isArray(video.protocols)
+    ? video.protocols.filter(Number.isInteger)
+    : Number.isInteger(video.protocol)
+      ? [video.protocol]
+      : [];
+  const actualProtocols = [
+    ...new Set([...media.protocols, ...(Number.isInteger(bid.protocol) ? [bid.protocol] : [])]),
+  ];
+  if (
+    allowedProtocols.length &&
+    actualProtocols.some((protocol) => !allowedProtocols.includes(protocol))
+  ) {
+    out.push(
+      C('crosscheck.bid.video_protocol_mismatch', false, CROSS_LEVELS.CRIT, path, {
+        ...baseParams,
+        protocols: actualProtocols,
+        allowed: allowedProtocols,
+      }),
+    );
+  }
   return out;
 }
 
@@ -644,7 +826,7 @@ function inner30(payload, key) {
  *
  * @param {any} req
  * @returns {{id:unknown, cur:unknown, imp:Array<any>, base:string, impBase:string,
- *            floorLeaf:string, bcat:unknown, badv:unknown}|null}
+ *            floorLeaf:string, bcat:unknown, badv:unknown, wseat?:unknown, bseat?:unknown}|null}
  */
 function buildRequestView(req) {
   if (!isObj(req)) return null;
@@ -679,6 +861,8 @@ function buildRequestView(req) {
     floorLeaf: 'bidfloor',
     bcat: req.bcat,
     badv: req.badv,
+    wseat: req.wseat,
+    bseat: req.bseat,
   };
 }
 

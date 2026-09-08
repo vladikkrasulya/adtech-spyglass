@@ -187,25 +187,5 @@
     "http": {
       "status": 200
     }
-  },
-  "knownGap": {
-    "id": "DEF-130",
-    "layers": ["core", "http", "browser"],
-    "note": "MediaFile is a Linear-creative element (VAST §3.9); an InLine ad delivering only NonLinearAds must not be flagged for a missing MediaFile.",
-    "matches": {
-      "core": [
-        "^response:\\ findings\\ above\\ warning:\\ vast\\.mediafile_missing\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$",
-        "^response:\\ forbidden\\ finding\\ present\\ vast\\.mediafile_missing\\ \\[error\\]\\ →\\ vast\\.mediafile_missing\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
-      ],
-      "http": [
-        "^response:\\ findings\\ above\\ warning:\\ vast\\.mediafile_missing\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$",
-        "^response:\\ forbidden\\ finding\\ present\\ vast\\.mediafile_missing\\ \\[error\\]\\ →\\ vast\\.mediafile_missing\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
-      ],
-      "browser": [
-        "^browser\\.row:\\ forbidden\\ response\\ vast\\.mediafile_missing$",
-        "^browser\\.response:\\ findings\\ above\\ warning:\\ vast\\.mediafile_missing\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$",
-        "^browser\\.response:\\ forbidden\\ finding\\ present\\ vast\\.mediafile_missing\\ \\[error\\]\\ →\\ vast\\.mediafile_missing\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
-      ]
-    }
   }
 }

@@ -336,5 +336,12 @@
   "response.nbr_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidresponse",
   "response.30.nbr_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/9af34fc79580f67f6abaf89b1e48d18398c9a697/OpenRTB%20v3.0%20FINAL.md#object_response",
   "imp.audio.mimes_required": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectaudio",
-  "imp.audio.mimes_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectaudio"
+  "imp.audio.mimes_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectaudio",
+  "crosscheck.seat.not_allowed": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidrequest",
+  "crosscheck.bid.video_mime_mismatch": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectvideo",
+  "crosscheck.bid.video_duration_mismatch": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectvideo",
+  "crosscheck.bid.video_protocol_mismatch": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectvideo",
+  "crosscheck.bid.banner_not_banner": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbanner",
+  "crosscheck.bid.audio_not_vast": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectaudio",
+  "crosscheck.bid.audio_media_mismatch": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectaudio"
 }

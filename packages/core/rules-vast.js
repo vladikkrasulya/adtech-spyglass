@@ -24,6 +24,14 @@ const { LEVELS, makeFinding } = require('./findings');
 const { isVastShape, detectVastVersion } = require('./format-detect');
 
 const F = makeFinding;
+const MEDIA_PROTOCOLS = new Map([
+  ['vast:2.0', [2, 5]],
+  ['vast:3.0', [3, 6]],
+  ['vast:4.0', [7, 8]],
+  ['vast:4.1', [11, 12]],
+  ['vast:4.2', [13, 14]],
+  ['daast:1.0', [9, 10]],
+]);
 
 function hasTag(adm, tag) {
   return new RegExp(`<${tag}\\b`, 'i').test(adm);
@@ -97,6 +105,260 @@ function getAttrValues(adm, tag, attr) {
 }
 
 /**
+ * Read complete attributes from one already bounded start tag. A malformed
+ * token ends the read; every iteration advances or returns. Quoted text is
+ * consumed as one value, so apparent attributes inside it are not evidence.
+ * @param {string} tag
+ * @param {number} offset
+ * @returns {Map<string, string>}
+ */
+function mediaTagAttributes(tag, offset) {
+  const attributes = new Map();
+  let i = offset;
+  while (i < tag.length) {
+    while (i < tag.length && /[ \t\r\n]/.test(tag[i])) i++;
+    if (i === tag.length || tag[i] === '/') break;
+    const start = i;
+    while (i < tag.length && /[A-Za-z0-9_.:-]/.test(tag[i])) i++;
+    if (i === start) break;
+    const name = tag.slice(start, i).toLowerCase();
+    while (i < tag.length && /[ \t\r\n]/.test(tag[i])) i++;
+    if (tag[i++] !== '=') break;
+    while (i < tag.length && /[ \t\r\n]/.test(tag[i])) i++;
+    const quote = tag[i++];
+    if (quote !== '"' && quote !== "'") break;
+    const valueStart = i;
+    while (i < tag.length && tag[i] !== quote) i++;
+    if (i === tag.length) break;
+    if (!attributes.has(name)) attributes.set(name, tag.slice(valueStart, i));
+    i++;
+  }
+  return attributes;
+}
+
+/**
+ * Skip a declaration without expanding entities. Internal subsets, comments,
+ * processing instructions and quoted greater-than signs stay inside it.
+ * @param {string} xml
+ * @param {number} start
+ * @returns {number}
+ */
+function mediaDeclarationEnd(xml, start) {
+  let depth = 0;
+  let quote = '';
+  for (let i = start + 2; i < xml.length; i++) {
+    if (quote) {
+      if (xml[i] === quote) quote = '';
+    } else if (xml.startsWith('<!--', i) || xml.startsWith('<?', i)) {
+      const comment = xml.startsWith('<!--', i);
+      const end = xml.indexOf(comment ? '-->' : '?>', i + (comment ? 4 : 2));
+      if (end < 0) return xml.length;
+      i = end + (comment ? 2 : 1);
+    } else if (xml[i] === '"' || xml[i] === "'") quote = xml[i];
+    else if (xml[i] === '[') depth++;
+    else if (xml[i] === ']' && depth > 0) depth--;
+    else if (xml[i] === '>' && depth === 0) return i + 1;
+  }
+  return xml.length;
+}
+
+/**
+ * @typedef {{inline:boolean, mimes:string[], durations:number[], hasDuration:boolean,
+ * mediaFileCount:number}} VastLinearMedia
+ * @typedef {{inline:boolean, linearCount:number, hasNonLinear:boolean}} VastAdMedia
+ * @typedef {{name:string, structure:string, ignored:boolean, ad:VastAdMedia|null,
+ * linear:VastLinearMedia|null, text:string[]|null, invalidText:boolean}} MediaFrame
+ */
+
+/**
+ * Extract the supplied document's playable media facts for validation and
+ * crosscheck. This owner shares one result with both consumers; format detection
+ * remains independently owned. No wrapper fetching or general XML validation.
+ *
+ * The cursor advances once across each lexical construct. A mismatched closing
+ * tag or an unterminated token stops inspection rather than searching backward.
+ * Structural parent states keep vendor metadata and text out of creative facts.
+ * Duration text is joined once per node, and rendition arrays retain their
+ * per-Linear alternatives instead of collapsing a pod into one global MIME set.
+ * @param {unknown} adm
+ * @returns {{root:'vast'|'daast'|null, version:string|null, hasInLine:boolean,
+ * hasWrapper:boolean, protocols:number[], linears:VastLinearMedia[], hasNonLinear:boolean,
+ * hasAudioMedia:boolean, hasVideoMedia:boolean, adTypeAudio:boolean, adTypeVideo:boolean,
+ * inlineMediaMissing:boolean}}
+ */
+function inspectVastMedia(adm) {
+  /** @type {ReturnType<typeof inspectVastMedia>} */
+  const result = {
+    root: null,
+    version: null,
+    hasInLine: false,
+    hasWrapper: false,
+    protocols: [],
+    linears: [],
+    hasNonLinear: false,
+    hasAudioMedia: false,
+    hasVideoMedia: false,
+    adTypeAudio: false,
+    adTypeVideo: false,
+    inlineMediaMissing: false,
+  };
+  if (typeof adm !== 'string') return result;
+  /** @type {MediaFrame[]} */
+  const stack = [];
+  /** @type {VastAdMedia[]} */
+  const ads = [];
+  const extensions = new Set([
+    'extensions',
+    'extension',
+    'creativeextensions',
+    'creativeextension',
+  ]);
+  const finish = (frame) => {
+    if (frame.structure !== 'duration' || frame.invalidText) return;
+    const value = frame.text.join('').trim();
+    const match = /^(\d{2}):([0-5]\d):([0-5]\d)(\.\d{1,3})?$/.exec(value);
+    if (match)
+      frame.linear.durations.push(
+        Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]) + Number(match[4] || 0),
+      );
+  };
+  let i = adm.charCodeAt(0) === 0xfeff ? 1 : 0;
+  while (i < adm.length) {
+    const open = adm.indexOf('<', i);
+    if (open < 0) break;
+    const parent = stack.at(-1);
+    if (!result.root && !/^[ \t\r\n]*$/.test(adm.slice(i, open))) break;
+    if (parent?.text) parent.text.push(adm.slice(i, open));
+    if (adm.startsWith('<!--', open) || adm.startsWith('<?', open)) {
+      const comment = adm.startsWith('<!--', open);
+      const end = adm.indexOf(comment ? '-->' : '?>', open + (comment ? 4 : 2));
+      if (end < 0) break;
+      i = end + (comment ? 3 : 2);
+      continue;
+    }
+    if (adm.startsWith('<![CDATA[', open)) {
+      if (!result.root) break;
+      const end = adm.indexOf(']]>', open + 9);
+      if (end < 0) break;
+      if (parent?.text) parent.text.push(adm.slice(open + 9, end));
+      i = end + 3;
+      continue;
+    }
+    if (adm.startsWith('<!', open)) {
+      i = mediaDeclarationEnd(adm, open);
+      continue;
+    }
+    let quote = '';
+    let end = open + 1;
+    for (; end < adm.length; end++) {
+      const ch = adm[end];
+      if (quote) {
+        if (ch === quote) quote = '';
+      } else if (ch === '"' || ch === "'") quote = ch;
+      else if (ch === '>') break;
+    }
+    if (end === adm.length) break;
+    const tag = adm.slice(open + 1, end);
+    i = end + 1;
+    const closing = tag[0] === '/';
+    const nameMatch =
+      /^(?:[A-Za-z_][A-Za-z0-9_.-]*:)?([A-Za-z_][A-Za-z0-9_.-]*)(?=[ \t\r\n/]|$)/.exec(
+        closing ? tag.slice(1) : tag,
+      );
+    if (!nameMatch) break;
+    const name = nameMatch[1].toLowerCase();
+    if (closing) {
+      if (!parent || parent.name !== name) break;
+      finish(stack.pop());
+      if (stack.length === 0) break;
+      continue;
+    }
+    if (parent?.text) parent.invalidText = true;
+    const attrs = mediaTagAttributes(tag, nameMatch[0].length);
+    const ignored = Boolean(parent?.ignored || extensions.has(name));
+    /** @type {MediaFrame} */
+    const frame = {
+      name,
+      structure: 'other',
+      ignored,
+      ad: parent?.ad || null,
+      linear: parent?.linear || null,
+      text: null,
+      invalidText: false,
+    };
+    if (!result.root) {
+      if (name !== 'vast' && name !== 'daast') break;
+      result.root = name;
+      result.version = attrs.get('version') || null;
+      frame.structure = 'root';
+    } else if (!ignored) {
+      if (parent?.structure === 'root' && name === 'ad') frame.structure = 'ad';
+      else if (parent?.structure === 'ad' && (name === 'inline' || name === 'wrapper')) {
+        frame.structure = 'content';
+        frame.ad = { inline: name === 'inline', linearCount: 0, hasNonLinear: false };
+        ads.push(frame.ad);
+        if (frame.ad.inline) result.hasInLine = true;
+        else result.hasWrapper = true;
+      } else if (parent?.structure === 'content' && name === 'creatives')
+        frame.structure = 'creatives';
+      else if (parent?.structure === 'creatives' && name === 'creative')
+        frame.structure = 'creative';
+      else if (parent?.structure === 'creative' && name === 'linear') {
+        frame.structure = 'linear';
+        frame.ad.linearCount++;
+        frame.linear = {
+          inline: frame.ad.inline,
+          mimes: [],
+          durations: [],
+          hasDuration: false,
+          mediaFileCount: 0,
+        };
+        result.linears.push(frame.linear);
+      } else if (parent?.structure === 'linear' && name === 'mediafiles')
+        frame.structure = 'mediafiles';
+      else if (parent?.structure === 'mediafiles' && name === 'mediafile') {
+        frame.structure = 'mediafile';
+        frame.linear.mediaFileCount++;
+        const mime = attrs.get('type')?.trim().toLowerCase();
+        if (mime) {
+          frame.linear.mimes.push(mime);
+          if (mime.startsWith('audio/')) result.hasAudioMedia = true;
+          if (mime.startsWith('video/')) result.hasVideoMedia = true;
+        }
+      } else if (parent?.structure === 'linear' && name === 'duration') {
+        frame.structure = 'duration';
+        frame.linear.hasDuration = true;
+        frame.text = [];
+      } else if (parent?.structure === 'creative' && name === 'nonlinearads')
+        frame.structure = 'nonlinearads';
+      else if (parent?.structure === 'nonlinearads' && name === 'nonlinear') {
+        frame.ad.hasNonLinear = true;
+        result.hasNonLinear = true;
+      }
+    }
+    if (frame.structure === 'root' || frame.structure === 'ad') {
+      const adType = attrs.get('adtype')?.trim().toLowerCase();
+      if (adType === 'audio') result.adTypeAudio = true;
+      if (adType === 'video') result.adTypeVideo = true;
+    }
+    if (/\/\s*$/.test(tag)) {
+      finish(frame);
+      if (frame.structure === 'root') break;
+    } else stack.push(frame);
+  }
+  // Exact supported OpenRTB list values, not a family guess for future versions.
+  const codes = MEDIA_PROTOCOLS.get(`${result.root}:${result.version}`);
+  if (codes) {
+    if (result.hasInLine) result.protocols.push(codes[0]);
+    if (result.hasWrapper) result.protocols.push(codes[1]);
+  }
+  result.inlineMediaMissing =
+    ads.some((ad) => ad.inline && ad.linearCount === 0 && !ad.hasNonLinear) ||
+    result.linears.some((row) => row.inline && row.mediaFileCount === 0);
+  return result;
+}
+
+/**
  * @param {string} adm — bid.adm string already verified as VAST shape
  * @param {string} path — JSON path of the adm field (e.g. "seatbid[0].bid[0].adm")
  * @returns {Array<{id:string, level:string, path:string, params:object}>}
@@ -130,9 +392,12 @@ function validateVast(adm, path) {
     if (!hasTag(adm, 'AdTitle')) {
       findings.push(F('vast.adtitle_missing', LEVELS.ERROR, path));
     }
-    // R4. InLine MUST have at least one <MediaFile>. Without media there
-    //     is nothing to play.
-    if (!hasTag(adm, 'MediaFile')) {
+    // R4. MediaFile belongs to a Linear creative. A NonLinear-only InLine
+    //     needs no Linear media, but cannot hide a broken sibling Linear/ad.
+    const media = inspectVastMedia(adm);
+    // Preserve the previous missing-media diagnostic on malformed documents
+    // whose InLine is outside the supported structural path.
+    if (media.inlineMediaMissing || (!media.hasInLine && !hasTag(adm, 'MediaFile'))) {
       findings.push(F('vast.mediafile_missing', LEVELS.ERROR, path));
     }
   }
@@ -390,4 +655,4 @@ function validateVast(adm, path) {
   return findings;
 }
 
-module.exports = { validateVast, isVastShape };
+module.exports = { validateVast, isVastShape, inspectVastMedia };

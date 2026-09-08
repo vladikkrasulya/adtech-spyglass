@@ -87,19 +87,7 @@
   },
   "specNotes": [
     "audio: unidentified-inert; classify the actual creative body and assert visible identity while retaining auction diagnostics.",
-    "Creative body classification follows specs/012 \u00a71\u20132 independently of auction format validity. A visible preview does not make a mismatched response valid. Original base provenance is retained; fixture bytes are synthetic.",
+    "Creative body classification follows specs/012 §1–2 independently of auction format validity. A visible preview does not make a mismatched response valid. Original base provenance is retained; fixture bytes are synthetic.",
     "Audio protocols=[7] negotiates VAST4.0; plain prose must produce an auction media mismatch, independently of the correct inert preview."
-  ],
-  "knownGap": {
-    "id": "DEF-194",
-    "layers": ["core", "http", "browser"],
-    "note": "Prose cannot satisfy negotiated VAST audio; the preview remains correctly inert while auction media mismatch is absent.",
-    "matches": {
-      "core": ["^crosscheck:\\ missing\\ issue\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"],
-      "http": ["^crosscheck:\\ missing\\ issue\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"],
-      "browser": [
-        "^browser\\.crosscheck:\\ missing\\ issue\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
-      ]
-    }
-  }
+  ]
 }

@@ -134,22 +134,6 @@
       "state": "success"
     }
   },
-  "knownGap": {
-    "id": "DEF-111",
-    "layers": ["core", "http", "browser"],
-    "note": "A valid mtype=2 video bid answering mixed offered inventory is checked against its selected video format, not against unchosen banner/native requirements.",
-    "matches": {
-      "core": [
-        "^crosscheck:\\ forbidden\\ crosscheck\\.bid\\.video_not_vast\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm\\ →\\ crosscheck\\.bid\\.video_not_vast\\[warn\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
-      ],
-      "http": [
-        "^crosscheck:\\ forbidden\\ crosscheck\\.bid\\.video_not_vast\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm\\ →\\ crosscheck\\.bid\\.video_not_vast\\[warn\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
-      ],
-      "browser": [
-        "^browser\\.crosscheck:\\ forbidden\\ crosscheck\\.bid\\.video_not_vast\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm\\ →\\ crosscheck\\.bid\\.video_not_vast\\[warn\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
-      ]
-    }
-  },
   "specNotes": [
     "OpenRTB 2.6 §5.8 introduced bid.mtype precisely to disambiguate which of a mixed impression's offered media types a bid answers. Here mtype:1 (banner) unambiguously selects the banner side, so the video block's isVastShape gate should not apply to this bid at all.",
     "crosscheck.js never reads bid.mtype (confirmed absent from the whole file); the video block runs unconditionally off imp.video presence, so a legitimate banner fill on a mixed imp still receives a spurious crosscheck.bid.video_not_vast WARN. Same root cause as DEF-111 (format-mixed-impression-video-wins), mirrored onto the video side of the same imp shape."

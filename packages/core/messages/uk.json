@@ -140,7 +140,7 @@
   "vast.inline_or_wrapper_required": "Seatbid #{sNum} → bid #{bNum}: у VAST немає ані <InLine>, ані <Wrapper>. Кожен <Ad> повинен мати рівно один з них — InLine несе креатив напряму, Wrapper посилається на інший VAST URL. Без цього плеєр не має що рендерити.",
   "vast.adsystem_missing": "Seatbid #{sNum} → bid #{bNum}: у <InLine> відсутній обов'язковий <AdSystem>. VAST §3.2 — система що видала рекламу повинна себе ідентифікувати. SSP відкине InLine без AdSystem.",
   "vast.adtitle_missing": "Seatbid #{sNum} → bid #{bNum}: у <InLine> відсутній обов'язковий <AdTitle>. За VAST §3.2 — обов'язкове поле. Може бути порожнім (<AdTitle/>), але не може бути відсутнім.",
-  "vast.mediafile_missing": "Seatbid #{sNum} → bid #{bNum}: у <InLine> немає жодного <MediaFile>. Без медіа нічого програти. Додай хоча б один <MediaFile> з URL, type, width, height.",
+  "vast.mediafile_missing": "Seatbid #{sNum} → bid #{bNum}: у Linear-креативі InLine немає MediaFile або InLine не містить підтримуваного Linear/NonLinear-креативу. Додай медіафайл для Linear; окремому NonLinear він не потрібен.",
   "vast.wrapper_no_tag_uri": "Seatbid #{sNum} → bid #{bNum}: у <Wrapper> відсутній <VASTAdTagURI>. Сенс Wrapper — переадресувати на інший VAST тег. Без URL він не робить нічого.",
   "vast.insecure_url": "Seatbid #{sNum} → bid #{bNum}: VAST містить {count} небезпечний(их) http:// URL у тегах трекінгу/медіа (приклад: {sampleUrl}). Сучасні видавничі сторінки на https — браузери тихо блокують mixed content. Переходь на https://.",
   "request.30.envelope_required": "У oRTB 3.0 BidRequest відсутня обгортка openrtb. 3.0 загортає запит у { openrtb: { ver, request: {...} } } — без цього біддер навіть не зможе визначити версію протоколу. Додай обгортку або надсилай 2.x формат.",
@@ -357,5 +357,12 @@
   "response.nbr_invalid": "nbr має бути цілим числом. Виправ передане значення або прибери це необов’язкове поле.",
   "response.30.nbr_invalid": "openrtb.response.nbr має бути цілим числом. Виправ передане значення або прибери це необов’язкове поле.",
   "imp.audio.mimes_required": "Слот #{num}: аудіо без audio.mimes. Перерахуй MIME-типи що приймає плеєр (наприклад [\"audio/mp4\",\"audio/mpeg\"]) — інакше біддер не знає чим відповідати.",
-  "imp.audio.mimes_invalid": "Слот #{num}: audio.mimes має бути непорожнім масивом непорожніх MIME-рядків (наприклад [\"audio/mp4\",\"audio/mpeg\"])."
+  "imp.audio.mimes_invalid": "Слот #{num}: audio.mimes має бути непорожнім масивом непорожніх MIME-рядків (наприклад [\"audio/mp4\",\"audio/mpeg\"]).",
+  "crosscheck.seat.not_allowed": "Місце покупця {seat} не дозволене обмеженнями запиту.",
+  "crosscheck.bid.video_mime_mismatch": "Seatbid #{sNum} → bid #{bNum}: серед медіатипів VAST {returned} немає варіанта, дозволеного списком {allowed}.",
+  "crosscheck.bid.video_duration_mismatch": "Seatbid #{sNum} → bid #{bNum}: тривалість VAST {durations} с виходить за межі запитаного діапазону {min}–{max}.",
+  "crosscheck.bid.video_protocol_mismatch": "Seatbid #{sNum} → bid #{bNum}: коди протоколів креативу {protocols} суперечать списку підтримуваних {allowed}.",
+  "crosscheck.bid.banner_not_banner": "Seatbid #{sNum} → bid #{bNum}: для вибраного банерного показу повернуто XML відео/аудіо або розмітку Native.",
+  "crosscheck.bid.audio_not_vast": "Seatbid #{sNum} → bid #{bNum}: аудіопоказ містить вбудований вміст, який не є документом VAST або DAAST.",
+  "crosscheck.bid.audio_media_mismatch": "Seatbid #{sNum} → bid #{bNum}: для аудіопоказу повернуто відео або NonLinear-вміст без аудіомедіа."
 }

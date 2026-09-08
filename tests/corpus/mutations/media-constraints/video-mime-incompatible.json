@@ -109,18 +109,6 @@
       "state": "success"
     }
   },
-  "knownGap": {
-    "id": "DEF-113",
-    "layers": ["core", "http", "browser"],
-    "note": "A response creative incompatible with the requested MIME, duration or protocol must produce an issue on the affected bid adm. Detecting VAST shape alone is insufficient.",
-    "matches": {
-      "core": ["^crosscheck:\\ missing\\ issue\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"],
-      "http": ["^crosscheck:\\ missing\\ issue\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"],
-      "browser": [
-        "^browser\\.crosscheck:\\ missing\\ issue\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
-      ]
-    }
-  },
   "specNotes": [
     "No public per-constraint finding ID exists. Require a warn/crit at the affected adm path, where the valid base has no unrelated warning.",
     "A shape-only video_vast row does not check negotiated MIME, duration or protocol."

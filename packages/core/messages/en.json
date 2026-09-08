@@ -141,7 +141,7 @@
   "vast.inline_or_wrapper_required": "Seatbid #{sNum} → bid #{bNum}: VAST has neither <InLine> nor <Wrapper>. Each <Ad> must declare exactly one — InLine carries the creative directly, Wrapper points to another VAST URL.",
   "vast.adsystem_missing": "Seatbid #{sNum} → bid #{bNum}: <InLine> is missing the required <AdSystem>. VAST §3.2 — the system that served the ad must identify itself. SSPs reject InLine ads without AdSystem.",
   "vast.adtitle_missing": "Seatbid #{sNum} → bid #{bNum}: <InLine> is missing the required <AdTitle>. VAST §3.2 makes it mandatory — even an empty <AdTitle/> is fine, but it can't be absent.",
-  "vast.mediafile_missing": "Seatbid #{sNum} → bid #{bNum}: <InLine> has no <MediaFile>. Without media there is nothing to play. Add at least one <MediaFile> with URL, type, width, height.",
+  "vast.mediafile_missing": "Seatbid #{sNum} → bid #{bNum}: an InLine Linear creative lacks a MediaFile, or InLine has no supported Linear/NonLinear creative. Supply playable media for Linear; a NonLinear-only ad does not require it.",
   "vast.wrapper_no_tag_uri": "Seatbid #{sNum} → bid #{bNum}: <Wrapper> is missing <VASTAdTagURI>. The whole point of a Wrapper is to forward to another VAST tag — without the URL it does nothing.",
   "vast.insecure_url": "Seatbid #{sNum} → bid #{bNum}: VAST contains {count} insecure http:// URL(s) in tracking/media tags (sample: {sampleUrl}). Modern publisher pages run on https — browsers block mixed content silently. Switch to https://.",
   "request.30.envelope_required": "oRTB 3.0 BidRequest is missing the openrtb envelope. 3.0 wraps the request as { openrtb: { ver, request: {...} } }; without this envelope the bidder can't even identify the protocol version. Add the wrapper or send 2.x shape.",
@@ -358,5 +358,12 @@
   "response.nbr_invalid": "nbr must be an integer. Correct the supplied value or omit this optional field.",
   "response.30.nbr_invalid": "openrtb.response.nbr must be an integer. Correct the supplied value or omit this optional field.",
   "imp.audio.mimes_required": "Slot #{num}: audio has no audio.mimes. List the MIME types the player accepts (e.g. [\"audio/mp4\",\"audio/mpeg\"]). Without it the bidder doesn't know what to send.",
-  "imp.audio.mimes_invalid": "Slot #{num}: audio.mimes must be a non-empty array of non-empty MIME type strings (e.g. [\"audio/mp4\",\"audio/mpeg\"])."
+  "imp.audio.mimes_invalid": "Slot #{num}: audio.mimes must be a non-empty array of non-empty MIME type strings (e.g. [\"audio/mp4\",\"audio/mpeg\"]).",
+  "crosscheck.seat.not_allowed": "Buyer seat {seat} is excluded by the request’s seat restrictions.",
+  "crosscheck.bid.video_mime_mismatch": "Seatbid #{sNum} → bid #{bNum}: VAST media types {returned} have no supported rendition in {allowed}.",
+  "crosscheck.bid.video_duration_mismatch": "Seatbid #{sNum} → bid #{bNum}: VAST duration {durations} seconds is outside the requested range {min}–{max}.",
+  "crosscheck.bid.video_protocol_mismatch": "Seatbid #{sNum} → bid #{bNum}: creative protocol codes {protocols} contradict the supported list {allowed}.",
+  "crosscheck.bid.banner_not_banner": "Seatbid #{sNum} → bid #{bNum}: the selected banner impression contains video/audio XML or Native markup.",
+  "crosscheck.bid.audio_not_vast": "Seatbid #{sNum} → bid #{bNum}: the audio impression contains inline content that is not a VAST or DAAST document.",
+  "crosscheck.bid.audio_media_mismatch": "Seatbid #{sNum} → bid #{bNum}: the audio impression returned video or NonLinear content without audio media."
 }
