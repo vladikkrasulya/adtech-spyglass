@@ -512,28 +512,45 @@ async function clickControl(page, element) {
   await element.evaluate((el) =>
     el.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' }),
   );
-  await page.waitForFunction(
-    (el) => {
-      const rect = el.getBoundingClientRect();
-      if (!rect.width || !rect.height) return false;
-      const x = Math.max(0, Math.min(window.innerWidth - 1, rect.left + rect.width / 2));
-      const y = Math.max(0, Math.min(window.innerHeight - 1, rect.top + rect.height / 2));
-      const hit = document.elementFromPoint(x, y);
-      return hit && (hit === el || el.contains(hit));
-    },
-    { timeout: 8000 },
-    element,
-  );
-  // ElementHandle.click scrolls again before clicking. On mobile that can
-  // restart a smooth scroll and move the target away after our hit test.
-  const point = await element.evaluate((el) => {
-    const rect = el.getBoundingClientRect();
-    return {
-      x: Math.max(0, Math.min(window.innerWidth - 1, rect.left + rect.width / 2)),
-      y: Math.max(0, Math.min(window.innerHeight - 1, rect.top + rect.height / 2)),
-    };
-  });
-  await page.mouse.click(point.x, point.y);
+  // Mobile content-visibility/layout can move a hittable control by an entire
+  // button height between two protocol calls. Require a settled, unobscured
+  // target and take its coordinates from that same measurement. This remains
+  // one physical click: a delivered click that does not act still fails.
+  const stability = await page.evaluateHandle(() => ({ box: null, since: 0 }));
+  let pointHandle;
+  try {
+    pointHandle = await page.waitForFunction(
+      (el, state) => {
+        const rect = el.getBoundingClientRect();
+        const box = [rect.left, rect.top, rect.width, rect.height];
+        const x = Math.max(0, Math.min(window.innerWidth - 1, rect.left + rect.width / 2));
+        const y = Math.max(0, Math.min(window.innerHeight - 1, rect.top + rect.height / 2));
+        const hit = document.elementFromPoint(x, y);
+        const hittable =
+          rect.width > 0 && rect.height > 0 && hit && (hit === el || el.contains(hit));
+        const now = performance.now();
+        if (
+          !hittable ||
+          !state.box ||
+          box.some((value, index) => Math.abs(value - state.box[index]) > 0.5)
+        ) {
+          state.box = box;
+          state.since = now;
+          return false;
+        }
+        return now - state.since >= 100 ? { x, y } : false;
+      },
+      { timeout: 8000, polling: 'raf' },
+      element,
+      stability,
+    );
+    const point = await pointHandle.jsonValue();
+    // ElementHandle.click would scroll again after the stability check.
+    await page.mouse.click(point.x, point.y);
+  } finally {
+    await pointHandle?.dispose();
+    await stability.dispose();
+  }
 }
 
 /**

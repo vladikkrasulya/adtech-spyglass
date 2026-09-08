@@ -62,7 +62,11 @@ MVP is US1 validated without browser dependency, followed by US2 and US3. All th
 | FR-003      | T003, T006, T007, T009       |
 | FR-004      | T003, T005, T006             |
 | FR-005      | T003, T005, T006, T007, T009 |
-| FR-006      | T007                         |
-| FR-007      | T008, T018                   |
+| FR-006      | T007, T021                   |
+| FR-007      | T008, T018, T021             |
 | FR-008      | T009, T010, T011, T016, T019 |
-| FR-009      | T012, T013, T020             |
+| FR-009      | T012, T013, T020, T021       |
+
+## Phase 8: Pointer actionability follow-up
+
+- [x] T021 [US2] Stabilize real pointer coordinates in tests/corpus/lib/browser.js after the mobile reveal race exposed by the pre-push gate; retain actual mouse activation and all reveal assertions, verify the UX suite without screenshot timing, then run repository CI and complete delivery (FR-006, FR-007, FR-009).

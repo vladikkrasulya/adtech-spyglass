@@ -24,6 +24,66 @@ const MATRIX = ['en', 'uk', 'ru'].flatMap((locale) =>
 const skipReason = B.browserSkipReason || '';
 const requireBrowser = process.env.CORPUS_REQUIRE_BROWSER === '1';
 
+test(
+  'corpus UX driver: a moving reveal target receives one trusted click after layout settles',
+  { skip: !requireBrowser && (skipReason || false), timeout: 20000 },
+  async () => {
+    if (skipReason) assert.fail(skipReason);
+    const browser = await B.launchBrowser();
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 390, height: 844 });
+      await page.setContent(`<!doctype html><style>
+        body { margin: 0; height: 700px; }
+        button { position: absolute; top: 100px; left: 80px; width: 160px; height: 32px; }
+        .moving { animation: move 250ms linear forwards; }
+        @keyframes move { to { transform: translateY(240px); } }
+      </style><div id="creativePreviewSafe"><button data-action="reveal-creative">Reveal</button></div>`);
+      await page.evaluate(() => {
+        const button = document.querySelector('button');
+        const state = { settled: false, enabled: true, clicks: [] };
+        /** @type {any} */ (window).__pointerProbe = state;
+        button.addEventListener('animationend', () => {
+          state.settled = true;
+        });
+        button.addEventListener('click', (event) => {
+          state.clicks.push({ trusted: event.isTrusted, settled: state.settled });
+          if (state.enabled)
+            document.getElementById('creativePreviewSafe').classList.add('is-revealed');
+        });
+        button.classList.add('moving');
+      });
+      const physicalClick = page.mouse.click.bind(page.mouse);
+      page.mouse.click = async (...args) => {
+        // Emulate protocol latency between receiving coordinates and sending
+        // a real pointer event. The button moves farther than half its height.
+        await new Promise((resolve) => setTimeout(resolve, 60));
+        return physicalClick(...args);
+      };
+      assert.equal((await B.reveal(page)).revealed, true);
+      assert.deepEqual(
+        await page.evaluate(() => /** @type {any} */ (window).__pointerProbe.clicks),
+        [{ trusted: true, settled: true }],
+      );
+      await page.evaluate(() => {
+        /** @type {any} */ (window).__pointerProbe.enabled = false;
+        document.getElementById('creativePreviewSafe').classList.remove('is-revealed');
+      });
+      assert.equal(
+        (await B.reveal(page)).revealed,
+        false,
+        'a delivered click with a broken handler must remain an unrevealed failure',
+      );
+      assert.equal(
+        await page.evaluate(() => /** @type {any} */ (window).__pointerProbe.clicks.length),
+        2,
+      );
+    } finally {
+      await browser.close();
+    }
+  },
+);
+
 /** @returns {import('./corpus/lib/load').Materialized} */
 function fixture(id, marker, price = 2) {
   return {

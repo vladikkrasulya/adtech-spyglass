@@ -1,6 +1,6 @@
 # Ad format verification matrix
 
-Generated: 2026-09-08T05:51:08.402Z. Baseline: a61fc258c3ec8cc8bda5e2512df125a358bc08a4.
+Generated: 2026-09-08T06:45:32.832Z. Baseline: f840925baa8ed89ab4b41f7afd6fe92b5a85e57b.
 
 Audit execution: **complete**. Product conformity across asserted cases: **not fully satisfied**.
 

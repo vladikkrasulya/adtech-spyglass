@@ -4,14 +4,14 @@ The final integrated audit completed on 2026-09-08: **184 corpus scenarios, 12 l
 
 ## Reproduction and evidence
 
-Product baseline: `a61fc258c3ec8cc8bda5e2512df125a358bc08a4` plus this feature's test, script and documentation changes. App 1.19.4, Core 0.38.0, CLI 0.1.3; Node v22.23.2, Chrome/151.0.7922.137. No product code, dependencies, public contracts or production deployment changed.
+Product baseline: `f840925baa8ed89ab4b41f7afd6fe92b5a85e57b` plus this feature's test, script and documentation changes. App 1.19.4, Core 0.38.0, CLI 0.1.3; Node v22.23.2, Chrome/151.0.7922.137. No product code, dependencies, public contracts or production deployment changed.
 
 ```sh
 CORPUS_REPORT_DIR=/home/vk/.local/share/ortbtools-research/2026-09-08-final-corpus/runs npm run test:corpus
 npm run ci
 ```
 
-Final run: `2026-09-08T05:45:38.871Z`–`2026-09-08T05:51:08.328Z`. The [persistent report directory](/home/vk/.local/share/ortbtools-research/2026-09-08-final-corpus/runs/ortbtools-audit-ct2VXk) contains `run.json`, `report.json`, per-layer JSONL, `ux-a11y-findings.json`, generated matrices and 234 screenshots. Evidence is from isolated local servers and Chromium, not from production or live ad delivery. The checked-in [case matrix](coverage-matrix.md) and [coverage axes](coverage-axes.md) are copied from this measured run.
+Final run: `2026-09-08T06:39:19.394Z`–`2026-09-08T06:45:32.753Z`. The [persistent report directory](/home/vk/.local/share/ortbtools-research/2026-09-08-final-corpus/runs/ortbtools-audit-8nihgL) contains `run.json`, `report.json`, per-layer JSONL, `ux-a11y-findings.json`, generated matrices and 234 screenshots. Evidence is from isolated local servers and Chromium, not from production or live ad delivery. The checked-in [case matrix](coverage-matrix.md) and [coverage axes](coverage-axes.md) are copied from this measured run.
 
 | Layer   | Pass | Known gap | Not applicable | Unexpected failure | Skipped / missing |
 | ------- | ---: | --------: | -------------: | -----------------: | ----------------: |
@@ -29,10 +29,10 @@ Three Core cases are inapplicable because lexical JSON parsing or the HTTP body 
 | `tests/corpus-report.test.js`          |    0 |     0.7 |
 | `tests/corpus-axes.test.js`            |    0 |     0.2 |
 | `tests/corpus-core.test.js`            |    0 |     0.4 |
-| `tests/corpus-http.test.js`            |    0 |     1.5 |
-| `tests/corpus-browser.test.js`         |    0 |   227.9 |
-| `tests/corpus-ux-browser.test.js`      |    0 |    57.2 |
-| `tests/corpus-ux-a11y-browser.test.js` |    0 |    41.3 |
+| `tests/corpus-http.test.js`            |    0 |     1.4 |
+| `tests/corpus-browser.test.js`         |    0 |   252.7 |
+| `tests/corpus-ux-browser.test.js`      |    0 |    74.2 |
+| `tests/corpus-ux-a11y-browser.test.js` |    0 |    43.5 |
 
 The first three phases run 45 harness, report and applicability tests. They exercise exact known-gap matching/retirement, required scenario coverage, unknown/duplicate/missing records and the separation of observed coverage from product conformance. A missing Chromium executable fails the dedicated command. Fresh run directories and no automatic retry prevent stale observations or hidden reruns from satisfying this audit.
 
@@ -78,10 +78,20 @@ Before final acceptance, source review corrected several invalid test assumption
 
 The diagnostic integrated run `ortbtools-audit-9fSncA` is retained with its nine unexpected browser failures. Review separated two expected root-shape rejections, a missing blank-input identity contract, and exact browser manifestations of existing product gaps. A focused ten-case rerun passed before the final full run above; no runtime fix or weakened normative finding was used to make the audit green. DEF-302 signatures were narrowed to exact aggregate findings so an unrelated error cannot be hidden by a wildcard.
 
-Final `npm run ci` exited 0: formatting, lint, typechecking and coverage-enabled tests passed. The runner executed 160 nonbrowser and 25 browser files. Final accepted outcomes are 3,767 tests/subtests: 3,608 passed, 156 expected-failure markers and three explicit nonapplicable Core skips; zero unresolved failures or cancellations. One existing `macro-evaluator-browser.test.js` attempt failed with Chrome protocol error `Runtime.callFunctionOn: Promise was collected`; the runner's announced retry passed without code changes. The [CI summary](/home/vk/.local/share/ortbtools-research/2026-09-08-final-corpus/ci-final-summary.json) retains that failed attempt separately; `ci-final.log` contains both attempts. These are runner counts, not unique payload counts. The dedicated audit above had no retries.
+Final `npm run ci` after the pointer correction exited 0 without retries: formatting, lint, typechecking and coverage-enabled tests passed across 160 nonbrowser and 25 browser files. The runner reported 3,768 tests/subtests: 3,609 passed, 156 known-gap expected-failure markers and three explicitly nonapplicable Core transport skips; zero failures or cancellations. The [final CI summary](/home/vk/.local/share/ortbtools-research/2026-09-08-final-corpus/ci-pointer-final-summary.json) and `ci-pointer-final.log` retain the evidence. Runner counts are not unique payload counts. Earlier unsuccessful delivery attempts and their diagnosis are described below; they do not replace the final successful gate.
 
-An earlier repository gate found one literal BOM in the source JSON fixture `encoding-adm-bom-prefixed-vast.json`. It was replaced by the visible Unicode escape, with parsed JSON equality asserted; the materialized test input and portable archive are unchanged. The diagnosed initial CI was stopped and is retained in `ci-initial.log` / `ci-initial-outcome.json`; the successful full CI above started afresh. The control-character guard also passed directly after the repair.
+The source-control guard previously found a literal BOM in `encoding-adm-bom-prefixed-vast.json`. It was replaced by a visible Unicode escape, with parsed JSON equality asserted. This changes the source representation only: the tested payload and portable archive are unchanged. The diagnosed initial run is retained in `ci-initial.log` / `ci-initial-outcome.json`.
 
-Final convergence checked nine functional requirements, four success criteria, three user stories, seven plan decisions and eight governing principles. No buildable audit gaps remained. No tasks were appended, and tasks.md stayed byte-for-byte unchanged during assessment (SHA-256 `19bdf84e13baa7035daec96546a74415aa6a05945d03a136c8ded20247fd8899`). Normal completion bookkeeping records T018/T020 as complete and updates the feature/index/roadmap; product fixes and cleanup implementation remain follow-up scope. Documentation/governance checks passed again on the closed records. The mandatory pre-push gate reruns local CI, and hosted CI independently owns package and Docker smoke; their exact-SHA outcomes are retained with the delivery evidence. The earlier 81-case first-pass report is retained as [historical evidence](/home/vk/.local/share/ortbtools-research/2026-09-08-final-corpus/verification-before-final.md) and does not describe current counts.
+Final convergence, including the pointer follow-up, checked nine functional requirements, four success criteria, three user stories, seven plan decisions and eight governing principles. No buildable gaps remained and no convergence tasks were appended. During assessment tasks.md stayed byte-for-byte unchanged (SHA-256 `080d9efc98c5ddecaac0fd0b0d7062e8bf9098e84ab53c82a530aa9c175d1f52`). Normal completion bookkeeping closes T020/T021 and updates the feature records; product fixes and cleanup implementation remain follow-up scope. Documentation/governance checks are repeated on the closed records. The pre-push gate reruns local CI; hosted CI independently owns package and Docker smoke, with exact-SHA outcomes retained in the delivery evidence. The earlier 81-case first-pass report is retained as [historical evidence](/home/vk/.local/share/ortbtools-research/2026-09-08-final-corpus/verification-before-final.md) and does not describe current counts.
 
 Remaining combinations and complementary existing suites are listed in [coverage-inventory.md](coverage-inventory.md). This audit does not certify arbitrary payloads, every custom dialect/Core option, every format in Mirror/Migrate/history/sharing, other browser engines, real devices, external wrappers, live bidding/tracking or sustained concurrency.
+
+## Pointer actionability follow-up before delivery
+
+The initial local CI passed with one existing macro-browser protocol retry. A subsequent pre-push CI passed without retries, but the SSH push exited 141 after the checks and left origin/main unchanged. The HTTPS retry then correctly stopped at the gate: the Ukrainian light mobile UX scenario failed on both attempts; Russian dark mobile also failed on the first attempt. Both cases reported an offered reveal control remaining blurred. No failure signature or product expectation was weakened to admit this behavior.
+
+The diagnostic pointer trace records mobile control rectangles moving by about 33.5 pixels between animation frames near the click. The original helper only hit-tested one instantaneous rectangle, then obtained coordinates in another protocol call. The driver now requires the target rectangle to remain stable and unobscured for 100 ms within the existing eight-second actionability bound, and takes the pointer coordinates from that same measurement. It still sends exactly one real mouse click and retains the three-second reveal-result assertion.
+
+The regression in tests/corpus-ux-browser.test.js uses an animated target and 60 ms of pointer-protocol latency. With the previous driver loaded from f840925, the test fails because the target is missed; with the corrected driver it passes and records one trusted click after the movement ends. A separate broken-handler assertion confirms a delivered click still returns an unrevealed failure instead of fabricating success. Both fixtures are isolated browser documents, not runtime application changes.
+
+Evidence is retained under /home/vk/.local/share/ortbtools-research/2026-09-08-final-corpus/: reveal-diagnostic/, pointer-regression-before.log (expected failure), pointer-regression-fixed.log (pass), pointer-ux-1.log (13 tests passed), and pointer-ux-2.log (14 tests passed, including the regression). Both full UX acceptance runs used no screenshots or report I/O, so their success does not depend on screenshot delays. This is a harness correction and does not add a 43rd product-defect group. The final dedicated audit and repository gates following this correction provide the completion evidence above.
