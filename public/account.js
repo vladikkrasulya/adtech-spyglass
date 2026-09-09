@@ -32,6 +32,52 @@
     window.registerI18nModule({
       id: 'cabinet',
       keys: {
+        'cabinet.dialects.edit': { en: 'Edit', uk: 'Редагувати', ru: 'Изменить' },
+        'cabinet.dialects.remove': { en: 'Remove', uk: 'Видалити', ru: 'Удалить' },
+        'cabinet.dialects.save': { en: 'Save', uk: 'Зберегти', ru: 'Сохранить' },
+        'cabinet.dialects.cancel': { en: 'Cancel', uk: 'Скасувати', ru: 'Отмена' },
+        'cabinet.dialects.activate': {
+          en: 'Use by default',
+          uk: 'Застосовувати за замовчуванням',
+          ru: 'Применять по умолчанию',
+        },
+        'cabinet.dialects.deactivate': {
+          en: 'Stop using by default',
+          uk: 'Не застосовувати за замовчуванням',
+          ru: 'Не применять по умолчанию',
+        },
+        'cabinet.dialects.import': {
+          en: 'Import dialect JSON',
+          uk: 'Імпортувати JSON діалекту',
+          ru: 'Импортировать JSON диалекта',
+        },
+        'cabinet.dialects.imported': {
+          en: 'Imported. Activate the dialect to apply it.',
+          uk: 'Імпортовано. Активуй діалект, щоб застосувати його.',
+          ru: 'Импортировано. Активируй диалект, чтобы применить его.',
+        },
+        'cabinet.dialects.failed': {
+          en: 'Could not save the change. Check the fields and try again.',
+          uk: 'Не вдалося зберегти зміну. Перевір поля та повтори спробу.',
+          ru: 'Не удалось сохранить изменение. Проверь поля и повтори попытку.',
+        },
+        'cabinet.dialects.confirm_remove': {
+          en: 'Remove this saved mapping?',
+          uk: 'Видалити цей збережений мапінг?',
+          ru: 'Удалить этот сохранённый маппинг?',
+        },
+        'cabinet.dialects.path': { en: 'Field path', uk: 'Шлях поля', ru: 'Путь поля' },
+        'cabinet.dialects.value': {
+          en: 'Exact value',
+          uk: 'Точне значення',
+          ru: 'Точное значение',
+        },
+        'cabinet.dialects.notes': { en: 'Notes', uk: 'Нотатки', ru: 'Заметки' },
+        'cabinet.dialects.unsupported': {
+          en: 'Unsupported mapping version; remove or export with a compatible version of the app.',
+          uk: 'Непідтримувана версія мапінгу; видали його або експортуй сумісною версією застосунку.',
+          ru: 'Неподдерживаемая версия маппинга; удали его или экспортируй совместимой версией приложения.',
+        },
         'cabinet.dialects.engine_rules': { en: 'rules', uk: 'правила', ru: 'правила' },
         'cabinet.dialects.mappings_show': {
           en: 'Show mappings',
@@ -260,6 +306,134 @@
   // Latest dialect list, shared with the click handler bound once below.
   let exportable = [];
 
+  function dialectButton(key, handler) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-ghost btn-sm';
+    btn.textContent = T('cabinet.dialects.' + key);
+    btn.dataset.dialectAction = key;
+    btn.addEventListener('click', handler);
+    return btn;
+  }
+
+  function dialectFeedback(host, message) {
+    let note = host.querySelector('[data-dialect-feedback]');
+    if (!note) {
+      note = document.createElement('p');
+      note.dataset.dialectFeedback = 'true';
+      note.setAttribute('role', 'status');
+      host.appendChild(note);
+    }
+    note.textContent = message;
+  }
+
+  async function mutateDialect(path, method, body) {
+    const result = await api(path, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    if (!result || !result.success) throw new Error('dialect_mutation_failed');
+    return result;
+  }
+
+  async function refreshDialects() {
+    const result = await api('/api/dialects');
+    if (!result || !Array.isArray(result.dialects)) throw new Error('dialects_invalid');
+    renderDialectsCard(result.dialects);
+  }
+
+  function renderMappingEditor(row, dialectId, mapping) {
+    row.textContent = '';
+    const form = document.createElement('form');
+    form.dataset.mappingEditor = mapping.id;
+    const field = (key, control) => {
+      const label = document.createElement('label');
+      label.className = 'dialect-mapping-field';
+      label.textContent = T(key) + ' ';
+      label.appendChild(control);
+      form.appendChild(label);
+      return control;
+    };
+    const input = (value) => {
+      const control = document.createElement('input');
+      control.type = 'text';
+      control.value = value || '';
+      control.style.maxWidth = '100%';
+      return control;
+    };
+    const path = field('cabinet.dialects.path', input(mapping.signal_path));
+    path.name = 'signal_path';
+    const label = document.createElement('select');
+    label.name = 'semantic_label';
+    for (const id of window.KeyRoleVocabulary.STORABLE_LABELS) {
+      const option = document.createElement('option');
+      option.value = id;
+      option.textContent = T('dialect.label.name.' + id);
+      label.appendChild(option);
+    }
+    label.value = mapping.semantic_label;
+    field('dialect.label.pick', label);
+    const scope = document.createElement('select');
+    scope.name = 'match_scope';
+    for (const name of ['value', 'path']) {
+      const option = document.createElement('option');
+      option.value = name;
+      option.textContent = T('dialect.label.scope_' + name);
+      scope.appendChild(option);
+    }
+    scope.value = mapping.match_scope === 'path' ? 'path' : 'value';
+    field('dialect.label.scope', scope);
+    const value = field('cabinet.dialects.value', input(mapping.signal_value));
+    value.name = 'signal_value';
+    value.maxLength = 256;
+    const notes = field('cabinet.dialects.notes', input(mapping.notes));
+    notes.name = 'notes';
+    notes.maxLength = 1000;
+    const hint = document.createElement('p');
+    const sync = () => {
+      const allowed = window.KeyRoleVocabulary.ROLE_LABELS.includes(label.value);
+      scope.querySelector('[value="path"]').disabled = !allowed;
+      if (!allowed) scope.value = 'value';
+      value.disabled = scope.value === 'path';
+      value.required = !value.disabled;
+      value.parentElement.hidden = value.disabled;
+      hint.textContent = T(
+        scope.value === 'path' ? 'dialect.label.scope_path_note' : 'dialect.label.scope_note',
+      );
+    };
+    scope.addEventListener('change', sync);
+    label.addEventListener('change', sync);
+    sync();
+    form.appendChild(hint);
+    const save = dialectButton('save', () => form.requestSubmit());
+    form.append(
+      save,
+      dialectButton('cancel', () =>
+        refreshDialects().catch(() => dialectFeedback(row, T('cabinet.dialects.failed'))),
+      ),
+    );
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      save.disabled = true;
+      try {
+        await mutateDialect('/api/dialects/' + dialectId + '/mappings/' + mapping.id, 'PATCH', {
+          signal_path: path.value,
+          semantic_label: label.value,
+          match_scope: scope.value,
+          ...(scope.value === 'value' ? { signal_value: value.value } : {}),
+          notes: notes.value,
+        });
+        await refreshDialects();
+      } catch (_) {
+        save.disabled = false;
+        dialectFeedback(form, T('cabinet.dialects.failed'));
+      }
+    });
+    row.appendChild(form);
+    path.focus();
+  }
+
   function renderDialectsCard(dialects) {
     // Null-guarded throughout — future ID drift in account.{lang}.html
     // won't crash init (per spyglass_cabinet_draft.md convention).
@@ -310,10 +484,36 @@
         // rather than failing or hiding the row.
         return named === '[' + key + ']' ? id : named;
       };
+      const opened = new Set(
+        Array.from($list.querySelectorAll('details[open]'), (el) => el.dataset.dialectId),
+      );
       $list.textContent = '';
+      const importInput = document.createElement('input');
+      importInput.type = 'file';
+      importInput.accept = '.json,application/json';
+      importInput.hidden = true;
+      importInput.dataset.dialectImport = 'true';
+      const importButton = dialectButton('import', () => importInput.click());
+      importInput.addEventListener('change', async () => {
+        const file = importInput.files && importInput.files[0];
+        if (!file) return;
+        importButton.disabled = true;
+        try {
+          if (file.size > 1024 * 1024) throw new Error('import_too_large');
+          await mutateDialect('/api/dialects/import', 'POST', JSON.parse(await file.text()));
+          await refreshDialects();
+          dialectFeedback($list, T('cabinet.dialects.imported'));
+        } catch (_) {
+          importButton.disabled = false;
+          importInput.value = '';
+          dialectFeedback($list, T('cabinet.dialects.failed'));
+        }
+      });
+      $list.append(importButton, importInput);
       dialects.forEach(function (d) {
         const det = document.createElement('details');
         det.className = 'dialect-mappings-item';
+        det.dataset.dialectId = String(d.id);
         const sum = document.createElement('summary');
         sum.textContent =
           (d.name || 'dialect-' + d.id) +
@@ -324,6 +524,18 @@
         det.appendChild(sum);
         const box = document.createElement('div');
         det.appendChild(box);
+        const activation = dialectButton(d.is_default ? 'deactivate' : 'activate', async () => {
+          activation.disabled = true;
+          try {
+            await mutateDialect('/api/dialects/' + d.id, 'PATCH', { is_default: !d.is_default });
+            await refreshDialects();
+          } catch (_) {
+            activation.disabled = false;
+            dialectFeedback(det, T('cabinet.dialects.failed'));
+          }
+        });
+        activation.dataset.dialectActivate = d.id;
+        det.appendChild(activation);
         det.addEventListener('toggle', async function () {
           if (!det.open || det.dataset.loaded) return;
           det.dataset.loaded = '1';
@@ -337,12 +549,34 @@
             rows.forEach(function (m) {
               const row = document.createElement('div');
               row.className = 'dialect-mapping-row';
+              row.dataset.mappingId = m.id;
               const label = document.createElement('strong');
               label.textContent = labelName(m.semantic_label);
               const sig = document.createElement('code');
-              sig.textContent = ' ' + m.signal_path + ' = ' + m.signal_value;
-              row.appendChild(label);
-              row.appendChild(sig);
+              const scope = m.match_scope || (m.version === 2 ? 'path' : 'value');
+              sig.textContent =
+                ' ' +
+                m.signal_path +
+                (scope === 'path' ? ' · ' + T('dialect.label.scope_path') : ' = ' + m.signal_value);
+              row.append(label, sig);
+              const controls = document.createElement('div');
+              controls.className = 'cab-actions';
+              const edit = dialectButton('edit', () => renderMappingEditor(row, d.id, m));
+              edit.disabled = scope === 'unknown';
+              if (edit.disabled) edit.title = T('cabinet.dialects.unsupported');
+              const remove = dialectButton('remove', async () => {
+                if (!window.confirm(T('cabinet.dialects.confirm_remove'))) return;
+                remove.disabled = true;
+                try {
+                  await mutateDialect('/api/dialects/' + d.id + '/mappings/' + m.id, 'DELETE');
+                  await refreshDialects();
+                } catch (_) {
+                  remove.disabled = false;
+                  dialectFeedback(row, T('cabinet.dialects.failed'));
+                }
+              });
+              controls.append(edit, remove);
+              row.appendChild(controls);
               box.appendChild(row);
             });
           } catch (_) {
@@ -351,6 +585,7 @@
           }
         });
         $list.appendChild(det);
+        if (opened.has(String(d.id))) det.open = true;
       });
     }
     if ($btnExport) {
@@ -1171,6 +1406,14 @@
     if (!sections.length || !navItems.length) return;
     sectionRoutingBound = true;
     const validSectionIds = new Set(sections.map((s) => s.id));
+
+    // At narrow/zoomed widths the cabinet navigation scrolls horizontally.
+    // Native Tab scrolling can leave a partly visible link clipped; reveal
+    // its full bounds in either keyboard direction without moving sections.
+    document.getElementById('cabNav')?.addEventListener('focusin', (event) => {
+      const link = event.target.closest('.cab-nav-item');
+      if (link) link.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'nearest' });
+    });
 
     // Find the .cab-section ancestor of a given element id (or the
     // element itself if it IS a section). Returns the section id or

@@ -79,6 +79,16 @@ const LOGOUT_FAILED_PUBLIC_MSG = {
   uk: 'Сервер не зміг підтвердити завершення сесії.',
   ru: 'Сервер не смог подтвердить завершение сессии.',
 };
+const AUTH_UNAVAILABLE_PUBLIC_MSG = {
+  en: 'Authentication is temporarily unavailable. Try again shortly.',
+  uk: 'Вхід тимчасово недоступний. Спробуй ще раз трохи пізніше.',
+  ru: 'Вход временно недоступен. Попробуй ещё раз немного позже.',
+};
+const AUTH_CHANGED_PUBLIC_MSG = {
+  en: 'Your sign-in state changed. Sign in again.',
+  uk: 'Стан входу змінився. Увійди ще раз.',
+  ru: 'Состояние входа изменилось. Войди ещё раз.',
+};
 
 /**
  * @param {{
@@ -146,6 +156,17 @@ function createAuthRoutesModule(deps) {
     return sendJson(res, 200, { success: true, user: publicUser(user), encryption });
   }
 
+  function sendAuthFailure(req, res, error) {
+    const locale = resolveEmailLocale(null, req);
+    const message =
+      error.code === 'auth_unavailable'
+        ? AUTH_UNAVAILABLE_PUBLIC_MSG[locale]
+        : error.code === 'session_state_changed'
+          ? AUTH_CHANGED_PUBLIC_MSG[locale]
+          : error.message;
+    return sendError(res, error.status || 400, error.code || 'bad_request', message);
+  }
+
   function handleRegister(req, res) {
     return readJson(req)
       .then(async ({ email, password }) => {
@@ -188,7 +209,7 @@ function createAuthRoutesModule(deps) {
           email_error: emailError,
         });
       })
-      .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
+      .catch((e) => sendAuthFailure(req, res, e));
   }
 
   function handleLogin(req, res) {
@@ -202,7 +223,7 @@ function createAuthRoutesModule(deps) {
         // intel endpoints run on the deterministic rules engine — there is
         // no model to warm and nothing cold to pay for.
       })
-      .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
+      .catch((e) => sendAuthFailure(req, res, e));
   }
 
   function handleLogout(req, res) {
@@ -499,6 +520,15 @@ function createAuthRoutesModule(deps) {
             }
           }
           const newHash = await auth.hashPassword(b.newPassword);
+          auth.assertWritable?.();
+          if (Users.getByEmail(payload.email)?.password_hash !== fullUser.password_hash) {
+            return sendError(
+              res,
+              401,
+              'session_state_changed',
+              AUTH_CHANGED_PUBLIC_MSG[resolveEmailLocale(null, req)],
+            );
+          }
           // Atomic: password + crypto-state wrap rotate together. A crash
           // between hash-write and wrap-write previously locked the user
           // out of their own library (new password → new KEK → can't
@@ -518,6 +548,7 @@ function createAuthRoutesModule(deps) {
             }
           }
           const newHash = await auth.hashPassword(b.newPassword);
+          auth.assertWritable?.();
           // Same atomicity contract as 'rotate' — locked-out-on-crash was a
           // missed defect in the original audit (caught on second pass).
           Users.updatePasswordAndCrypto(payload.user_id, newHash, {
@@ -531,6 +562,7 @@ function createAuthRoutesModule(deps) {
           // in one transaction. Crash mid-flow rolls back entirely — user
           // keeps old state or transitions to clean-slate, never a half-state.
           const newHash = await auth.hashPassword(b.newPassword);
+          auth.assertWritable?.();
           Users.updatePasswordAndWipe(payload.user_id, newHash);
         } else {
           return sendError(res, 400, 'invalid_mode', `Unknown reset mode: ${mode}`);
@@ -539,18 +571,15 @@ function createAuthRoutesModule(deps) {
         // Drop all old sessions, mint a new one. Old cookies (if stolen)
         // stop working immediately.
         //
-        // Throw on DB-side session-delete failure (post-v0.25.0): refuse to
-        // mint a new session if the old ones might still be valid. Returning
-        // 500 lets the client retry; minting under partial invalidation
-        // would silently revive stolen tokens after the next container
-        // restart.
+        // Journaled revocation can succeed despite DB cleanup failure. Refuse
+        // a fresh session if neither durable path confirms invalidation.
         try {
           auth.invalidateUserSessions(payload.user_id);
-        } catch (e) {
-          notifyAdmin(
-            `<b>reset-password session-invalidate failed</b>\n<pre>${notifyEscape(String((e && e.stack) || e).slice(0, 800))}</pre>`,
-            { tag: 'reset-password-sessions', level: 'error' },
-          );
+        } catch (_e) {
+          notifyAdmin('<b>reset-password session-invalidate failed</b>', {
+            tag: 'reset-password-sessions',
+            level: 'error',
+          });
           return sendError(
             res,
             500,
@@ -558,12 +587,14 @@ function createAuthRoutesModule(deps) {
             'Password reset partially applied. Please retry; do not assume old sessions are invalidated.',
           );
         }
-        const fresh = Users.get(payload.user_id);
+        const fresh = auth.sessionUser
+          ? auth.sessionUser(payload.user_id)
+          : Users.get(payload.user_id);
         auth.createSession(req, res, fresh);
         const encryption = publicEncryption(Users.getCryptoState(payload.user_id));
         return sendJson(res, 200, { success: true, user: publicUser(fresh), encryption });
       })
-      .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
+      .catch((e) => sendAuthFailure(req, res, e));
   }
 
   return {

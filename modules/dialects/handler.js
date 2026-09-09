@@ -31,7 +31,10 @@ const log = require('../../lib/logger').child('dialects');
 // The one normative label enumeration lives in Core (016 FR-024, ADR-015):
 // eleven pre-existing labels plus the nine storable role labels. This route
 // used to declare its own array; importing keeps every surface in step.
-const { STORABLE_LABELS } = require('../../packages/core/dialects/key-role-vocabulary');
+const {
+  STORABLE_LABELS,
+  ROLE_LABELS,
+} = require('../../packages/core/dialects/key-role-vocabulary');
 const SEMANTIC_LABELS = new Set(STORABLE_LABELS);
 
 const NAME_MAX = 80;
@@ -68,7 +71,7 @@ function createDialectsModule(deps) {
     ),
     deleteDialect: db.prepare(`DELETE FROM user_dialects WHERE id = ?`),
     listMappings: db.prepare(
-      `SELECT id, signal_path, signal_value, semantic_label, shape_fingerprint,
+      `SELECT id, signal_path, signal_value, semantic_label, shape_fingerprint, version,
               params, confidence, notes, created_at
        FROM dialect_mappings WHERE dialect_id = ?
        ORDER BY created_at DESC`,
@@ -84,15 +87,19 @@ function createDialectsModule(deps) {
       `INSERT INTO dialect_mappings
          (dialect_id, signal_path, signal_value, semantic_label,
           shape_fingerprint, params, version, confidence, notes, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ),
     updateMapping: db.prepare(
       `UPDATE dialect_mappings
        SET signal_path = ?, signal_value = ?, semantic_label = ?,
-           shape_fingerprint = ?, params = ?, notes = ?
+           shape_fingerprint = ?, params = ?, notes = ?, version = ?
        WHERE id = ?`,
     ),
     deleteMapping: db.prepare(`DELETE FROM dialect_mappings WHERE id = ?`),
+    pathConflict: db.prepare(
+      `SELECT id FROM dialect_mappings
+       WHERE dialect_id = ? AND version = 2 AND signal_path = ? AND id != ? LIMIT 1`,
+    ),
   };
 
   function requireUser(req, res) {
@@ -124,13 +131,26 @@ function createDialectsModule(deps) {
   }
 
   function validateMappingFields(body) {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return 'mapping_invalid';
     if (typeof body.signal_path !== 'string' || !SIGNAL_PATH_RX.test(body.signal_path)) {
       return 'signal_path_invalid';
     }
-    if (typeof body.signal_value !== 'string' || body.signal_value.length === 0) {
+    const scope = body.match_scope === undefined ? 'value' : body.match_scope;
+    if (scope !== 'value' && scope !== 'path') return 'match_scope_invalid';
+    if (body.version !== undefined && body.version !== (scope === 'path' ? 2 : 1)) {
+      return 'mapping_version_invalid';
+    }
+    if (scope === 'path') {
+      if (!ROLE_LABELS.includes(body.semantic_label)) return 'path_role_required';
+      if (!/^(?:imp\[\d*\]\.ext|ext)(?:\.[a-zA-Z_][a-zA-Z0-9_]*|\[\d*\])+$/u.test(body.signal_path))
+        return 'path_scope_invalid';
+      if (body.signal_value !== undefined && body.signal_value !== '')
+        return 'path_value_not_allowed';
+    } else if (typeof body.signal_value !== 'string' || body.signal_value.length === 0) {
       return 'signal_value_required';
     }
-    if (body.signal_value.length > SIGNAL_VALUE_MAX) return 'signal_value_too_long';
+    if (typeof body.signal_value === 'string' && body.signal_value.length > SIGNAL_VALUE_MAX)
+      return 'signal_value_too_long';
     if (!SEMANTIC_LABELS.has(body.semantic_label)) return 'semantic_label_invalid';
     if (body.notes != null) {
       if (typeof body.notes !== 'string') return 'notes_must_be_string';
@@ -141,6 +161,26 @@ function createDialectsModule(deps) {
       if (JSON.stringify(body.params).length > PARAMS_MAX) return 'params_too_large';
     }
     return null;
+  }
+
+  function canonicalMapping(body) {
+    const pathScope = body.match_scope === 'path';
+    return {
+      ...body,
+      version: pathScope ? 2 : 1,
+      match_scope: pathScope ? 'path' : 'value',
+      signal_path: pathScope ? body.signal_path.replace(/\[\d+\]/g, '[]') : body.signal_path,
+      signal_value: pathScope ? '' : body.signal_value,
+    };
+  }
+
+  function assertPathAvailable(dialectId, mapping, exceptId = 0) {
+    if (mapping.version === 2 && stmts.pathConflict.get(dialectId, mapping.signal_path, exceptId)) {
+      throw Object.assign(new Error('A field mapping already exists at this path'), {
+        code: 'path_mapping_exists',
+        status: 409,
+      });
+    }
   }
 
   function serializeMapping(row) {
@@ -155,6 +195,8 @@ function createDialectsModule(deps) {
     }
     return {
       id: row.id,
+      version: row.version,
+      match_scope: row.version === 1 ? 'value' : row.version === 2 ? 'path' : 'unknown',
       signal_path: row.signal_path,
       signal_value: row.signal_value,
       semantic_label: row.semantic_label,
@@ -245,6 +287,7 @@ function createDialectsModule(deps) {
     const d = getOwnedDialect(id, user.id);
     if (!d) return sendError(res, 404, 'not_found', 'Dialect not found');
     stmts.deleteDialect.run(d.id);
+    clearCacheForDb(db, d.id);
     sendJson(res, 200, { success: true });
   }
 
@@ -273,37 +316,40 @@ function createDialectsModule(deps) {
       .then((body) => {
         const err = validateMappingFields(body);
         if (err) return sendError(res, 400, err, 'Invalid mapping');
+        const mapping = canonicalMapping(body);
         const now = Date.now();
-        const r = stmts.insertMapping.run(
-          d.id,
-          body.signal_path,
-          body.signal_value,
-          body.semantic_label,
-          body.shape_fingerprint || null,
-          body.params ? JSON.stringify(body.params) : null,
-          'user-confirmed',
-          body.notes || null,
-          now,
-        );
+        const r = db.transaction(() => {
+          assertPathAvailable(d.id, mapping);
+          return stmts.insertMapping.run(
+            d.id,
+            mapping.signal_path,
+            mapping.signal_value,
+            mapping.semantic_label,
+            mapping.shape_fingerprint || null,
+            mapping.params ? JSON.stringify(mapping.params) : null,
+            mapping.version,
+            'user-confirmed',
+            mapping.notes || null,
+            now,
+          );
+        })();
         clearCacheForDb(db, d.id); // analyze must see the new mapping immediately, not after 60s TTL
         sendJson(res, 200, {
           success: true,
           mapping: serializeMapping({
             id: r.lastInsertRowid,
-            signal_path: body.signal_path,
-            signal_value: body.signal_value,
-            semantic_label: body.semantic_label,
-            shape_fingerprint: body.shape_fingerprint || null,
-            params: body.params ? JSON.stringify(body.params) : null,
+            ...mapping,
+            shape_fingerprint: mapping.shape_fingerprint || null,
+            params: mapping.params ? JSON.stringify(mapping.params) : null,
             confidence: 'user-confirmed',
-            notes: body.notes || null,
+            notes: mapping.notes || null,
             created_at: now,
           }),
         });
       })
       .catch((e) => {
         log.error({ err: e }, 'create mapping failed');
-        sendError(res, 400, e.code || 'bad_request', e.message);
+        sendError(res, e.status || 400, e.code || 'bad_request', e.message);
       });
   }
 
@@ -315,12 +361,27 @@ function createDialectsModule(deps) {
     const m = stmts.getMappingWithOwner.get(mid);
     if (!m) return sendError(res, 404, 'not_found', 'Mapping not found');
     if (m.owner_user_id !== user.id) return sendError(res, 403, 'forbidden', 'Not your mapping');
+    if (m.dialect_id !== parseIntId(match.params.id))
+      return sendError(res, 404, 'not_found', 'Mapping not found');
+    if (m.version !== 1 && m.version !== 2)
+      return sendError(res, 409, 'mapping_version_unsupported', 'Mapping version is not supported');
 
     return readJson(req)
       .then((body) => {
+        if (!body || typeof body !== 'object' || Array.isArray(body))
+          return sendError(res, 400, 'mapping_invalid', 'Invalid mapping');
+        const scope =
+          body.match_scope === undefined ? (m.version === 2 ? 'path' : 'value') : body.match_scope;
         const merged = {
+          match_scope: scope,
+          ...(body.version !== undefined ? { version: body.version } : {}),
           signal_path: body.signal_path !== undefined ? body.signal_path : m.signal_path,
-          signal_value: body.signal_value !== undefined ? body.signal_value : m.signal_value,
+          signal_value:
+            body.signal_value !== undefined
+              ? body.signal_value
+              : scope === 'path'
+                ? ''
+                : m.signal_value,
           semantic_label:
             body.semantic_label !== undefined ? body.semantic_label : m.semantic_label,
           shape_fingerprint:
@@ -330,22 +391,27 @@ function createDialectsModule(deps) {
         };
         const err = validateMappingFields(merged);
         if (err) return sendError(res, 400, err, 'Invalid mapping update');
-        stmts.updateMapping.run(
-          merged.signal_path,
-          merged.signal_value,
-          merged.semantic_label,
-          merged.shape_fingerprint,
-          merged.params ? JSON.stringify(merged.params) : null,
-          merged.notes,
-          m.id,
-        );
+        const mapping = canonicalMapping(merged);
+        db.transaction(() => {
+          assertPathAvailable(m.dialect_id, mapping, m.id);
+          stmts.updateMapping.run(
+            mapping.signal_path,
+            mapping.signal_value,
+            mapping.semantic_label,
+            mapping.shape_fingerprint,
+            mapping.params ? JSON.stringify(mapping.params) : null,
+            mapping.notes,
+            mapping.version,
+            m.id,
+          );
+        })();
         clearCacheForDb(db, m.dialect_id); // invalidate cached mappings for this dialect
         const fresh = stmts.getMappingWithOwner.get(m.id);
         sendJson(res, 200, { success: true, mapping: serializeMapping(fresh) });
       })
       .catch((e) => {
         log.error({ err: e }, 'update mapping failed');
-        sendError(res, 400, e.code || 'bad_request', e.message);
+        sendError(res, e.status || 400, e.code || 'bad_request', e.message);
       });
   }
 
@@ -357,6 +423,8 @@ function createDialectsModule(deps) {
     const m = stmts.getMappingWithOwner.get(mid);
     if (!m) return sendError(res, 404, 'not_found', 'Mapping not found');
     if (m.owner_user_id !== user.id) return sendError(res, 403, 'forbidden', 'Not your mapping');
+    if (m.dialect_id !== parseIntId(match.params.id))
+      return sendError(res, 404, 'not_found', 'Mapping not found');
     stmts.deleteMapping.run(m.id);
     clearCacheForDb(db, m.dialect_id); // drop cached mappings so analyze stops using the deleted one
     sendJson(res, 200, { success: true });
@@ -372,7 +440,20 @@ function createDialectsModule(deps) {
     const d = getOwnedDialect(id, user.id);
     if (!d) return sendError(res, 404, 'not_found', 'Dialect not found');
 
-    const mappings = stmts.listMappings.all(d.id).map((row) => ({
+    const rows = stmts.listMappings.all(d.id);
+    if (rows.some((row) => row.version !== 1 && row.version !== 2)) {
+      return sendError(
+        res,
+        409,
+        'mapping_version_unsupported',
+        'Cannot export an unsupported mapping version',
+      );
+    }
+    const schemaVersion = rows.some((row) => row.version === 2) ? 2 : 1;
+    const mappings = rows.map((row) => ({
+      ...(schemaVersion === 2
+        ? { version: row.version, match_scope: row.version === 2 ? 'path' : 'value' }
+        : {}),
       signal_path: row.signal_path,
       signal_value: row.signal_value,
       semantic_label: row.semantic_label,
@@ -385,7 +466,7 @@ function createDialectsModule(deps) {
       name: d.name,
       mappings,
       exported_at: Date.now(),
-      schema_version: 1,
+      schema_version: schemaVersion,
     });
   }
 
@@ -395,17 +476,60 @@ function createDialectsModule(deps) {
 
     return readJson(req)
       .then((body) => {
-        if (body.schema_version !== 1) {
-          return sendError(res, 400, 'unsupported_schema_version', 'Expected schema_version=1');
+        if (!body || (body.schema_version !== 1 && body.schema_version !== 2)) {
+          return sendError(
+            res,
+            400,
+            'unsupported_schema_version',
+            'Expected schema_version=1 or 2',
+          );
         }
         const nameErr = validateName(body.name);
         if (nameErr) return sendError(res, 400, nameErr, 'Invalid dialect name in import');
         if (!Array.isArray(body.mappings)) {
           return sendError(res, 400, 'mappings_must_be_array', null);
         }
+        const mappings = [];
+        const pathIdentities = new Set();
         for (let i = 0; i < body.mappings.length; i += 1) {
-          const merr = validateMappingFields(body.mappings[i]);
+          const raw = body.mappings[i];
+          if (
+            body.schema_version === 1 &&
+            raw &&
+            (raw.match_scope === 'path' || (raw.version !== undefined && raw.version !== 1))
+          ) {
+            return sendError(
+              res,
+              400,
+              'mapping_version_invalid',
+              'Field mappings require schema_version=2',
+            );
+          }
+          if (
+            body.schema_version === 2 &&
+            (!raw || !['value', 'path'].includes(raw.match_scope) || raw.version === undefined)
+          ) {
+            return sendError(
+              res,
+              400,
+              'mapping_version_invalid',
+              'Schema 2 requires explicit mapping scope and version',
+            );
+          }
+          const merr = validateMappingFields(raw);
           if (merr) return sendError(res, 400, merr, `Mapping at index ${i} is invalid`);
+          const mapping = canonicalMapping(raw);
+          if (mapping.version === 2) {
+            if (pathIdentities.has(mapping.signal_path))
+              return sendError(
+                res,
+                409,
+                'path_mapping_exists',
+                'Duplicate field mapping in import',
+              );
+            pathIdentities.add(mapping.signal_path);
+          }
+          mappings.push(mapping);
         }
 
         const now = Date.now();
@@ -414,7 +538,7 @@ function createDialectsModule(deps) {
         const tx = db.transaction(() => {
           const r = stmts.insertDialect.run(user.id, importedName, 0, now, now);
           newId = r.lastInsertRowid;
-          for (const m of body.mappings) {
+          for (const m of mappings) {
             stmts.insertMapping.run(
               newId,
               m.signal_path,
@@ -422,6 +546,7 @@ function createDialectsModule(deps) {
               m.semantic_label,
               m.shape_fingerprint || null,
               m.params ? JSON.stringify(m.params) : null,
+              m.version,
               'imported',
               m.notes || null,
               now,

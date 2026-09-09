@@ -9,8 +9,9 @@
  *     change every `compose up --build` kicked all logged-in users out
  *     even though their cookie was still valid for 30 days)
  *
- * Writes are write-through: createSession + destroySession update both
- * sides. On boot we load all non-expired sessions from DB into the Map.
+ * Production persists versioned keyed lookup identities, never raw cookies.
+ * The recovery owner fences startup and journals revocations before DB deletion.
+ * Only a drained, orderly shutdown may preserve trusted restart continuity.
  *
  * Cookie:
  *   ot_session = <64-char hex token>
@@ -57,19 +58,85 @@ function makeLimiter({ windowMs, max }) {
 }
 
 /**
- * @param {{ Users: any, Sessions?: any, logger?: any }} deps
+ * @param {{ Users: any, Sessions?: any, recovery?: any, logger?: any }} deps
  */
-function createAuth({ Users, Sessions, logger }) {
+function createAuth({ Users, Sessions, recovery, logger }) {
   const log = logger || console;
   /** @type {Map<string, { userId: number, expiresAt: number, ip: string, ua: string }>} */
   const sessions = new Map();
+  const proofs = new WeakMap();
+  const epochs = new Map();
+  let closing = false;
+  let closed = false;
+  let unaccountedRevocation = false;
+
+  function recordRevocations(entries) {
+    try {
+      if (recovery.revoke(entries)) return true;
+    } catch {
+      /* hot denial and the prearmed fence still have to finish */
+    }
+    unaccountedRevocation = true;
+    return false;
+  }
+
+  function assertWritable() {
+    if (closing || closed) {
+      throw Object.assign(new Error('Authentication is temporarily unavailable.'), {
+        code: 'auth_unavailable',
+        status: 503,
+      });
+    }
+  }
+
+  function credentialHash(user) {
+    try {
+      return Sessions && typeof Sessions.credentialHash === 'function'
+        ? Sessions.credentialHash(user.id)
+        : Users.getByEmail(user.email)?.password_hash;
+    } catch {
+      throw Object.assign(new Error('Authentication is temporarily unavailable.'), {
+        code: 'auth_unavailable',
+        status: 503,
+      });
+    }
+  }
+
+  function rememberProof(user, passwordHash, epoch = epochs.get(user.id) || 0) {
+    proofs.set(user, { passwordHash, epoch });
+    return user;
+  }
+
+  // Used only after an already-authorized synchronous reset transaction.
+  // Callers cannot turn a pre-reset user object into a later login proof.
+  function sessionUser(id) {
+    assertWritable();
+    const user = Users.get(id);
+    if (!user)
+      throw Object.assign(new Error('Sign in again.'), {
+        code: 'session_state_changed',
+        status: 401,
+      });
+    return rememberProof(user, credentialHash(user));
+  }
+
+  const lookup = (token) => (recovery ? recovery.lookup(token) : token);
 
   // Boot-time hydration: pull all non-expired sessions from DB into the
   // Map so request handlers (which only check the Map) recognise tokens
   // that survive a restart. Cheap — typical row count is single-digits
   // to low hundreds even for active products. Sessions param is optional
   // for tests that exercise auth without a DB.
-  if (Sessions) {
+  if (recovery) {
+    for (const r of recovery.activeRows) {
+      sessions.set(r.token, {
+        userId: r.userId,
+        expiresAt: r.expiresAt,
+        ip: r.ip || '',
+        ua: r.ua || '',
+      });
+    }
+  } else if (Sessions) {
     try {
       Sessions.pruneExpired();
       const rows = Sessions.loadActive();
@@ -139,10 +206,11 @@ function createAuth({ Users, Sessions, logger }) {
   function getCurrentUser(req) {
     const token = getCookieToken(req);
     if (!token) return null;
-    const s = sessions.get(token);
+    const id = lookup(token);
+    const s = sessions.get(id);
     if (!s) return null;
     if (s.expiresAt < Date.now()) {
-      sessions.delete(token);
+      sessions.delete(id);
       return null;
     }
     const user = Users.get(s.userId);
@@ -188,7 +256,24 @@ function createAuth({ Users, Sessions, logger }) {
   }
 
   function createSession(req, res, user) {
+    assertWritable();
+    const proof = proofs.get(user);
+    if (recovery || proof) {
+      if (
+        !proof ||
+        typeof proof.passwordHash !== 'string' ||
+        proof.epoch !== (epochs.get(user.id) || 0) ||
+        proof.passwordHash !== credentialHash(user)
+      ) {
+        throw Object.assign(new Error('Sign in again.'), {
+          code: 'session_state_changed',
+          status: 401,
+        });
+      }
+      proofs.delete(user);
+    }
     const token = newToken();
+    const identity = lookup(token);
     const expiresAt = Date.now() + SESSION_TTL_MS;
     const ip = clientIp(req);
     const ua = (req.headers['user-agent'] || '').slice(0, 200);
@@ -199,13 +284,13 @@ function createAuth({ Users, Sessions, logger }) {
       // post-restart. Throwing here lets the caller return 500; better
       // than handing out a session that won't outlive the process.
       try {
-        Sessions.create({ token, userId: user.id, expiresAt, ip, ua });
+        Sessions.create({ token: identity, userId: user.id, expiresAt, ip, ua });
       } catch (e) {
-        log.error && log.error({ err: e.message }, 'session DB write failed');
+        log.error && log.error({ operation: 'session_create' }, 'session DB write failed');
         throw new Error('session_persistence_failed', { cause: e });
       }
     }
-    sessions.set(token, { userId: user.id, expiresAt, ip, ua });
+    sessions.set(identity, { userId: user.id, expiresAt, ip, ua });
     setSessionCookie(req, res, token);
     log.info && log.info({ userId: user.id, sessions: sessions.size }, 'session created');
   }
@@ -214,12 +299,18 @@ function createAuth({ Users, Sessions, logger }) {
     const token = getCookieToken(req);
     let persistenceError;
     if (token) {
-      sessions.delete(token);
-      if (Sessions) {
+      const id = lookup(token);
+      const known = sessions.get(id);
+      // Only a known live session can add a revocation. Unknown cookies must
+      // not turn this public endpoint into an unbounded journal/DB writer.
+      const durable =
+        recovery && known ? recordRevocations([{ id, expiresAt: known.expiresAt }]) : false;
+      sessions.delete(id);
+      if (Sessions && (!recovery || known)) {
         try {
-          Sessions.destroy(token);
+          Sessions.destroy(id);
         } catch (e) {
-          persistenceError = new Error('session_persistence_failed', { cause: e });
+          if (!durable) persistenceError = new Error('session_persistence_failed', { cause: e });
           log.error && log.error({ operation: 'session_delete' }, 'session DB delete failed');
         }
       }
@@ -227,14 +318,15 @@ function createAuth({ Users, Sessions, logger }) {
     const parts = [`${COOKIE_NAME}=`, 'Path=/', 'HttpOnly', 'SameSite=Lax', 'Max-Age=0'];
     if (isHttps(req)) parts.push('Secure');
     res.setHeader('Set-Cookie', parts.join('; '));
-    // Local cleanup must finish even when durable deletion fails. The route
-    // must still know that a restart could reload the undeleted session.
+    // Durable intent is sufficient even when the physical DB deletion fails.
+    // Total-write failure keeps the prearmed recovery fence dirty.
     if (persistenceError) {
       throw persistenceError;
     }
   }
 
   async function register({ email, password }, req) {
+    assertWritable();
     const ip = clientIp(req);
     if (!registerLimiter(ip)) {
       const e = /** @type {Error & {code?: string, status?: number}} */ (
@@ -267,6 +359,7 @@ function createAuth({ Users, Sessions, logger }) {
     // The 409 response code itself is a residual disclosure but at this
     // scale (small user base) the UX win of an honest error outweighs it.
     const password_hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    assertWritable();
     if (Users.getByEmail(normEmail)) {
       const e = /** @type {Error & {code?: string, status?: number}} */ (
         new Error('Email already registered')
@@ -276,10 +369,11 @@ function createAuth({ Users, Sessions, logger }) {
       throw e;
     }
     const user = Users.create({ email: normEmail, password_hash });
-    return user;
+    return rememberProof(user, password_hash);
   }
 
   async function login({ email, password }, req) {
+    assertWritable();
     const ip = clientIp(req);
     const emailKey =
       typeof email === 'string' && email.length ? email.trim().toLowerCase() : '<empty>';
@@ -311,6 +405,7 @@ function createAuth({ Users, Sessions, logger }) {
       throw e;
     }
     const userRow = Users.getByEmail(email);
+    const epoch = userRow ? epochs.get(userRow.id) || 0 : 0;
     // Always run bcrypt to keep timing similar between "no such email" and
     // "wrong password" cases.
     const ok = await bcrypt.compare(password, userRow ? userRow.password_hash : TIMING_DUMMY_HASH);
@@ -332,7 +427,11 @@ function createAuth({ Users, Sessions, logger }) {
       component: 'auth',
       ctx: { outcome: 'success', reason_code: 'ok' },
     });
-    return { id: userRow.id, email: userRow.email, created_at: userRow.created_at };
+    return rememberProof(
+      { id: userRow.id, email: userRow.email, created_at: userRow.created_at },
+      userRow.password_hash,
+      epoch,
+    );
   }
 
   function activeSessionCount() {
@@ -361,37 +460,22 @@ function createAuth({ Users, Sessions, logger }) {
   }
 
   /**
-   * Drop ALL sessions belonging to a user — DB and in-memory Map.
-   * Used on password reset so previously-stolen cookies stop working
-   * immediately, even across container restarts.
-   *
-   * Critical invariant (post-audit v0.37.1): the in-memory Map MUST be
-   * cleared regardless of DB outcome. Map cleanup uses Map.delete which
-   * cannot throw, so we run it in a finally block; the DB error (if any)
-   * is rethrown afterward so the caller still sees the failure.
-   *
-   * Why both halves matter even after the DB throws:
-   *   • If DB delete fails but Map was nuked anyway, a stolen cookie
-   *     stops working immediately (which is what we want).
-   *   • Restart resurrection is now closed at a different layer —
-   *     updatePasswordAndCrypto / updatePasswordAndWipe both DELETE
-   *     FROM sessions inside their atomic transaction, so by the time
-   *     this function runs the DB is already clean and the call below
-   *     is a defensive double-check that returns 0 changes on the
-   *     happy path.
-   *
-   * Pre-v0.20.0 this only cleared the in-memory Map.
-   * Pre-v0.25.0 this swallowed DB-delete failures (session revival).
-   * Pre-v0.37.1 a DB throw skipped Map cleanup (Pro-audit P1-001
-   *     desync: stolen cookies stayed live in Map until container
-   *     restart). Closed by the finally+atomic-transaction combo.
+   * Revoke every known session, retire outstanding credential proofs, then
+   * attempt DB cleanup. Reset/wipe retain their atomic password/data/session
+   * transaction; the journal also protects direct account-wide invalidation.
+   * Hot denial always finishes. A durable journal is sufficient if deletion
+   * fails; failure of both stores is surfaced and forbids a clean checkpoint.
    *
    * @param {number} userId
    * @returns {number} count removed from the in-memory Map
-   * @throws if DB-side delete fails — caller must surface to user,
-   *         but Map is already cleared so the security boundary holds
+   * @throws when durable revocation cannot be confirmed; local denial is done
    */
   function invalidateUserSessions(userId) {
+    epochs.set(userId, (epochs.get(userId) || 0) + 1);
+    const affected = [...sessions].filter(([, session]) => session.userId === userId);
+    const durable = recovery
+      ? recordRevocations(affected.map(([id, session]) => ({ id, expiresAt: session.expiresAt })))
+      : false;
     let dbError = null;
     try {
       if (Sessions) {
@@ -407,7 +491,10 @@ function createAuth({ Users, Sessions, logger }) {
         removed++;
       }
     }
-    if (dbError) throw dbError;
+    if (dbError && !durable) {
+      if (recovery) throw new Error('session_persistence_failed');
+      throw dbError;
+    }
     return removed;
   }
 
@@ -447,9 +534,19 @@ function createAuth({ Users, Sessions, logger }) {
     return verifyEmailLimiter(clientIp(req));
   }
 
-  function shutdown() {
+  function beginShutdown() {
+    closing = true;
+  }
+
+  function shutdown({ clean = false } = {}) {
     clearInterval(sweepTimer);
     sessions.clear();
+    const trusted = recovery
+      ? recovery.close({ clean: clean && closing && !unaccountedRevocation })
+      : true;
+    closing = true;
+    closed = true;
+    return trusted;
   }
 
   return {
@@ -457,6 +554,8 @@ function createAuth({ Users, Sessions, logger }) {
     register,
     login,
     createSession,
+    sessionUser,
+    assertWritable,
     destroySession,
     getCurrentUser,
     activeSessionCount,
@@ -469,6 +568,7 @@ function createAuth({ Users, Sessions, logger }) {
     checkVerifyEmailLimit,
     clientIp, // exposed so other handlers (e.g. /api/analyze rate-limit) reuse the same trusted-proxy rule
     shutdown,
+    beginShutdown,
   };
 }
 

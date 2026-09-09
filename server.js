@@ -68,6 +68,9 @@ const {
   extractAllCategories,
   detectFormat,
   rollupStatus,
+  inspectSchain,
+  listInspectionProfiles,
+  evaluateDeclaredRoute,
 } = require('@ortbtools/core');
 const { analyze: analyzeBehavior } = require('@ortbtools/core/behavior');
 const knowledgeBase = require('@ortbtools/core/knowledge-base');
@@ -187,7 +190,17 @@ function getPublicBaseUrl() {
   return process.env.PUBLIC_BASE_URL || 'http://localhost:' + PORT;
 }
 
-const auth = createAuth({ Users, Sessions, logger: require('./lib/logger').child('auth') });
+const { createSessionRecovery } = require('./lib/session-recovery');
+const sessionRecovery = createSessionRecovery({
+  directory: path.join(process.env.ORTBTOOLS_DATA_DIR || '/data', 'session-recovery'),
+  store: Sessions,
+});
+const auth = createAuth({
+  Users,
+  Sessions,
+  recovery: sessionRecovery,
+  logger: require('./lib/logger').child('auth'),
+});
 
 // ── Backend module router ───────────────────────────────────────────────────
 // First-module migration: GET /api/health moved to modules/health/handler.js.
@@ -700,6 +713,7 @@ const sampleModule = require('./modules/sample/handler');
 const findingsModule = require('./modules/findings/handler');
 const { createFxModule } = require('./modules/fx/handler');
 const { createAnalyzeModule } = require('./modules/analyze/handler');
+const { createInspectionModule } = require('./modules/inspection/handler');
 const { createIntelModule } = require('./modules/intel/handler');
 const { createCorpusModule } = require('./modules/corpus/handler');
 const { createAccountModule } = require('./modules/account/handler');
@@ -759,6 +773,15 @@ router.register(createAnalyticsModule({ readLimiter, auth, READ_MAX_PER_WINDOW }
 router.register(createTelemetryModule({ telemetryLimiter, auth }));
 router.register(createGistsModule({ Gists, gistWriteLimiter, readLimiter }));
 router.register(
+  createInspectionModule({
+    auth,
+    analyzeLimiter,
+    readLimiter,
+    inspectSchain,
+    listInspectionProfiles,
+  }),
+);
+router.register(
   createAnalyzeModule({
     analyzeLimiter,
     behaviorLimiter,
@@ -774,6 +797,8 @@ router.register(
     detectFormat,
     unionFormat,
     rollupStatus,
+    inspectSchain,
+    evaluateDeclaredRoute,
     AnalyzeLog,
     // v8 — User Dialects: analyze handler loads the caller's default
     // dialect per request and passes it into validate() so the
@@ -1271,15 +1296,26 @@ const _pruneTimer = setInterval(() => {
 }, ONE_DAY_MS);
 if (typeof _pruneTimer.unref === 'function') _pruneTimer.unref();
 
+let shuttingDown = false;
 const shutdown = (signal) => {
+  if (shuttingDown) return;
+  shuttingDown = true;
   log.info({ signal }, 'shutting down');
+  auth.beginShutdown();
   streamGenerator.stop();
-  auth.shutdown();
-  // Flush in-flight Sentry events before close — best-effort 2s budget.
-  // Server close + flush race; whichever finishes first wins, the 5s
-  // hard-exit below catches any remaining hang.
-  flushSentry(2000).finally(() => server.close(() => process.exit(0)));
-  setTimeout(() => process.exit(1), 5000).unref();
+  // Stop accepting HTTP immediately. Only the drained process can certify a
+  // clean auth checkpoint; a timeout/crash keeps the durable dirty fence.
+  const hardExit = setTimeout(() => {
+    auth.shutdown();
+    process.exit(1);
+  }, 5000);
+  hardExit.unref();
+  const drained = new Promise((resolve) => server.close(resolve));
+  Promise.allSettled([drained, flushSentry(2000)]).then(() => {
+    auth.shutdown({ clean: true });
+    clearTimeout(hardExit);
+    process.exit(0);
+  });
 };
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));

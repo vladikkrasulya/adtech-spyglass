@@ -235,3 +235,15 @@ A new or changed route section needs a focused mount/deactivate/remount test, si
 for every resource, locale behavior, and any explicit global contract. Inspector changes run the
 re-entrancy and window-contract suites. Crypto/session changes run browser crypto, auth, and privacy
 guards. Finish with the frontend steps and complete gate in [quickstart.md](../quickstart.md).
+
+## Explicit inspection, mappings and images (033)
+
+The Inspector Tools action mounts serialized/structured SChain inspection in the existing modal host. Declared sender/profile context is local to the current Inspector mount. Editing dialog input aborts its outstanding inspection; applying a different declaration invalidates the main analysis and its derived output. Closing/deactivating cancels outstanding work. Missing or incompatible context stays visibly unknown with source provenance.
+
+Field-role mapping scope is explicit in the label dialog and Account→Dialects. Exact values take precedence; scope edits, removal, activation and import/export use the account API. Numeric path indices normalize without persisting an observed field-role value. Long paths wrap within the account card; mapping forms stack below their actions.
+
+The selected creative owns a bounded deduplicated raster manifest for images/posters, responsive sources and embedded/inline CSS images. Explicit signed-in loads retain full-document styles and standards-mode doctype, per-resource outcomes and unresolved-only retry. Edit, clear, selection or unmount invalidates late results and queued work. Existing probe/static-analysis identity and sandbox remain. Hidden retry/cancel controls occupy no space; passive toast regions do not intercept unrelated buttons.
+
+Saved-library failures expose retry rather than an encryption-state claim. An auth generation change immediately clears account rows and rejects older fetch completions. History persistence precedes painting because quota fallback may trim the in-memory ring; row indices always refer to the visible final ring.
+
+A saved-Library row opens the selected record through the existing Inspector load path at `?saved=ID`. The ID must be one positive safe integer; duplicate IDs or a simultaneous curated `sample` parameter are rejected without fetching either source. A locked session retains the explicit selection through reload, opens the localized existing unlock modal and consumes the selection once after a legitimate unlock. Logout/account change, Clear, a newer selection, edited inputs or unmount prevents late saved bodies from replacing the current editors. API ownership and browser decryption still govern access; no private record bodies travel in the URL.

@@ -53,6 +53,9 @@ The whole surface lives on a single domain by design — see the
   fragments in a sandboxed iframe (`sandbox="allow-scripts"`, no
   `allow-same-origin`). Native bids are synthesized into a stand-alone HTML
   card so behavior probes see clicks the same way they would on a banner.
+- **Supply-chain inspection** — the Tools menu accepts a structured request, serialized SChain or a URL/query containing it. It shows copy locations, node counts and grounded findings. Optional sender and pinned adapter context are explicit operator declarations; they never establish the real traffic route.
+- **Reusable field roles** — account dialects can map a normalized field path independently of its value. Exact-value mappings take precedence. Scope can be edited, removed and exported/imported with the dialect.
+- **Explicit preview images** — signed-in users can request up to 12 distinct raster resources for the selected creative, including responsive images and inline CSS images, with per-resource status and retry. Requests go through the bounded server image endpoint; remote code, stylesheets, fonts and media are excluded.
 - **Behavior probe** (Phase 5/6): an in-iframe instrumentation bundle hooks
   `addEventListener` / `Location.href` / permission APIs and reports back
   via `postMessage`. Engine flags misclick traps, frozen threads, permission

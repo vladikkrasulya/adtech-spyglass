@@ -6021,6 +6021,24 @@ body:has(.app-footer) .toast-container {
 .creative-actions .creative-inline-assets {
   max-width: 100%;
 }
+.creative-actions .btn[hidden] {
+  display: none;
+}
+.creative-asset-inventory {
+  flex-basis: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.creative-asset-inventory summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.creative-asset-inventory ol {
+  padding-left: var(--space-4);
+}
 
 /* ── 7b. `.creative-bid-selector` — DEF-201, reach every returned creative ─
    Same seam as `.creative-actions`: a sibling AFTER `.preview-safe`, never a

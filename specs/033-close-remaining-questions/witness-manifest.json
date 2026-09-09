@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "frozen_at": "2026-09-09",
+  "source_revision": "0ba352315253f6692af6497d553cfb12909a1b8b",
+  "audit_tree_sha256": "edf782a09fdf3180feb9077b360d96eceab5a316f12bc342fae6376c118d9230",
+  "execution": "direct MakeRequests, cloned synthetic input, no HTTP, network-none container",
+  "records": [
+    {
+      "id": "b2-logan-002-66ba4254762b",
+      "group": "disagreement",
+      "state": "pending"
+    },
+    {
+      "id": "b2-sovrn-010-7a928c161a6a",
+      "group": "disagreement",
+      "state": "pending"
+    },
+    {
+      "id": "b2-insticator-004-52d68d7cb4e5",
+      "group": "disagreement",
+      "state": "pending"
+    },
+    {
+      "id": "b2-insticator-005-cf460d0b3a2c",
+      "group": "disagreement",
+      "state": "pending"
+    },
+    {
+      "id": "b2-insticator-008-2ee091eb630c",
+      "group": "disagreement",
+      "state": "pending"
+    },
+    {
+      "id": "b2-insticator-009-c777667bcc8b",
+      "group": "disagreement",
+      "state": "pending"
+    },
+    {
+      "id": "b2-insticator-010-f05d495a0537",
+      "group": "disagreement",
+      "state": "pending"
+    },
+    {
+      "id": "b1-001-huaweiads-imp.audio-forbidden",
+      "group": "previously-inconclusive",
+      "state": "pending"
+    },
+    {
+      "id": "b1-002-telaria-imp.banner-forbidden",
+      "group": "previously-inconclusive",
+      "state": "pending"
+    },
+    {
+      "id": "b1-003-adnuntius-imp.video-forbidden",
+      "group": "previously-inconclusive",
+      "state": "pending"
+    },
+    {
+      "id": "b1-005-gamma-imp.native-forbidden",
+      "group": "previously-inconclusive",
+      "state": "pending"
+    },
+    {
+      "id": "b1-006-audienceNetwork-site-forbidden",
+      "group": "previously-inconclusive",
+      "state": "pending"
+    },
+    {
+      "id": "b1-008-unicorn-regs.ext.gdpr-forbidden",
+      "group": "previously-inconclusive",
+      "state": "pending"
+    },
+    {
+      "id": "b1-010-lockerdome-imp-rewritten",
+      "group": "previously-inconclusive",
+      "state": "pending"
+    },
+    {
+      "id": "b1-011-smartyads-imp.ext.bidder-moved",
+      "group": "previously-inconclusive",
+      "state": "pending"
+    },
+    {
+      "id": "b1-012-huaweiads-imp.ext.bidder-moved",
+      "group": "previously-inconclusive",
+      "state": "pending"
+    },
+    {
+      "id": "b1-031-alliance_gravity-imp.ext.bidder-rewritten",
+      "group": "previously-inconclusive",
+      "state": "pending"
+    },
+    {
+      "id": "b1-037-limelightDigital-id-rewritten",
+      "group": "previously-inconclusive",
+      "state": "pending"
+    },
+    {
+      "id": "b1-047-goldbach-id-rewritten",
+      "group": "previously-inconclusive",
+      "state": "pending"
+    }
+  ]
+}

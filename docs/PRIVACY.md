@@ -103,6 +103,25 @@ paths/values, semantic labels, fingerprints, parameters, confidence, notes, and
 timestamps — are also plaintext. These records are account-scoped and auth-gated, but
 they are not encrypted with the sample DEK and are readable by the server operator.
 
+### Explicit raster image requests (signed in)
+
+Native, push and HTML previews can load up to 12 unique raster images only after you explicitly request it while signed in. The inventory lists hosts and image roles, with per-resource results and retry for unresolved images. The server sends the complete image URL, including query parameters, to its remote host; that host sees the server IP. Images are returned as data URIs without enabling advertiser requests from your browser. Remote stylesheets, fonts, scripts, frames and media bodies stay blocked. Editing, clearing or replacing the creative cancels queued image requests; an already sent request cannot be recalled.
+
+The raster endpoint is authenticated and rate-limited. It validates public DNS addresses,
+pins the connection address, rejects redirects and non-raster types, and limits response
+size/time. The application does not persist fetched image bytes or full asset URLs;
+retries keep successful data URIs only in the current preview's memory. This does not
+prevent the destination host from recording the explicitly requested URL.
+
+For a value-independent mapping, the browser omits the observed value from the save
+request. Only the normalized field path and one of the nine field roles are needed;
+its stored version-2 value slot is empty. Exact-value mappings retain their existing
+plaintext value storage. Notes and other manually entered metadata remain plaintext.
+
+**Українською.** Native, push та HTML-прев’ю можуть завантажити до 12 унікальних растрових зображень лише після твого явного запиту, коли ти увійшов. Перелік показує хости й ролі зображень, результат кожного запиту та повторення для незавантажених ресурсів. Сервер надсилає повний URL зображення разом із параметрами запиту віддаленому хосту; той бачить IP сервера. Зображення повертаються як data URI без увімкнення запитів браузера до рекламодавця. Зовнішні стилі, шрифти, скрипти, фрейми та медіафайли залишаються заблокованими. Редагування, очищення чи заміна креативу скасовує запити з черги; уже надісланий запит відкликати неможливо. Мапінг ролі поля не надсилає побачене значення під час збереження: зберігаються нормалізований шлях і роль, а поле значення порожнє. Точні мапінги й вручну введені нотатки залишаються відкритим текстом.
+
+**По-русски.** Native, push и HTML-превью могут загрузить до 12 уникальных растровых изображений только после твоего явного запроса, когда ты вошёл. Список показывает хосты и роли изображений, результат каждого запроса и повторение для незагруженных ресурсов. Сервер отправляет полный URL изображения вместе с параметрами запроса удалённому хосту; тот видит IP сервера. Изображения возвращаются как data URI без включения запросов браузера к рекламодателю. Внешние стили, шрифты, скрипты, фреймы и медиафайлы остаются заблокированными. Редактирование, очистка или замена креатива отменяет запросы из очереди; уже отправленный запрос отозвать невозможно. Маппинг роли поля не отправляет увиденное значение при сохранении: сохраняются нормализованный путь и роль, а поле значения пустое. Точные маппинги и вручную введённые заметки остаются открытым текстом.
+
 ### Activity log (Cabinet → Activity)
 
 ortbtools records a metadata row in `analyze_log` each time you run an analysis while
@@ -645,6 +664,14 @@ A finding that lets the server decrypt request/response bodies saved through the
 current encrypted web flow is treated as high severity and triaged immediately.
 
 ---
+
+## Inspection and session recovery (033)
+
+**EN:** SChain input and explicitly declared sender/adapter context are processed transiently without fetching supplied URLs. A pinned source profile describes supported statements, not observed traffic. Path-role mappings retain the normalized field path and role, without an observed identifier/value; legacy exact-value mappings retain their existing value semantics. Private server recovery state stores a key and bounded keyed session-revocation identities/expiries, never raw cookies. Uncertain restart, initial upgrade or restore without a trusted checkpoint invalidates old sessions and may require login again. Saved account data is retained.
+
+**UK:** Вхідний SChain і явно вказаний контекст відправника/адаптера обробляються тимчасово без завантаження переданих URL. Профіль за зафіксованим джерелом описує підтримувані твердження, а не спостережений трафік. Мапінг ролі поля зберігає нормалізований шлях і роль без спостереженого ідентифікатора чи значення; точні мапінги зберігають попередню семантику значень. Приватний стан відновлення сервера містить ключ та обмежений список похідних ідентифікаторів відкликаних сесій зі строками дії, без сирих cookie. Невизначений перезапуск, перше оновлення або відновлення без довіреного стану скасовує старі сесії та може вимагати повторного входу. Дані акаунта зберігаються.
+
+**RU:** Входной SChain и явно указанный контекст отправителя/адаптера обрабатываются временно без загрузки переданных URL. Профиль по зафиксированному источнику описывает поддерживаемые утверждения, а не наблюдаемый трафик. Маппинг роли поля сохраняет нормализованный путь и роль без наблюдаемого идентификатора или значения; точные маппинги сохраняют прежнюю семантику значений. Приватное состояние восстановления сервера содержит ключ и ограниченный список производных идентификаторов отозванных сессий со сроками действия, без исходных cookie. Неопределённый перезапуск, первое обновление или восстановление без доверенного состояния отменяет старые сессии и может потребовать повторного входа. Данные аккаунта сохраняются.
 
 ## Changelog of privacy-relevant changes
 

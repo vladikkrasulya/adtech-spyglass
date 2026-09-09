@@ -1015,6 +1015,14 @@ const AnalyzeLog = {
 // writes go to BOTH (write-through) so the Map stays the hot read path.
 // ─────────────────────────────────────────────────────────────────────────
 const Sessions = {
+  /** Auth proof recheck at mint; the hash never enters public user objects. */
+  credentialHash(userId) {
+    return db.prepare('SELECT password_hash FROM users WHERE id = ?').get(userId)?.password_hash;
+  },
+  /** Uncertain recovery and first installation must finish before hydration. */
+  destroyAll() {
+    return db.prepare('DELETE FROM sessions').run().changes;
+  },
   /** @param {{ token: string, userId: number, expiresAt: number, ip: string, ua: string }} s */
   create(s) {
     db.prepare(

@@ -52,16 +52,46 @@
       },
       'dialect.label.confidence': { uk: 'впевненість', en: 'confidence', ru: 'уверенность' },
       'dialect.label.low_confidence_warn': {
-        uk: 'Низька впевненість. Перевір здогад, перш ніж зберігати: мапінг застосується там, де цей шлях має саме це значення, у вибраному діалекті.',
-        en: 'Low confidence. Check the guess before saving: the mapping applies where this path has exactly this value, in the chosen dialect.',
-        ru: 'Низкая уверенность. Проверь догадку, прежде чем сохранять: маппинг применится там, где этот путь имеет именно это значение, в выбранном диалекте.',
+        uk: 'Низька впевненість. Перевір лейбл і вибрану область відповідності перед збереженням.',
+        en: 'Low confidence. Check the label and selected match scope before saving.',
+        ru: 'Низкая уверенность. Проверь лейбл и выбранную область соответствия перед сохранением.',
       },
       // FR-015: the saved mapping's REAL scope — this dialect, this
       // normalized path, this exact serialized value. Never "all traffic".
+      'dialect.label.scope': {
+        en: 'Match scope',
+        uk: 'Область відповідності',
+        ru: 'Область соответствия',
+      },
+      'dialect.label.saved_activation_failed': {
+        en: 'Mapping saved, but the default dialect could not be updated. Check activation in your account.',
+        uk: 'Мапінг збережено, але не вдалося оновити діалект за замовчуванням. Перевір активацію в кабінеті.',
+        ru: 'Маппинг сохранён, но не удалось обновить диалект по умолчанию. Проверь активацию в кабинете.',
+      },
+      'dialect.label.scope_value': {
+        en: 'This exact value',
+        uk: 'Лише це значення',
+        ru: 'Только это значение',
+      },
+      'dialect.label.scope_path': {
+        en: 'Field role, any value',
+        uk: 'Роль поля, будь-яке значення',
+        ru: 'Роль поля, любое значение',
+      },
+      'dialect.label.activate': {
+        en: 'Use this dialect by default for my analyses',
+        uk: 'Застосовувати цей діалект за замовчуванням до моїх перевірок',
+        ru: 'Применять этот диалект по умолчанию к моим проверкам',
+      },
+      'dialect.label.scope_path_note': {
+        en: 'Stores only this normalized path and its role, without the observed value. Exact-value mappings take priority. Only your default dialect applies automatically; this does not declare an ad format or suppress validation errors.',
+        uk: 'Зберігає лише цей нормалізований шлях і роль, без побаченого значення. Мапінги точного значення мають пріоритет. Автоматично діє лише твій діалект за замовчуванням; це не визначає формат реклами й не приховує помилки перевірки.',
+        ru: 'Сохраняет только этот нормализованный путь и роль, без увиденного значения. Маппинги точного значения имеют приоритет. Автоматически действует только твой диалект по умолчанию; это не определяет формат рекламы и не скрывает ошибки проверки.',
+      },
       'dialect.label.scope_note': {
-        uk: 'Мапінг діє лише у вибраному діалекті, для цього шляху з саме цим значенням. Інших значень, шляхів чи діалектів він не торкається.',
-        en: 'The mapping applies only within the chosen dialect, to this path with exactly this value. Other values, paths or dialects are untouched.',
-        ru: 'Маппинг действует только в выбранном диалекте, для этого пути с именно этим значением. Других значений, путей и диалектов он не касается.',
+        uk: 'Зберігає цей шлях і точне значення лише у вибраному діалекті. Автоматично застосовується лише діалект за замовчуванням.',
+        en: 'Stores this path and exact value only in the chosen dialect. Only your default dialect applies automatically.',
+        ru: 'Сохраняет этот путь и точное значение только в выбранном диалекте. Автоматически применяется только диалект по умолчанию.',
       },
 
       // ── 016: the role/value split, variants, provenance ──
@@ -340,6 +370,63 @@
         ru: 'Не удалось сохранить разметку.',
       },
       // ── creative assets, fetched server-side so the preview CSP stays shut ──
+      'creative.assets.inventory': {
+        en: 'Image resources: {n} · limit {cap}',
+        uk: 'Ресурси зображень: {n} · ліміт {cap}',
+        ru: 'Ресурсы изображений: {n} · лимит {cap}',
+      },
+      'creative.assets.disclosure': {
+        en: 'On your click, while signed in, the server requests these raster image URLs, including their query parameters. The remote hosts see the server IP. No browser advertiser requests, scripts, remote stylesheets, fonts, frames or media bodies are enabled.',
+        uk: 'Після твого натискання, коли ти увійшов, сервер запитує ці URL растрових зображень разом із параметрами запиту. Віддалені хости бачать IP сервера. Запити браузера до рекламодавця, скрипти, зовнішні стилі, шрифти, фрейми й медіафайли не вмикаються.',
+        ru: 'После твоего нажатия, когда ты вошёл, сервер запрашивает эти URL растровых изображений вместе с параметрами запроса. Удалённые хосты видят IP сервера. Запросы браузера к рекламодателю, скрипты, внешние стили, шрифты, фреймы и медиафайлы не включаются.',
+      },
+      'creative.assets.cap': {
+        en: '{n} additional resources are excluded by the {cap}-image limit.',
+        uk: 'Ще {n} ресурсів виключено через ліміт {cap} зображень.',
+        ru: 'Ещё {n} ресурсов исключено из-за лимита {cap} изображений.',
+      },
+      'creative.assets.retry': {
+        en: 'Retry {n} unresolved image(s)',
+        uk: 'Повторити для незавантажених зображень ({n})',
+        ru: 'Повторить для незагруженных изображений ({n})',
+      },
+      'creative.assets.cancel': {
+        en: 'Cancel image loading',
+        uk: 'Скасувати завантаження зображень',
+        ru: 'Отменить загрузку изображений',
+      },
+      'creative.assets.cancelled': {
+        en: 'Image loading cancelled. Queued requests were not sent.',
+        uk: 'Завантаження зображень скасовано. Запити з черги не надіслано.',
+        ru: 'Загрузка изображений отменена. Запросы из очереди не отправлены.',
+      },
+      'creative.assets.sign_in': {
+        en: 'Sign in to load images.',
+        uk: 'Увійди, щоб завантажити зображення.',
+        ru: 'Войди, чтобы загрузить изображения.',
+      },
+      'creative.assets.resource_failed': {
+        en: 'Not loaded; you can retry.',
+        uk: 'Не завантажено; можна повторити.',
+        ru: 'Не загружено; можно повторить.',
+      },
+      'creative.assets.role.image': { en: 'image', uk: 'зображення', ru: 'изображение' },
+      'creative.assets.role.poster': { en: 'poster', uk: 'постер', ru: 'постер' },
+      'creative.assets.role.responsive': {
+        en: 'responsive image',
+        uk: 'адаптивне зображення',
+        ru: 'адаптивное изображение',
+      },
+      'creative.assets.role.css': { en: 'CSS image', uk: 'зображення CSS', ru: 'изображение CSS' },
+      'creative.assets.status.pending': {
+        en: 'waiting for your action',
+        uk: 'очікує на твою дію',
+        ru: 'ожидает твоего действия',
+      },
+      'creative.assets.status.loading': { en: 'loading', uk: 'завантаження', ru: 'загрузка' },
+      'creative.assets.status.loaded': { en: 'loaded', uk: 'завантажено', ru: 'загружено' },
+      'creative.assets.status.failed': { en: 'failed', uk: 'помилка', ru: 'ошибка' },
+      'creative.assets.status.cancelled': { en: 'cancelled', uk: 'скасовано', ru: 'отменено' },
       'creative.assets.load': {
         uk: 'Показати зображення ({n}) через сервер',
         en: 'Load {n} image(s) via the server',

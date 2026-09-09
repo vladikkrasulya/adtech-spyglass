@@ -158,11 +158,6 @@ const T = {
     ru: 'Войди, чтобы увидеть сохранённые образцы. Веб-интерфейс шифрует bid-тела перед загрузкой; названия, заметки и данные партнёров читает сервер.',
   },
   signIn: { en: 'Sign in', uk: 'Увійти', ru: 'Войти' },
-  lockedPrompt: {
-    en: 'Your saved bid bodies are encrypted. Unlock them from the cabinet to view samples here.',
-    uk: 'Твої збережені bid-тіла зашифровані. Розблокуй їх у кабінеті, щоб побачити зразки тут.',
-    ru: 'Твои сохранённые bid-тела зашифрованы. Разблокируй их в кабинете, чтобы увидеть образцы здесь.',
-  },
   openCabinet: { en: 'Open cabinet', uk: 'Відкрити кабінет', ru: 'Открыть кабинет' },
   emptySaved: {
     en: 'No saved samples yet. Save one from the inspector to add the first.',
@@ -413,7 +408,7 @@ function renderCatalogRow(item, lang, localeP) {
 }
 
 function renderSavedRow(s, lang, localeP, partnerName, t) {
-  const href = `${localeP}/account#sample-${encodeURIComponent(s.id)}`;
+  const href = `${localeP}/inspector?saved=${encodeURIComponent(s.id)}`;
   const req = Number(s.req_len) > 0;
   const res = Number(s.res_len) > 0;
   const shape = req && res ? T.reqRes : req ? T.reqOnly : res ? T.resOnly : T.noBody;
@@ -501,12 +496,10 @@ function renderBody(state, lang, localeP, t) {
       )}</a>`,
     );
   }
-  if (saved.state === 'locked') {
+  if (saved.state === 'error') {
     return note(
-      `<p>${escapeHtml(pick(T.lockedPrompt, lang))}</p>`,
-      `<a class="lib-btn lib-btn--primary" href="${escapeHtml(localeP)}/account">${escapeHtml(
-        pick(T.openCabinet, lang),
-      )}</a>`,
+      `<p role="alert">${escapeHtml(pick(T.loadFailed, lang))}</p>`,
+      `<button type="button" class="lib-btn lib-btn--primary" data-action="retry-saved">${escapeHtml(pick(T.retry, lang))}</button>`,
     );
   }
   const head = colHead([
@@ -565,26 +558,22 @@ async function fetchPartners(signal) {
 }
 
 async function fetchSavedState(signal) {
-  // Probe auth — /api/auth/me returns 200 with user info if logged in, 401 otherwise.
-  let me = null;
   try {
     const r = await fetch('/api/auth/me', { credentials: 'same-origin', signal });
-    if (r.ok) me = await r.json();
-  } catch (_e) {
-    /* fail-open → treat as anonymous */
-  }
-  if (!me || !me.user) return { state: 'anonymous', samples: [] };
-
-  try {
-    const r = await fetch('/api/samples', { credentials: 'same-origin', signal });
     if (r.status === 401) return { state: 'anonymous', samples: [] };
-    if (!r.ok) return { state: 'locked', samples: [] };
-    const data = await r.json();
-    // Backend returns {success, samples:[...]} or similar.
-    const samples = Array.isArray(data) ? data : data.samples || data.items || [];
+    if (!r.ok) return { state: 'error', samples: [] };
+    const me = await r.json();
+    if (!me || !me.user) return { state: 'anonymous', samples: [] };
+    const response = await fetch('/api/samples', { credentials: 'same-origin', signal });
+    if (response.status === 401) return { state: 'anonymous', samples: [] };
+    if (!response.ok) return { state: 'error', samples: [] };
+    const data = await response.json();
+    const samples = Array.isArray(data) ? data : data.samples;
+    if (!Array.isArray(samples)) return { state: 'error', samples: [] };
     return { state: 'ok', samples };
-  } catch (_e) {
-    return { state: 'locked', samples: [] };
+  } catch (error) {
+    if (error.name === 'AbortError') throw error;
+    return { state: 'error', samples: [] };
   }
 }
 
@@ -763,23 +752,46 @@ export default {
       paintBody();
     };
 
+    let savedGeneration = 0;
     const hydrateSaved = async () => {
       if (state.savedHydrated) return;
       state.savedHydrated = true;
+      const generation = ++savedGeneration;
+      let saved;
+      let partners = [];
       try {
-        state.saved = await fetchSavedState(ctx.signal);
-        if (state.saved.state === 'ok') {
-          state.partners = await fetchPartners(ctx.signal);
+        saved = await fetchSavedState(ctx.signal);
+        if (saved.state === 'ok') {
+          partners = await fetchPartners(ctx.signal);
         }
       } catch (e) {
         if (e.name === 'AbortError') return;
-        state.saved = { state: 'locked', samples: [] };
+        saved = { state: 'error', samples: [] };
       }
+      if (ctx.signal.aborted || generation !== savedGeneration) return;
+      state.saved = saved;
+      state.partners = partners;
       if (state.scope === 'saved') {
         paintFilters();
         paintBody();
       }
     };
+
+    // The library's metadata belongs to the current account too. Drop it
+    // immediately on identity change and ignore the prior account's in-flight
+    // read, even when its response arrives after a successful logout.
+    ctx.addCleanup(
+      ctx.on('auth:changed', (event) => {
+        savedGeneration++;
+        state.savedHydrated = !event.detail?.user;
+        state.saved = event.detail?.user ? null : { state: 'anonymous', samples: [] };
+        state.partners = [];
+        state.facet = 'all';
+        paintFilters();
+        paintBody();
+        if (state.scope === 'saved' && !state.savedHydrated) hydrateSaved();
+      }),
+    );
 
     root.addEventListener(
       'click',
@@ -808,6 +820,21 @@ export default {
               bodyEl.querySelector('[data-action="retry-catalog"]') ||
               filterRow.querySelector('[data-scope="catalog"]');
             if (next) next.focus({ preventScroll: true });
+          });
+          return;
+        }
+        const retrySaved = e.target.closest('[data-action="retry-saved"]');
+        if (retrySaved) {
+          const hadFocus = document.activeElement === retrySaved;
+          state.savedHydrated = false;
+          state.saved = null;
+          paintBody();
+          hydrateSaved().then(() => {
+            if (ctx.signal.aborted || !hadFocus) return;
+            const next =
+              bodyEl.querySelector('[data-action="retry-saved"]') ||
+              filterRow.querySelector('[data-scope="saved"]');
+            next?.focus({ preventScroll: true });
           });
           return;
         }

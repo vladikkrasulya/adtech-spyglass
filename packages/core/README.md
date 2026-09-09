@@ -257,3 +257,11 @@ MIT — see [LICENSE](./LICENSE).
 ## Not affiliated with IAB Tech Lab.
 
 OpenRTB® is a trademark of IAB Tech Lab. This package consumes the public OpenRTB specifications but is not an official IAB tool.
+
+### Supply-chain inspection and declared routes
+
+`inspectSchain(input, {locale, declaredSender})` inspects a structured request, serialized SChain, or explicit query/URL carrier without network access. It returns schemaVersion1, input kind/status, located copies and node counts, decorated findings, sources and a comparison marked with declaration provenance. The optional sender has `{asi,sid,provenance:'declared'}`. Missing/malformed/incompatible data is not silently accepted; additional nodes alone do not imply a violation.
+
+`listInspectionProfiles({locale})` returns the bounded pinned-source adapter catalog. `evaluateDeclaredRoute(input, {adapterId,direction,revision,provenance:'declared'}, {locale})` explains known/unknown applicability against that exact revision. A payload name or endpoint never supplies this declaration. None of these APIs fetches an advertiser or adapter URL.
+
+Route relevance visits at most10000 carrier values across all statements and aliases, with nesting capped at32. Malformed impression entries or exceeded traversal bounds return `unknown` with reason `incompatible_input`; unrelated extension subtrees are not scanned.

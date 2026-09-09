@@ -288,8 +288,8 @@
   "err-schain-node-asi": "schain node[{idx}].asi is missing or not a valid domain (got: \"{val}\"). asi is the canonical domain of the SSP or exchange and is required for audit trail integrity.",
   "err-schain-node-sid": "schain node[{idx}].sid is missing or empty. sid is the seller account ID on the asi domain — required for buyers to verify the seller via ads.txt.",
   "err-schain-node-hp": "schain node[{idx}].hp must be 0 or 1 (got: \"{val}\"). hp=1 means this node is included in the payment flow; hp=0 means it is a passthrough. Missing hp breaks payment attribution.",
-  "warn-schain-node-rid-missing": "schain node[{idx}].rid is absent. rid (request ID) is optional per spec but strongly recommended — without it buyers cannot correlate impressions back to exchange logs for discrepancy resolution.",
-  "warn-schain-node-domain-missing": "schain node[{idx}].domain is absent. domain is optional but recommended — it lets buyers cross-reference the seller domain independently of the asi field.",
+  "warn-schain-node-rid-missing": "schain node[{idx}].rid is optional. Its absence does not invalidate the chain; a supplied request ID can help correlate exchange logs.",
+  "warn-schain-node-domain-missing": "schain node[{idx}].domain is optional seller metadata. Omit it when sellers.json already provides it; it is not required to equal the inventory domain or app bundle.",
   "err-eids-not-array": "user.ext.eids is present but not an array (got: {type}). The EID spec requires an array of identity source objects — wrap your EID object in an array.",
   "err-eids-source-missing": "user.ext.eids[{idx}].source is missing or empty. source must be the canonical domain of the identity provider (e.g. \"liveramp.com\", \"id5-sync.com\").",
   "err-eids-uids-empty": "user.ext.eids[{idx}].uids is missing or empty. Each EID entry must contain at least one uid record with the actual identifier.",
@@ -398,5 +398,14 @@
   "feed.native.field_missing": "Native material omits {field}; the creative may render incompletely.",
   "feed.inpage.field_invalid": "In-page material: supplied {field} is invalid. Use an HTTP(S) URL for impurl and a non-empty string for advertiser.",
   "floor.negative": "A supplied floor is negative. Use a non-negative number; this floor cannot support an above/below-floor verdict.",
-  "internal.rule_family_failed": "Validation family {family} could not finish. Analysis is incomplete; remaining families were checked."
+  "internal.rule_family_failed": "Validation family {family} could not finish. Analysis is incomplete; remaining families were checked.",
+  "schain.nodes_limit": "This inspection supports at most {limit} SupplyChain nodes. The limit is an inspection bound, not a claim that longer chains violate IAB rules.",
+  "schain.comparison_limit": "This SupplyChain contains extension data that cannot be compared within the inspection depth limit.",
+  "schain.duplicate_identity": "Seller identity {asi} / {sid} repeats node {first} at node {idx}. Check whether the same hop was appended twice; the same system with a different seller account is distinct.",
+  "schain.declared_sender_mismatch": "The last node does not match the explicitly declared sender {asi} / {sid}. This compares supplied context and does not identify the actual network sender.",
+  "schain.copy_conflict": "This valid SupplyChain copy differs from {otherPath}. Compare their version, completeness and ordered nodes before choosing a copy.",
+  "schain.input_invalid": "SupplyChain input could not be inspected ({reason}). Use a structured object, a serialized chain, or one explicit schain query parameter.",
+  "schain.ext_invalid": "A supplied schain.ext must be a JSON object. Correct the value or omit this optional field.",
+  "schain.node.ext_invalid": "A supplied schain node[{idx}].ext must be a JSON object. Correct the value or omit this optional field.",
+  "schain.node.name_invalid": "A supplied schain node[{idx}].name must be a string. Correct the value or omit this optional field."
 }

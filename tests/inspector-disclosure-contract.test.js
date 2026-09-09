@@ -190,6 +190,7 @@ test('History and Saved rows render native sibling controls with independent key
     '_partnerCache',
     'toast',
     'renderAuthWidget',
+    'resumeSavedLoad',
     `'use strict';\n${sliceInspectorDeclaration('async function refreshSamples() {')}\nreturn refreshSamples;`,
   )(
     (id) => savedDocument.getElementById(id),
@@ -208,6 +209,7 @@ test('History and Saved rows render native sibling controls with independent key
     [{ id: 3, name: 'Partner' }],
     () => {},
     () => {},
+    async () => {}, // This isolated row-render fixture has no pending saved deep link.
   );
   await refreshSamples();
 

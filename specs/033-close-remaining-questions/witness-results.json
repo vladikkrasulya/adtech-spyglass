@@ -1,0 +1,971 @@
+{
+  "schemaVersion": 1,
+  "generation": "033-direct-adapters",
+  "sourceRevision": "0ba352315253f6692af6497d553cfb12909a1b8b",
+  "scope": "Nineteen bounded direct-adapter witnesses; declared-profile relevance, no actual-traffic or corpus-wide accuracy claim.",
+  "oldCorpusSha256": "73d067fa6ea9689b09167104db7bb1a72ff950446db8275b41bd54e32193598b",
+  "newCorpusSha256": "7e0a96eee1a2c0ee549a5051518c8f3e8af72f95fc5d39bd75b7ab5d0c703bc4",
+  "newCorpusPath": "/tmp/ortbtools-dialect033-kplg6vsh/derived/adapter-rules-033.json",
+  "historicalAuditTreeSha256": "edf782a09fdf3180feb9077b360d96eceab5a316f12bc342fae6376c118d9230",
+  "historicalB1": {
+    "pass": 36,
+    "fail": 0,
+    "inconclusive": 12
+  },
+  "successfulAttempt": 4,
+  "attemptPath": "/tmp/ortbtools-dialect033-kplg6vsh/evidence/attempt004",
+  "frozenInputs": {
+    "attempt": 4,
+    "sourceRevision": "0ba352315253f6692af6497d553cfb12909a1b8b",
+    "trackedSourceClean": true,
+    "sourceFiles": {
+      "adapters/adnuntius/adnuntius.go": "420cab9cc749f65ffd98853efe457532750e226eead85dab2996bfb31259019e",
+      "adapters/alliance_gravity/alliance_gravity.go": "a2bf68f8f7c70f57274f6d79b63b9bd5976e1d6913f9cc484b14f3a323a3143b",
+      "adapters/audienceNetwork/facebook.go": "823c5f34bffaafd9e9032637ce1da8f94bcf8f83aa9395450406fdc55e9c500c",
+      "adapters/gamma/gamma.go": "a0b5c7bc42a2b2b9d72d886fc17f736be57977ac6f72ba7b233b8cf78c9b58a0",
+      "adapters/goldbach/goldbach.go": "c72422b6ac5c4ffabb1dec7571da519f37fa2f195e77d58b75b1002a5acac62b",
+      "adapters/huaweiads/huaweiads.go": "9171528dd48fae666667afd85d6a08593fc41d5604e148f3923dec4181bb09b0",
+      "adapters/insticator/insticator.go": "45e2619a8939f84355ca559bebdf44122bae7e8417e800a6aefd0cc68dc8525c",
+      "adapters/limelightDigital/limelightDigital.go": "894c67eb52039bca4a214c9f0d56aa5efd96f11939a6f356165e777a2e6a1bbc",
+      "adapters/lockerdome/lockerdome.go": "972c38e5b3aa946a0a94e8deab5461b7f9d110c92586757a253ba620bcde0319",
+      "adapters/logan/logan.go": "66410d47eb3db7dec8230ce67be8a59d93da4e260c4144c94fac01eef19b0a9b",
+      "adapters/smartyads/smartyads.go": "29083e760d783f2034ce12075f011d2a7e33645d1e0784941252a2e9be0862e7",
+      "adapters/sovrn/sovrn.go": "7dd7a097e2d95a7bbc08b8a0624f14a964c0074d116fbd238f2cf1df6d65e0eb",
+      "adapters/telaria/telaria.go": "ec567ab8069d4b2cadf61b99036902be9c1216baa587d25c05cf2328f3e90d66",
+      "adapters/unicorn/unicorn.go": "219de5d257a7de4944e9fcebd1f78cfaeacab5c9f3c0668c9cd7f7d1cd17a343"
+    },
+    "files": {
+      "run.py": "72fc0afd453a269712ff505370e85b0a4bbbacb0b84d9e587e48c1a8fda0f529",
+      "witness-manifest.json": "b3871d560e54a59ced88ab2158c94cd784532bbb1a7e61938ae2a6de1e5eb974",
+      "generate.py": "876ae4b753a9b6a530271013be63f6108a81775554493a2f811b3975641b3737",
+      "cases.json": "7361e15ff875b0a4529585205cd214c2815d5e090bd295985ad1debea992a0f1",
+      "witness_test.go": "efdd965f3d1e62a3cc2eb32ee170a9516b170618f3a6ac1a32cd87d34057d443"
+    }
+  },
+  "execution": {
+    "exitCode": 0,
+    "containerExitCode": 0,
+    "oomKilled": false,
+    "finishedAt": "2026-09-09T11:35:01Z",
+    "logSha256": "d0af59bd2af142964332982dab1d9e5b1ce7cf2ffd264a4e0816e5d2df144ebc"
+  },
+  "isolation": {
+    "image": "sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc",
+    "networkMode": "none",
+    "readonlyRootfs": true,
+    "user": "1000:1000",
+    "capDrop": ["ALL"],
+    "tmpfs": {
+      "/tmp": "rw,exec,nosuid,size=1g"
+    }
+  },
+  "observationsSha256": "296aa55b68920d6029483cc664c29d5976207344588001d63cee9d2b6cff2246",
+  "totals": {
+    "cases": 19,
+    "pass": 19,
+    "fail": 0,
+    "variants": 69,
+    "assertions": 181,
+    "dispositionChanges": 4,
+    "uniqueRulesWithEvidence": 17
+  },
+  "records": [
+    {
+      "id": "b2-logan-002-66ba4254762b",
+      "group": "disagreement",
+      "adapter": "logan",
+      "outcome": "pass",
+      "oracle": "constant overwrite: two distinct supplied values and absent-field control all become publisher",
+      "variantCount": 4,
+      "assertions": 11,
+      "corpusIndex": 1,
+      "before": {
+        "field": "imp.ext.bidder.type",
+        "disposition": "injected",
+        "detail": "A constant type of \"publisher\" is added to the bidder object on every imp.",
+        "evidence": "adapters/logan/logan.go:54",
+        "status": "unverified"
+      },
+      "action": "update-existing",
+      "after": {
+        "field": "imp.ext.bidder.type",
+        "disposition": "rewritten",
+        "detail": "The input type value is overwritten with the constant publisher before the bidder extension is serialized.",
+        "evidence": "adapters/logan/logan.go:46-61",
+        "status": "verified",
+        "condition": "unconditional",
+        "b2Provenance": {
+          "candidateId": "b2-logan-002-66ba4254762b",
+          "blindRuleIndex": 1,
+          "candidateArtifactSha256": "42dd73d89616d9b9200f0cf7257d8be10d2b19baea4d7361568b7bfa12123c65",
+          "sourceCommit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "batch": "A"
+        },
+        "witness033": {
+          "generation": "033-direct-adapters",
+          "ids": ["b2-logan-002-66ba4254762b"],
+          "observationsSha256": "296aa55b68920d6029483cc664c29d5976207344588001d63cee9d2b6cff2246"
+        }
+      }
+    },
+    {
+      "id": "b2-sovrn-010-7a928c161a6a",
+      "group": "disagreement",
+      "adapter": "sovrn",
+      "outcome": "pass",
+      "oracle": "same-adapter condition pair with an independent positive execution control",
+      "variantCount": 4,
+      "assertions": 8,
+      "corpusIndex": 4,
+      "before": {
+        "field": "imp.video.mimes",
+        "disposition": "conditional",
+        "detail": "When a video object is present, mimes, maxduration and protocols must all be non-empty and non-zero, otherwise that impression is dropped with an error.",
+        "evidence": "adapters/sovrn/sovrn.go:94",
+        "status": "verified"
+      },
+      "action": "update-existing",
+      "after": {
+        "field": "imp.video.mimes",
+        "disposition": "validated",
+        "detail": "When video is present, a missing (nil) mimes list rejects the impression. Empty and nonempty supplied lists are accepted when the other video fields are valid.",
+        "evidence": "adapters/sovrn/sovrn.go:91-102",
+        "status": "verified",
+        "condition": "imp.video is present",
+        "b2Provenance": {
+          "candidateId": "b2-sovrn-010-7a928c161a6a",
+          "blindRuleIndex": 9,
+          "candidateArtifactSha256": "42dd73d89616d9b9200f0cf7257d8be10d2b19baea4d7361568b7bfa12123c65",
+          "sourceCommit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "batch": "A"
+        },
+        "witness033": {
+          "generation": "033-direct-adapters",
+          "ids": ["b2-sovrn-010-7a928c161a6a"],
+          "observationsSha256": "296aa55b68920d6029483cc664c29d5976207344588001d63cee9d2b6cff2246"
+        }
+      }
+    },
+    {
+      "id": "b2-insticator-004-52d68d7cb4e5",
+      "group": "disagreement",
+      "adapter": "insticator",
+      "outcome": "pass",
+      "oracle": "first parsed impression source identity: reordered inputs and absent/existing destination controls",
+      "variantCount": 5,
+      "assertions": 14,
+      "corpusIndex": 2,
+      "before": {
+        "field": "site.publisher.id",
+        "disposition": "injected",
+        "detail": "site.publisher.id is overwritten with imp.ext.bidder.publisherId, creating the publisher object if the site had none.",
+        "evidence": "adapters/insticator/insticator.go:387",
+        "status": "unverified"
+      },
+      "action": "update-existing",
+      "after": {
+        "field": "imp.ext.bidder.publisherId",
+        "disposition": "moved",
+        "detail": "imp.ext.bidder.publisherId from the first successfully parsed impression is moved to site.publisher.id, overwriting an existing ID or creating the publisher object when absent; the first value is shared across all grouped outbound requests.",
+        "evidence": "adapters/insticator/insticator.go:147-151",
+        "status": "verified",
+        "condition": "request.Site != nil; only the publisherId from the first successfully parsed imp is used",
+        "b2Provenance": {
+          "candidateId": "b2-insticator-004-52d68d7cb4e5",
+          "sourceCommit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "readingRunId": "b2-v2-blind-20260821T114710Z-eab7ce6c",
+          "indexSha256": "80741412f42e6b32ef6b0032f9453a7b02c9aef1c32864e53dfd7e669dd6a87e"
+        },
+        "witness033": {
+          "generation": "033-direct-adapters",
+          "ids": ["b2-insticator-004-52d68d7cb4e5"],
+          "observationsSha256": "296aa55b68920d6029483cc664c29d5976207344588001d63cee9d2b6cff2246"
+        }
+      }
+    },
+    {
+      "id": "b2-insticator-005-cf460d0b3a2c",
+      "group": "disagreement",
+      "adapter": "insticator",
+      "outcome": "pass",
+      "oracle": "first parsed impression source identity: reordered inputs and absent/existing destination controls",
+      "variantCount": 5,
+      "assertions": 14,
+      "corpusIndex": 3,
+      "before": {
+        "field": "app.publisher.id",
+        "disposition": "injected",
+        "detail": "app.publisher.id is overwritten with imp.ext.bidder.publisherId, creating the publisher object if the app had none.",
+        "evidence": "adapters/insticator/insticator.go:404",
+        "status": "unverified"
+      },
+      "action": "update-existing",
+      "after": {
+        "field": "imp.ext.bidder.publisherId",
+        "disposition": "moved",
+        "detail": "imp.ext.bidder.publisherId from the first successfully parsed impression is moved to app.publisher.id, overwriting an existing ID or creating the publisher object when absent; the first value is shared across all grouped outbound requests.",
+        "evidence": "adapters/insticator/insticator.go:147-151",
+        "status": "verified",
+        "condition": "request.App != nil; only the publisherId from the first successfully parsed imp is used",
+        "b2Provenance": {
+          "candidateId": "b2-insticator-005-cf460d0b3a2c",
+          "sourceCommit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "readingRunId": "b2-v2-blind-20260821T114710Z-eab7ce6c",
+          "indexSha256": "80741412f42e6b32ef6b0032f9453a7b02c9aef1c32864e53dfd7e669dd6a87e"
+        },
+        "witness033": {
+          "generation": "033-direct-adapters",
+          "ids": ["b2-insticator-005-cf460d0b3a2c"],
+          "observationsSha256": "296aa55b68920d6029483cc664c29d5976207344588001d63cee9d2b6cff2246"
+        }
+      }
+    },
+    {
+      "id": "b2-insticator-008-2ee091eb630c",
+      "group": "disagreement",
+      "adapter": "insticator",
+      "outcome": "pass",
+      "oracle": "same-adapter condition pair with an independent positive execution control",
+      "variantCount": 4,
+      "assertions": 8,
+      "corpusIndex": 1,
+      "before": {
+        "field": "imp.video.w",
+        "disposition": "required-by-adapter",
+        "detail": "If the imp has a video object, w, h and mimes must all be present and non-zero or the imp is rejected with a bad-input error.",
+        "evidence": "adapters/insticator/insticator.go:364",
+        "status": "unverified"
+      },
+      "action": "none",
+      "after": {
+        "field": "imp.video.w",
+        "disposition": "required-by-adapter",
+        "detail": "When video is present, w and h must be supplied and nonzero, and mimes must be supplied (not nil). A supplied empty mimes list is accepted by this pinned adapter.",
+        "evidence": "adapters/insticator/insticator.go:364",
+        "status": "verified",
+        "witness033": {
+          "generation": "033-direct-adapters",
+          "ids": [
+            "b2-insticator-008-2ee091eb630c",
+            "b2-insticator-009-c777667bcc8b",
+            "b2-insticator-010-f05d495a0537"
+          ],
+          "observationsSha256": "296aa55b68920d6029483cc664c29d5976207344588001d63cee9d2b6cff2246"
+        }
+      }
+    },
+    {
+      "id": "b2-insticator-009-c777667bcc8b",
+      "group": "disagreement",
+      "adapter": "insticator",
+      "outcome": "pass",
+      "oracle": "same-adapter condition pair with an independent positive execution control",
+      "variantCount": 4,
+      "assertions": 8,
+      "corpusIndex": 1,
+      "before": {
+        "field": "imp.video.w",
+        "disposition": "required-by-adapter",
+        "detail": "If the imp has a video object, w, h and mimes must all be present and non-zero or the imp is rejected with a bad-input error.",
+        "evidence": "adapters/insticator/insticator.go:364",
+        "status": "unverified"
+      },
+      "action": "none",
+      "after": {
+        "field": "imp.video.w",
+        "disposition": "required-by-adapter",
+        "detail": "When video is present, w and h must be supplied and nonzero, and mimes must be supplied (not nil). A supplied empty mimes list is accepted by this pinned adapter.",
+        "evidence": "adapters/insticator/insticator.go:364",
+        "status": "verified",
+        "witness033": {
+          "generation": "033-direct-adapters",
+          "ids": [
+            "b2-insticator-008-2ee091eb630c",
+            "b2-insticator-009-c777667bcc8b",
+            "b2-insticator-010-f05d495a0537"
+          ],
+          "observationsSha256": "296aa55b68920d6029483cc664c29d5976207344588001d63cee9d2b6cff2246"
+        }
+      }
+    },
+    {
+      "id": "b2-insticator-010-f05d495a0537",
+      "group": "disagreement",
+      "adapter": "insticator",
+      "outcome": "pass",
+      "oracle": "same-adapter condition pair with an independent positive execution control",
+      "variantCount": 4,
+      "assertions": 8,
+      "corpusIndex": 1,
+      "before": {
+        "field": "imp.video.w",
+        "disposition": "required-by-adapter",
+        "detail": "If the imp has a video object, w, h and mimes must all be present and non-zero or the imp is rejected with a bad-input error.",
+        "evidence": "adapters/insticator/insticator.go:364",
+        "status": "unverified"
+      },
+      "action": "none",
+      "after": {
+        "field": "imp.video.w",
+        "disposition": "required-by-adapter",
+        "detail": "When video is present, w and h must be supplied and nonzero, and mimes must be supplied (not nil). A supplied empty mimes list is accepted by this pinned adapter.",
+        "evidence": "adapters/insticator/insticator.go:364",
+        "status": "verified",
+        "witness033": {
+          "generation": "033-direct-adapters",
+          "ids": [
+            "b2-insticator-008-2ee091eb630c",
+            "b2-insticator-009-c777667bcc8b",
+            "b2-insticator-010-f05d495a0537"
+          ],
+          "observationsSha256": "296aa55b68920d6029483cc664c29d5976207344588001d63cee9d2b6cff2246"
+        }
+      }
+    },
+    {
+      "id": "b1-001-huaweiads-imp.audio-forbidden",
+      "group": "previously-inconclusive",
+      "adapter": "huaweiads",
+      "outcome": "pass",
+      "oracle": "same-adapter condition pair with an independent positive execution control",
+      "variantCount": 4,
+      "assertions": 8,
+      "corpusIndex": 12,
+      "before": {
+        "field": "imp.audio",
+        "disposition": "forbidden",
+        "detail": "An impression carrying an audio object is rejected outright as unsupported.",
+        "evidence": "adapters/huaweiads/huaweiads.go:506",
+        "status": "verified",
+        "b1Provenance": {
+          "caseId": "b1-001-huaweiads-imp.audio-forbidden",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "PBS's own media-type capability filter removes the audio impression before the adapter runs (observed: \"request.imp[0] has no supported MediaTypes. It will be ignored\"), so the rejection at huaweiads.go:506 is unreachable in an auction and the observed zero calls cannot be attributed to it."
+        }
+      },
+      "action": "retain-classification",
+      "after": {
+        "field": "imp.audio",
+        "disposition": "forbidden",
+        "detail": "An audio-only impression is rejected as unsupported. A supported banner, Native or video object takes precedence when also supplied.",
+        "evidence": "adapters/huaweiads/huaweiads.go:506",
+        "status": "verified",
+        "b1Provenance": {
+          "caseId": "b1-001-huaweiads-imp.audio-forbidden",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "PBS's own media-type capability filter removes the audio impression before the adapter runs (observed: \"request.imp[0] has no supported MediaTypes. It will be ignored\"), so the rejection at huaweiads.go:506 is unreachable in an auction and the observed zero calls cannot be attributed to it."
+        },
+        "witness033": {
+          "generation": "033-direct-adapters",
+          "ids": ["b1-001-huaweiads-imp.audio-forbidden"],
+          "observationsSha256": "296aa55b68920d6029483cc664c29d5976207344588001d63cee9d2b6cff2246"
+        }
+      }
+    },
+    {
+      "id": "b1-002-telaria-imp.banner-forbidden",
+      "group": "previously-inconclusive",
+      "adapter": "telaria",
+      "outcome": "pass",
+      "oracle": "same-adapter condition pair with an independent positive execution control",
+      "variantCount": 3,
+      "assertions": 6,
+      "corpusIndex": 1,
+      "before": {
+        "field": "imp.banner",
+        "disposition": "forbidden",
+        "detail": "If any imp carries a banner object the entire request is rejected with \"Banner not supported\".",
+        "evidence": "adapters/telaria/telaria.go:54",
+        "status": "verified",
+        "b1Provenance": {
+          "caseId": "b1-002-telaria-imp.banner-forbidden",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "The retained outgoing body proves PBS stripped banner before the adapter: the trigger imp carried banner and video, the observed outgoing imp carried video only. The \"Banner not supported\" branch never received a banner, so the call that went out contradicts nothing about the rule."
+        }
+      },
+      "action": "retain-classification",
+      "after": {
+        "field": "imp.banner",
+        "disposition": "forbidden",
+        "detail": "If any imp carries a banner object the entire request is rejected with \"Banner not supported\".",
+        "evidence": "adapters/telaria/telaria.go:54",
+        "status": "verified",
+        "b1Provenance": {
+          "caseId": "b1-002-telaria-imp.banner-forbidden",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "The retained outgoing body proves PBS stripped banner before the adapter: the trigger imp carried banner and video, the observed outgoing imp carried video only. The \"Banner not supported\" branch never received a banner, so the call that went out contradicts nothing about the rule."
+        },
+        "witness033": {
+          "generation": "033-direct-adapters",
+          "ids": ["b1-002-telaria-imp.banner-forbidden"],
+          "observationsSha256": "296aa55b68920d6029483cc664c29d5976207344588001d63cee9d2b6cff2246"
+        }
+      }
+    },
+    {
+      "id": "b1-003-adnuntius-imp.video-forbidden",
+      "group": "previously-inconclusive",
+      "adapter": "adnuntius",
+      "outcome": "pass",
+      "oracle": "same-adapter condition pair with an independent positive execution control",
+      "variantCount": 3,
+      "assertions": 6,
+      "corpusIndex": 0,
+      "before": {
+        "field": "imp.video",
+        "disposition": "forbidden",
+        "detail": "An imp carrying a video object aborts the entire request with a BadInput error rather than being skipped; only banner and native ever reach the partner.",
+        "evidence": "adapters/adnuntius/adnuntius.go:71",
+        "status": "unverified",
+        "b1Provenance": {
+          "caseId": "b1-003-adnuntius-imp.video-forbidden",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "Same shape as telaria: adnuntius declares banner and native, so PBS stripped video before the adapter and the observed call was made on a banner-only imp. The rule's condition was never presented."
+        }
+      },
+      "action": "retain-classification",
+      "after": {
+        "field": "imp.video",
+        "disposition": "forbidden",
+        "detail": "An imp carrying a video object aborts the entire request with a BadInput error rather than being skipped; only banner and native ever reach the partner.",
+        "evidence": "adapters/adnuntius/adnuntius.go:71",
+        "status": "verified",
+        "b1Provenance": {
+          "caseId": "b1-003-adnuntius-imp.video-forbidden",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "Same shape as telaria: adnuntius declares banner and native, so PBS stripped video before the adapter and the observed call was made on a banner-only imp. The rule's condition was never presented."
+        },
+        "witness033": {
+          "generation": "033-direct-adapters",
+          "ids": ["b1-003-adnuntius-imp.video-forbidden"],
+          "observationsSha256": "296aa55b68920d6029483cc664c29d5976207344588001d63cee9d2b6cff2246"
+        }
+      }
+    },
+    {
+      "id": "b1-005-gamma-imp.native-forbidden",
+      "group": "previously-inconclusive",
+      "adapter": "gamma",
+      "outcome": "pass",
+      "oracle": "same-adapter condition pair with an independent positive execution control",
+      "variantCount": 3,
+      "assertions": 6,
+      "corpusIndex": 4,
+      "before": {
+        "field": "imp.native",
+        "disposition": "forbidden",
+        "detail": "An imp carrying neither a banner nor a video object is rejected — native-only and audio-only imps cannot be served.",
+        "evidence": "adapters/gamma/gamma.go:167",
+        "status": "unverified",
+        "b1Provenance": {
+          "caseId": "b1-005-gamma-imp.native-forbidden",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "PBS's media-type filter removed the native-only impression before the adapter (observed: \"request.imp[0] has no supported MediaTypes. It will be ignored\"), so gamma.go:167 never ran."
+        }
+      },
+      "action": "retain-classification",
+      "after": {
+        "field": "imp.native",
+        "disposition": "forbidden",
+        "detail": "An imp carrying neither a banner nor a video object is rejected — native-only and audio-only imps cannot be served.",
+        "evidence": "adapters/gamma/gamma.go:167",
+        "status": "verified",
+        "b1Provenance": {
+          "caseId": "b1-005-gamma-imp.native-forbidden",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "PBS's media-type filter removed the native-only impression before the adapter (observed: \"request.imp[0] has no supported MediaTypes. It will be ignored\"), so gamma.go:167 never ran."
+        },
+        "witness033": {
+          "generation": "033-direct-adapters",
+          "ids": ["b1-005-gamma-imp.native-forbidden"],
+          "observationsSha256": "296aa55b68920d6029483cc664c29d5976207344588001d63cee9d2b6cff2246"
+        }
+      }
+    },
+    {
+      "id": "b1-006-audienceNetwork-site-forbidden",
+      "group": "previously-inconclusive",
+      "adapter": "audienceNetwork",
+      "outcome": "pass",
+      "oracle": "same-adapter condition pair with an independent positive execution control",
+      "variantCount": 3,
+      "assertions": 6,
+      "corpusIndex": 1,
+      "before": {
+        "field": "site",
+        "disposition": "forbidden",
+        "detail": "Any request carrying a site object is rejected outright — only app inventory is accepted.",
+        "evidence": "adapters/audienceNetwork/facebook.go:58",
+        "status": "unverified",
+        "b1Provenance": {
+          "caseId": "b1-006-audienceNetwork-site-forbidden",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "The claimed effect held — the site trigger produced zero outgoing calls and the app minimal pair produced one — but the only message observed came from PBS's core capability check (\"this bidder does not support site requests\"), not from facebook.go:58. The outcome is real; its attribution to the adapter's own check is not observable here."
+        }
+      },
+      "action": "retain-classification",
+      "after": {
+        "field": "site",
+        "disposition": "forbidden",
+        "detail": "Any request carrying a site object is rejected outright — only app inventory is accepted.",
+        "evidence": "adapters/audienceNetwork/facebook.go:58",
+        "status": "verified",
+        "b1Provenance": {
+          "caseId": "b1-006-audienceNetwork-site-forbidden",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "The claimed effect held — the site trigger produced zero outgoing calls and the app minimal pair produced one — but the only message observed came from PBS's core capability check (\"this bidder does not support site requests\"), not from facebook.go:58. The outcome is real; its attribution to the adapter's own check is not observable here."
+        },
+        "witness033": {
+          "generation": "033-direct-adapters",
+          "ids": ["b1-006-audienceNetwork-site-forbidden"],
+          "observationsSha256": "296aa55b68920d6029483cc664c29d5976207344588001d63cee9d2b6cff2246"
+        }
+      }
+    },
+    {
+      "id": "b1-008-unicorn-regs.ext.gdpr-forbidden",
+      "group": "previously-inconclusive",
+      "adapter": "unicorn",
+      "outcome": "pass",
+      "oracle": "same-adapter condition pair with an independent positive execution control",
+      "variantCount": 3,
+      "assertions": 6,
+      "corpusIndex": 1,
+      "before": {
+        "field": "regs.ext.gdpr",
+        "disposition": "forbidden",
+        "detail": "A GDPR flag of 1 rejects the entire request.",
+        "evidence": "adapters/unicorn/unicorn.go:56",
+        "status": "unverified",
+        "b1Provenance": {
+          "caseId": "b1-008-unicorn-regs.ext.gdpr-forbidden",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "The trigger produced zero calls and no adapter message at all. PBS's own GDPR enforcement blocks a bidder when regs.ext.gdpr is 1 without consent, and the minimal pair differs by exactly that flag, so the contrast is confounded by core privacy enforcement rather than isolating unicorn.go:56."
+        }
+      },
+      "action": "retain-classification",
+      "after": {
+        "field": "regs.ext.gdpr",
+        "disposition": "forbidden",
+        "detail": "A GDPR flag of 1 rejects the entire request.",
+        "evidence": "adapters/unicorn/unicorn.go:56",
+        "status": "verified",
+        "b1Provenance": {
+          "caseId": "b1-008-unicorn-regs.ext.gdpr-forbidden",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "The trigger produced zero calls and no adapter message at all. PBS's own GDPR enforcement blocks a bidder when regs.ext.gdpr is 1 without consent, and the minimal pair differs by exactly that flag, so the contrast is confounded by core privacy enforcement rather than isolating unicorn.go:56."
+        },
+        "witness033": {
+          "generation": "033-direct-adapters",
+          "ids": ["b1-008-unicorn-regs.ext.gdpr-forbidden"],
+          "observationsSha256": "296aa55b68920d6029483cc664c29d5976207344588001d63cee9d2b6cff2246"
+        }
+      }
+    },
+    {
+      "id": "b1-010-lockerdome-imp-rewritten",
+      "group": "previously-inconclusive",
+      "adapter": "lockerdome",
+      "outcome": "pass",
+      "oracle": "survivor identity: the pinned defect retains the first original imp after filtering the later valid index",
+      "variantCount": 3,
+      "assertions": 9,
+      "corpusIndex": 3,
+      "before": {
+        "field": "imp",
+        "disposition": "rewritten",
+        "detail": "After validation, the survivor list is rebuilt from the first N original impressions instead of the recorded valid indexes, so an earlier rejected impression can be forwarded while a later accepted one is dropped.",
+        "evidence": "adapters/lockerdome/lockerdome.go:76",
+        "status": "verified",
+        "statusReason": "Normalized from the source-verified adapter note before the B1 generation-2 freeze.",
+        "b1Provenance": {
+          "caseId": "b1-010-lockerdome-imp-rewritten",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "The defect needs a mixed valid/invalid multi-impression list to reach the adapter. PBS dropped the intended-invalid impression first (\"request.imp[0] has no supported MediaTypes. It will be ignored\"), so the adapter received an already-filtered list and the survivor-indexing defect could not be staged."
+        }
+      },
+      "action": "retain-classification",
+      "after": {
+        "field": "imp",
+        "disposition": "rewritten",
+        "detail": "After validation, the survivor list is rebuilt from the first N original impressions instead of the recorded valid indexes, so an earlier rejected impression can be forwarded while a later accepted one is dropped.",
+        "evidence": "adapters/lockerdome/lockerdome.go:76",
+        "status": "verified",
+        "statusReason": "Normalized from the source-verified adapter note before the B1 generation-2 freeze.",
+        "b1Provenance": {
+          "caseId": "b1-010-lockerdome-imp-rewritten",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "The defect needs a mixed valid/invalid multi-impression list to reach the adapter. PBS dropped the intended-invalid impression first (\"request.imp[0] has no supported MediaTypes. It will be ignored\"), so the adapter received an already-filtered list and the survivor-indexing defect could not be staged."
+        },
+        "witness033": {
+          "generation": "033-direct-adapters",
+          "ids": ["b1-010-lockerdome-imp-rewritten"],
+          "observationsSha256": "296aa55b68920d6029483cc664c29d5976207344588001d63cee9d2b6cff2246"
+        }
+      }
+    },
+    {
+      "id": "b1-011-smartyads-imp.ext.bidder-moved",
+      "group": "previously-inconclusive",
+      "adapter": "smartyads",
+      "outcome": "pass",
+      "oracle": "last-impression identity: exact URI/header function, reordered pair and isolated final-impression control",
+      "variantCount": 4,
+      "assertions": 12,
+      "corpusIndex": 4,
+      "before": {
+        "field": "imp.ext.bidder",
+        "disposition": "moved",
+        "detail": "In a heterogeneous multi-impression request, endpoint routing uses the bidder parameters parsed from the final impression for the whole outgoing call.",
+        "evidence": "adapters/smartyads/smartyads.go:93",
+        "status": "verified",
+        "statusReason": "Normalized from the source-verified adapter note before the B1 generation-2 freeze.",
+        "b1Provenance": {
+          "caseId": "b1-011-smartyads-imp.ext.bidder-moved",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "The frozen fail-closed config uses a literal SmartyAds endpoint with no Host/SourceId/AccountID macros, so final-impression routing parameters cannot affect the recorded URI."
+        }
+      },
+      "action": "retain-classification",
+      "after": {
+        "field": "imp.ext.bidder",
+        "disposition": "moved",
+        "detail": "In a heterogeneous multi-impression request, endpoint routing uses the bidder parameters parsed from the final impression for the whole outgoing call.",
+        "evidence": "adapters/smartyads/smartyads.go:93",
+        "status": "verified",
+        "statusReason": "Normalized from the source-verified adapter note before the B1 generation-2 freeze.",
+        "b1Provenance": {
+          "caseId": "b1-011-smartyads-imp.ext.bidder-moved",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "The frozen fail-closed config uses a literal SmartyAds endpoint with no Host/SourceId/AccountID macros, so final-impression routing parameters cannot affect the recorded URI."
+        },
+        "witness033": {
+          "generation": "033-direct-adapters",
+          "ids": ["b1-011-smartyads-imp.ext.bidder-moved"],
+          "observationsSha256": "296aa55b68920d6029483cc664c29d5976207344588001d63cee9d2b6cff2246"
+        }
+      }
+    },
+    {
+      "id": "b1-012-huaweiads-imp.ext.bidder-moved",
+      "group": "previously-inconclusive",
+      "adapter": "huaweiads",
+      "outcome": "pass",
+      "oracle": "last-impression identity: exact URI/header function, reordered pair and isolated final-impression control",
+      "variantCount": 4,
+      "assertions": 12,
+      "corpusIndex": 10,
+      "before": {
+        "field": "imp.ext.bidder",
+        "disposition": "moved",
+        "detail": "In a multi-impression request, publisherid, keyid and signkey from the final parsed impression provide the Authorization inputs for the whole outgoing call.",
+        "evidence": "adapters/huaweiads/huaweiads.go:315",
+        "status": "verified",
+        "statusReason": "Normalized from the source-verified adapter note before the B1 generation-2 freeze.",
+        "b1Provenance": {
+          "caseId": "b1-012-huaweiads-imp.ext.bidder-moved",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "The claim concerns the Authorization digest built from the final parsed impression's credentials. The mock's own request log shows the header is sent on every huaweiads call, but PBS's debug httpcalls surface exposes only Accept, Content-Type, User-Agent and X-Prebid, so this run's evidence cannot bind the header to a case. The pre-registered digest is also nonce-derived and reproducible only in the adapter's unit test, where the nonce is fixed."
+        }
+      },
+      "action": "retain-classification",
+      "after": {
+        "field": "imp.ext.bidder",
+        "disposition": "moved",
+        "detail": "In a multi-impression request, publisherid, keyid and signkey from the final parsed impression provide the Authorization inputs for the whole outgoing call.",
+        "evidence": "adapters/huaweiads/huaweiads.go:315",
+        "status": "verified",
+        "statusReason": "Normalized from the source-verified adapter note before the B1 generation-2 freeze.",
+        "b1Provenance": {
+          "caseId": "b1-012-huaweiads-imp.ext.bidder-moved",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "The claim concerns the Authorization digest built from the final parsed impression's credentials. The mock's own request log shows the header is sent on every huaweiads call, but PBS's debug httpcalls surface exposes only Accept, Content-Type, User-Agent and X-Prebid, so this run's evidence cannot bind the header to a case. The pre-registered digest is also nonce-derived and reproducible only in the adapter's unit test, where the nonce is fixed."
+        },
+        "witness033": {
+          "generation": "033-direct-adapters",
+          "ids": ["b1-012-huaweiads-imp.ext.bidder-moved"],
+          "observationsSha256": "296aa55b68920d6029483cc664c29d5976207344588001d63cee9d2b6cff2246"
+        }
+      }
+    },
+    {
+      "id": "b1-031-alliance_gravity-imp.ext.bidder-rewritten",
+      "group": "previously-inconclusive",
+      "adapter": "alliance_gravity",
+      "outcome": "pass",
+      "oracle": "projection collapse plus source-to-destination identity: bidder becomes empty while srid moves",
+      "variantCount": 3,
+      "assertions": 11,
+      "corpusIndex": 0,
+      "before": {
+        "field": "imp.ext.bidder",
+        "disposition": "rewritten",
+        "detail": "Replaced with an empty JSON object, so the srid parameter never reaches the partner under that name.",
+        "evidence": "adapters/alliance_gravity/alliance_gravity.go:44",
+        "status": "unverified",
+        "b1Provenance": {
+          "caseId": "b1-031-alliance_gravity-imp.ext.bidder-rewritten",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "No schema-valid routed input bypasses Alliance Gravity's unconditional bidder-node rewrite."
+        }
+      },
+      "action": "retain-classification",
+      "after": {
+        "field": "imp.ext.bidder",
+        "disposition": "rewritten",
+        "detail": "Replaced with an empty JSON object, so the srid parameter never reaches the partner under that name.",
+        "evidence": "adapters/alliance_gravity/alliance_gravity.go:44",
+        "status": "verified",
+        "b1Provenance": {
+          "caseId": "b1-031-alliance_gravity-imp.ext.bidder-rewritten",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "No schema-valid routed input bypasses Alliance Gravity's unconditional bidder-node rewrite."
+        },
+        "witness033": {
+          "generation": "033-direct-adapters",
+          "ids": ["b1-031-alliance_gravity-imp.ext.bidder-rewritten"],
+          "observationsSha256": "296aa55b68920d6029483cc664c29d5976207344588001d63cee9d2b6cff2246"
+        }
+      }
+    },
+    {
+      "id": "b1-037-limelightDigital-id-rewritten",
+      "group": "previously-inconclusive",
+      "adapter": "limelightDigital",
+      "outcome": "pass",
+      "oracle": "identity-based fanout transformation: exact request-ID function and group-to-impression correspondence",
+      "variantCount": 3,
+      "assertions": 14,
+      "corpusIndex": 2,
+      "before": {
+        "field": "id",
+        "disposition": "rewritten",
+        "detail": "The request id becomes \"<original id>-<imp id>\" for each of the per-imp fan-out requests.",
+        "evidence": "adapters/limelightDigital/limelightDigital.go:75",
+        "status": "unverified",
+        "b1Provenance": {
+          "caseId": "b1-037-limelightDigital-id-rewritten",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "The adapter always appends '-' plus a required non-empty imp.id; no finite request-id fixed point or valid condition-off value exists."
+        }
+      },
+      "action": "retain-classification",
+      "after": {
+        "field": "id",
+        "disposition": "rewritten",
+        "detail": "The request id becomes \"<original id>-<imp id>\" for each of the per-imp fan-out requests.",
+        "evidence": "adapters/limelightDigital/limelightDigital.go:75",
+        "status": "verified",
+        "b1Provenance": {
+          "caseId": "b1-037-limelightDigital-id-rewritten",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "The adapter always appends '-' plus a required non-empty imp.id; no finite request-id fixed point or valid condition-off value exists."
+        },
+        "witness033": {
+          "generation": "033-direct-adapters",
+          "ids": ["b1-037-limelightDigital-id-rewritten"],
+          "observationsSha256": "296aa55b68920d6029483cc664c29d5976207344588001d63cee9d2b6cff2246"
+        }
+      }
+    },
+    {
+      "id": "b1-047-goldbach-id-rewritten",
+      "group": "previously-inconclusive",
+      "adapter": "goldbach",
+      "outcome": "pass",
+      "oracle": "identity-based fanout transformation: exact request-ID function and group-to-impression correspondence",
+      "variantCount": 3,
+      "assertions": 14,
+      "corpusIndex": 5,
+      "before": {
+        "field": "id",
+        "disposition": "rewritten",
+        "detail": "The request id becomes \"<original id>_<publisherId>\" so each fan-out request has a distinct id.",
+        "evidence": "adapters/goldbach/goldbach.go:202",
+        "status": "unverified",
+        "b1Provenance": {
+          "caseId": "b1-047-goldbach-id-rewritten",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "The adapter always appends '_' plus the required non-empty publisherId; no finite request-id fixed point or valid condition-off value exists."
+        }
+      },
+      "action": "retain-classification",
+      "after": {
+        "field": "id",
+        "disposition": "rewritten",
+        "detail": "The request id becomes \"<original id>_<publisherId>\" so each fan-out request has a distinct id.",
+        "evidence": "adapters/goldbach/goldbach.go:202",
+        "status": "verified",
+        "b1Provenance": {
+          "caseId": "b1-047-goldbach-id-rewritten",
+          "outcome": "inconclusive",
+          "runId": "b1-v3-reporting-20260821T130741Z",
+          "runSummarySha256": "21d3e39a43dc6e7f77a82acf837364b83e2a708eb8424f7a466f8a36ca075465",
+          "imageDigest": "sha256:67b7e0ca296169926e305bcf602997a7debf488ce7e711e0f091dbf628384760",
+          "commit": "0ba352315253f6692af6497d553cfb12909a1b8b",
+          "statusUnchanged": true,
+          "reason": "The adapter always appends '_' plus the required non-empty publisherId; no finite request-id fixed point or valid condition-off value exists."
+        },
+        "witness033": {
+          "generation": "033-direct-adapters",
+          "ids": ["b1-047-goldbach-id-rewritten"],
+          "observationsSha256": "296aa55b68920d6029483cc664c29d5976207344588001d63cee9d2b6cff2246"
+        }
+      }
+    }
+  ],
+  "attempts": [
+    {
+      "attempt": 1,
+      "path": "/tmp/ortbtools-dialect033-kplg6vsh/evidence/attempt001",
+      "exitCode": 1,
+      "logSha256": "4433e0184889abda73029ed1921bc1c0d33aae55a0a21515393415faa83eaad3",
+      "caseCount": 0,
+      "failedCaseIds": []
+    },
+    {
+      "attempt": 2,
+      "path": "/tmp/ortbtools-dialect033-kplg6vsh/evidence/attempt002",
+      "exitCode": 1,
+      "logSha256": "d25f5c0f6c42b895ac20f4f6969f478bdeb124e30e5d939e2430fbf6c7ac20a4",
+      "caseCount": 19,
+      "failedCaseIds": [
+        "b1-001-huaweiads-imp.audio-forbidden",
+        "b1-005-gamma-imp.native-forbidden",
+        "b1-012-huaweiads-imp.ext.bidder-moved"
+      ]
+    },
+    {
+      "attempt": 3,
+      "path": "/tmp/ortbtools-dialect033-kplg6vsh/evidence/attempt003",
+      "exitCode": 0,
+      "logSha256": "d0af59bd2af142964332982dab1d9e5b1ce7cf2ffd264a4e0816e5d2df144ebc",
+      "caseCount": 19,
+      "failedCaseIds": []
+    },
+    {
+      "attempt": 4,
+      "path": "/tmp/ortbtools-dialect033-kplg6vsh/evidence/attempt004",
+      "exitCode": 0,
+      "logSha256": "d0af59bd2af142964332982dab1d9e5b1ce7cf2ffd264a4e0816e5d2df144ebc",
+      "caseCount": 19,
+      "failedCaseIds": []
+    }
+  ],
+  "amendmentScriptSha256": "4121767309dbd1fadc6b640a76621b5d82e657fa21fd3cd3f8c9ec96951f2e57"
+}

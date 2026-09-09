@@ -1,0 +1,384 @@
+{
+  "revision": "0ba352315253f6692af6497d553cfb12909a1b8b",
+  "profiles": [
+    {
+      "adapterId": "adnuntius",
+      "sources": [
+        {
+          "path": "adapters/adnuntius/adnuntius.go",
+          "sha256": "420cab9cc749f65ffd98853efe457532750e226eead85dab2996bfb31259019e",
+          "url": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/adnuntius/adnuntius.go"
+        }
+      ],
+      "statements": [
+        {
+          "id": "b1-003-adnuntius-imp.video-forbidden",
+          "field": "imp.video",
+          "disposition": "forbidden",
+          "detail": {
+            "en": "A video impression aborts request construction.",
+            "uk": "Відеопоказ перериває побудову запиту.",
+            "ru": "Видеопоказ прерывает построение запроса."
+          },
+          "sourceRef": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/adnuntius/adnuntius.go#L71"
+        }
+      ]
+    },
+    {
+      "adapterId": "alliance_gravity",
+      "sources": [
+        {
+          "path": "adapters/alliance_gravity/alliance_gravity.go",
+          "sha256": "a2bf68f8f7c70f57274f6d79b63b9bd5976e1d6913f9cc484b14f3a323a3143b",
+          "url": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/alliance_gravity/alliance_gravity.go"
+        }
+      ],
+      "statements": [
+        {
+          "id": "b1-031-alliance_gravity-imp.ext.bidder-rewritten",
+          "field": "imp.ext.bidder",
+          "disposition": "rewritten",
+          "detail": {
+            "en": "Bidder parameters become an empty object; srid becomes the stored-request ID.",
+            "uk": "Параметри bidder стають порожнім об’єктом; srid стає ID збереженого запиту.",
+            "ru": "Параметры bidder становятся пустым объектом; srid становится ID сохранённого запроса."
+          },
+          "sourceRef": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/alliance_gravity/alliance_gravity.go#L44"
+        }
+      ]
+    },
+    {
+      "adapterId": "audienceNetwork",
+      "sources": [
+        {
+          "path": "adapters/audienceNetwork/facebook.go",
+          "sha256": "823c5f34bffaafd9e9032637ce1da8f94bcf8f83aa9395450406fdc55e9c500c",
+          "url": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/audienceNetwork/facebook.go"
+        }
+      ],
+      "statements": [
+        {
+          "id": "b1-006-audienceNetwork-site-forbidden",
+          "field": "site",
+          "disposition": "forbidden",
+          "detail": {
+            "en": "A site request is rejected; this profile requires app inventory.",
+            "uk": "Запит site відхиляється; профіль потребує інвентарю app.",
+            "ru": "Запрос site отклоняется; профилю нужен инвентарь app."
+          },
+          "sourceRef": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/audienceNetwork/facebook.go#L58"
+        }
+      ]
+    },
+    {
+      "adapterId": "gamma",
+      "sources": [
+        {
+          "path": "adapters/gamma/gamma.go",
+          "sha256": "a0b5c7bc42a2b2b9d72d886fc17f736be57977ac6f72ba7b233b8cf78c9b58a0",
+          "url": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/gamma/gamma.go"
+        }
+      ],
+      "statements": [
+        {
+          "id": "b1-005-gamma-imp.native-forbidden",
+          "field": "imp.native",
+          "disposition": "forbidden",
+          "detail": {
+            "en": "Native-only impressions lack supported banner/video media.",
+            "uk": "Показ лише з Native не містить підтримуваного banner/video.",
+            "ru": "Показ только с Native не содержит поддерживаемого banner/video."
+          },
+          "sourceRef": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/gamma/gamma.go#L167"
+        }
+      ]
+    },
+    {
+      "adapterId": "goldbach",
+      "sources": [
+        {
+          "path": "adapters/goldbach/goldbach.go",
+          "sha256": "c72422b6ac5c4ffabb1dec7571da519f37fa2f195e77d58b75b1002a5acac62b",
+          "url": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/goldbach/goldbach.go"
+        }
+      ],
+      "statements": [
+        {
+          "id": "b1-047-goldbach-id-rewritten",
+          "field": "id",
+          "disposition": "rewritten",
+          "detail": {
+            "en": "Each publisher group gets request-ID plus underscore plus publisher-ID.",
+            "uk": "Кожна група паблішера отримує ID запиту, підкреслення та ID паблішера.",
+            "ru": "Каждая группа паблишера получает ID запроса, подчёркивание и ID паблишера."
+          },
+          "sourceRef": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/goldbach/goldbach.go#L202"
+        }
+      ]
+    },
+    {
+      "adapterId": "huaweiads",
+      "sources": [
+        {
+          "path": "adapters/huaweiads/huaweiads.go",
+          "sha256": "9171528dd48fae666667afd85d6a08593fc41d5604e148f3923dec4181bb09b0",
+          "url": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/huaweiads/huaweiads.go"
+        }
+      ],
+      "statements": [
+        {
+          "id": "b1-001-huaweiads-imp.audio-forbidden",
+          "field": "imp.audio",
+          "disposition": "forbidden",
+          "detail": {
+            "en": "Audio-only impressions are rejected. A supported banner, Native or video object takes precedence if also present.",
+            "uk": "Покази лише з аудіо відхиляються. Якщо також є підтримуваний banner, Native чи video, він має пріоритет.",
+            "ru": "Показы только с аудио отклоняются. Если также есть поддерживаемый banner, Native или video, он имеет приоритет."
+          },
+          "sourceRef": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/huaweiads/huaweiads.go#L506"
+        },
+        {
+          "id": "b1-012-huaweiads-imp.ext.bidder-moved",
+          "field": "imp.ext.bidder",
+          "disposition": "moved",
+          "detail": {
+            "en": "The last impression supplies Authorization parameters for the request.",
+            "uk": "Останній показ задає параметри Authorization для запиту.",
+            "ru": "Последний показ задаёт параметры Authorization для запроса."
+          },
+          "sourceRef": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/huaweiads/huaweiads.go#L315"
+        }
+      ]
+    },
+    {
+      "adapterId": "insticator",
+      "sources": [
+        {
+          "path": "adapters/insticator/insticator.go",
+          "sha256": "45e2619a8939f84355ca559bebdf44122bae7e8417e800a6aefd0cc68dc8525c",
+          "url": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/insticator/insticator.go"
+        }
+      ],
+      "statements": [
+        {
+          "id": "b2-insticator-004-52d68d7cb4e5",
+          "field": "imp.ext.bidder.publisherId",
+          "disposition": "moved",
+          "detail": {
+            "en": "The first parsed publisherId becomes site.publisher.id.",
+            "uk": "Перший прочитаний publisherId стає site.publisher.id.",
+            "ru": "Первый прочитанный publisherId становится site.publisher.id."
+          },
+          "sourceRef": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/insticator/insticator.go#L377",
+          "context": "site"
+        },
+        {
+          "id": "b2-insticator-005-cf460d0b3a2c",
+          "field": "imp.ext.bidder.publisherId",
+          "disposition": "moved",
+          "detail": {
+            "en": "The first parsed publisherId becomes app.publisher.id.",
+            "uk": "Перший прочитаний publisherId стає app.publisher.id.",
+            "ru": "Первый прочитанный publisherId становится app.publisher.id."
+          },
+          "sourceRef": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/insticator/insticator.go#L393",
+          "context": "app"
+        },
+        {
+          "id": "b2-insticator-008-2ee091eb630c",
+          "field": "imp.video.w",
+          "disposition": "required-by-adapter",
+          "detail": {
+            "en": "Video width must be nonzero.",
+            "uk": "Ширина відео має бути ненульовою.",
+            "ru": "Ширина видео должна быть ненулевой."
+          },
+          "sourceRef": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/insticator/insticator.go#L320"
+        },
+        {
+          "id": "b2-insticator-009-c777667bcc8b",
+          "field": "imp.video.h",
+          "disposition": "required-by-adapter",
+          "detail": {
+            "en": "Video height must be nonzero.",
+            "uk": "Висота відео має бути ненульовою.",
+            "ru": "Высота видео должна быть ненулевой."
+          },
+          "sourceRef": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/insticator/insticator.go#L320"
+        },
+        {
+          "id": "b2-insticator-010-f05d495a0537",
+          "field": "imp.video.mimes",
+          "disposition": "required-by-adapter",
+          "detail": {
+            "en": "Video requires a supplied MIME list; this pinned adapter accepts an empty list.",
+            "uk": "Для відео потрібен переданий список MIME; ця зафіксована ревізія адаптера приймає порожній список.",
+            "ru": "Для видео нужен переданный список MIME; эта закреплённая ревизия адаптера принимает пустой список."
+          },
+          "sourceRef": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/insticator/insticator.go#L320"
+        }
+      ]
+    },
+    {
+      "adapterId": "limelightDigital",
+      "sources": [
+        {
+          "path": "adapters/limelightDigital/limelightDigital.go",
+          "sha256": "894c67eb52039bca4a214c9f0d56aa5efd96f11939a6f356165e777a2e6a1bbc",
+          "url": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/limelightDigital/limelightDigital.go"
+        }
+      ],
+      "statements": [
+        {
+          "id": "b1-037-limelightDigital-id-rewritten",
+          "field": "id",
+          "disposition": "rewritten",
+          "detail": {
+            "en": "Each impression gets a request ID formed as request-ID plus hyphen plus impression-ID.",
+            "uk": "Кожен показ отримує ID запиту з ID запиту, дефіса та ID показу.",
+            "ru": "Каждый показ получает ID запроса из ID запроса, дефиса и ID показа."
+          },
+          "sourceRef": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/limelightDigital/limelightDigital.go#L75"
+        }
+      ]
+    },
+    {
+      "adapterId": "lockerdome",
+      "sources": [
+        {
+          "path": "adapters/lockerdome/lockerdome.go",
+          "sha256": "972c38e5b3aa946a0a94e8deab5461b7f9d110c92586757a253ba620bcde0319",
+          "url": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/lockerdome/lockerdome.go"
+        }
+      ],
+      "statements": [
+        {
+          "id": "b1-010-lockerdome-imp-rewritten",
+          "field": "imp",
+          "disposition": "rewritten",
+          "detail": {
+            "en": "Mixed invalid/valid impressions expose a survivor-indexing defect in this pinned revision.",
+            "uk": "Суміш невалідних і валідних показів виявляє помилку індексів у цій зафіксованій ревізії.",
+            "ru": "Смесь невалидных и валидных показов выявляет ошибку индексов в этой закреплённой ревизии."
+          },
+          "sourceRef": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/lockerdome/lockerdome.go#L76"
+        }
+      ]
+    },
+    {
+      "adapterId": "logan",
+      "sources": [
+        {
+          "path": "adapters/logan/logan.go",
+          "sha256": "66410d47eb3db7dec8230ce67be8a59d93da4e260c4144c94fac01eef19b0a9b",
+          "url": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/logan/logan.go"
+        }
+      ],
+      "statements": [
+        {
+          "id": "b2-logan-002-66ba4254762b",
+          "field": "imp[].ext.bidder.type",
+          "disposition": "rewritten",
+          "detail": {
+            "en": "The adapter overwrites type with publisher.",
+            "uk": "Адаптер замінює type на publisher.",
+            "ru": "Адаптер заменяет type на publisher."
+          },
+          "sourceRef": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/logan/logan.go#L54"
+        }
+      ]
+    },
+    {
+      "adapterId": "smartyads",
+      "sources": [
+        {
+          "path": "adapters/smartyads/smartyads.go",
+          "sha256": "29083e760d783f2034ce12075f011d2a7e33645d1e0784941252a2e9be0862e7",
+          "url": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/smartyads/smartyads.go"
+        }
+      ],
+      "statements": [
+        {
+          "id": "b1-011-smartyads-imp.ext.bidder-moved",
+          "field": "imp.ext.bidder",
+          "disposition": "moved",
+          "detail": {
+            "en": "The last impression supplies endpoint host and account parameters.",
+            "uk": "Останній показ задає хост endpoint і параметри облікового запису.",
+            "ru": "Последний показ задаёт хост endpoint и параметры учётной записи."
+          },
+          "sourceRef": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/smartyads/smartyads.go#L93"
+        }
+      ]
+    },
+    {
+      "adapterId": "sovrn",
+      "sources": [
+        {
+          "path": "adapters/sovrn/sovrn.go",
+          "sha256": "7dd7a097e2d95a7bbc08b8a0624f14a964c0074d116fbd238f2cf1df6d65e0eb",
+          "url": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/sovrn/sovrn.go"
+        }
+      ],
+      "statements": [
+        {
+          "id": "b2-sovrn-010-7a928c161a6a",
+          "field": "imp.video.mimes",
+          "disposition": "validated",
+          "detail": {
+            "en": "A video MIME list must be supplied; a missing list is rejected.",
+            "uk": "Для відео потрібен список MIME; відсутній список відхиляється.",
+            "ru": "Для видео нужен список MIME; отсутствующий список отклоняется."
+          },
+          "sourceRef": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/sovrn/sovrn.go#L92"
+        }
+      ]
+    },
+    {
+      "adapterId": "telaria",
+      "sources": [
+        {
+          "path": "adapters/telaria/telaria.go",
+          "sha256": "ec567ab8069d4b2cadf61b99036902be9c1216baa587d25c05cf2328f3e90d66",
+          "url": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/telaria/telaria.go"
+        }
+      ],
+      "statements": [
+        {
+          "id": "b1-002-telaria-imp.banner-forbidden",
+          "field": "imp.banner",
+          "disposition": "forbidden",
+          "detail": {
+            "en": "A banner object is rejected even alongside video.",
+            "uk": "Об’єкт banner відхиляється навіть поруч із video.",
+            "ru": "Объект banner отклоняется даже рядом с video."
+          },
+          "sourceRef": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/telaria/telaria.go#L54"
+        }
+      ]
+    },
+    {
+      "adapterId": "unicorn",
+      "sources": [
+        {
+          "path": "adapters/unicorn/unicorn.go",
+          "sha256": "219de5d257a7de4944e9fcebd1f78cfaeacab5c9f3c0668c9cd7f7d1cd17a343",
+          "url": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/unicorn/unicorn.go"
+        }
+      ],
+      "statements": [
+        {
+          "id": "b1-008-unicorn-regs.ext.gdpr-forbidden",
+          "field": "regs.ext.gdpr",
+          "disposition": "forbidden",
+          "detail": {
+            "en": "GDPR value 1 prevents request construction.",
+            "uk": "Значення GDPR 1 блокує побудову запиту.",
+            "ru": "Значение GDPR 1 блокирует построение запроса."
+          },
+          "sourceRef": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/unicorn/unicorn.go#L56"
+        }
+      ]
+    }
+  ]
+}

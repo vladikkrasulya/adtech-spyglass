@@ -71,6 +71,26 @@ finding text and now receives English.
 }
 ```
 
+### Explicit comparison context (033)
+
+Two optional top-level objects add inspection results without inferring a traffic route:
+
+```json
+{
+  "declaredSender": { "asi": "seller.example", "sid": "account-1", "provenance": "declared" },
+  "declaredRoute": {
+    "adapterId": "logan",
+    "direction": "request",
+    "revision": "0ba352315253f6692af6497d553cfb12909a1b8b",
+    "provenance": "declared"
+  }
+}
+```
+
+Sender context adds `inspection.schain`; route context adds `inspection.route`. Their absence leaves the default Analyze envelope unchanged. The route result is `known` or `unknown`, with source-linked statements and applicability; absent/unsupported/incompatible or revision-mismatched context remains unknown. The catalog from `GET /api/inspection/profiles?locale=en` supplies currently pinned identities and revisions. Context objects reject extra keys, control characters and oversized/non-string fields with400 `invalid_input`.
+
+`POST /api/inspection/schain` accepts `{input,declaredSender?,locale?}` separately for a structured request or serialized/query carrier. The transport bound is256KiB, text bound200000 characters, and rate limiter is shared with Analyze. Response: `{success:true,inspection:{schemaVersion:1,kind,status,reason,copies,findings,comparison,sources}}`, with `Cache-Control:no-store`. Copies preserve locations/node counts; findings are localized. Invalid carrier content is an inspection result, while invalid HTTP shape is400. Unexpected backend failure returns500 `inspection_failed` with static safe text. Pasted URLs are never fetched and these input bodies are not retained.
+
 ### Response `200`
 
 ```jsonc

@@ -21,7 +21,9 @@ permissions:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The baseline suite already takes over14 minutes including release smoke;
+    # allow bounded headroom for the additional real-browser/recovery controls.
+    timeout-minutes: 25
     steps:
       # fetch-depth: 0 — full history, not the default shallow (depth 1) clone.
       # The privacy-floor guard (scripts/deploy-lib.sh) and its tests resolve a

@@ -82,8 +82,12 @@ mappings, timestamps, and explicitly saved Behavior Corpus data remain plaintext
   On an individual logout storage failure, the in-memory token and browser cookie
   are still cleared, while the handler reports `logout_persistence_failed`. The
   browser also clears its local encryption/session state and reports the failure.
-  This observable partial failure does not guarantee durable revocation of the
-  undeleted row after a server restart; successful durable deletion is required.
+  Feature033 records known-session revocation before deletion and uses private
+  bounded recovery state to reject the cookie across restarts. Uncertain recovery
+  invalidates all previous sessions durably or leaves authentication unavailable.
+  The checkpoint contains keyed lookup identities and expiries, never raw cookies;
+  it is capped at16384 unexpired intents and4MiB. Old sessions and restore without
+  trusted recovery state require login again.
 - Analyze metadata contains side/type, version, status, format, and severity counts only.
 - A partner deletion sets its samples' partner reference to null. It does not delete the samples.
 - A sample deletion nulls any optional Behavior Corpus source link through its foreign-key rule.
@@ -152,3 +156,9 @@ session lifetime, deletion scope, cache cap, telemetry gate, or backup lifecycle
 
 Run the HTTP/privacy and persistence steps in [quickstart.md](../quickstart.md), then the complete
 repository gate.
+
+## Explicit inspection and field-role data (033)
+
+Serialized SChain input and declared sender/route context are processed transiently. Inspection does not fetch a pasted URL. The public profile catalog is pinned source metadata, not observed traffic. Browser declaration state lasts for the Inspector mount and is cleared with results. Path-role mappings are account metadata: version2 stores the normalized path and label with no representative observed value. Legacy exact-value mappings retain their stated value semantics.
+
+The private `session-recovery/` directory is separate from account data. Canonical database/content backups do not preserve a live authentication checkpoint. On restore, remove or move aside recovery state while the app is stopped; startup invalidates restored sessions before serving. Never copy a clean checkpoint from a different database generation to bypass this invalidation. See the operations runbook.

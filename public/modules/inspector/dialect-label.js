@@ -33,6 +33,7 @@
   // (/core/key-role-vocabulary.js, loaded before this file) — one source of
   // truth, gated by tests/key-role-browser-mirror.test.js (016 FR-024, R-10).
   const LABELS = (window.KeyRoleVocabulary && window.KeyRoleVocabulary.STORABLE_LABELS) || [];
+  const ROLES = (window.KeyRoleVocabulary && window.KeyRoleVocabulary.ROLE_LABELS) || [];
 
   // Below this the proposal is shown with an explicit "check this yourself"
   // warning. Chosen to sit above the persona's own "no ground for an answer"
@@ -107,11 +108,11 @@
     return (j && j.dialects) || [];
   }
 
-  async function createDialect(name) {
+  async function createDialect(name, isDefault) {
     const r = await fetch('/api/dialects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, is_default: true }),
+      body: JSON.stringify({ name, is_default: isDefault }),
     });
     const j = await r.json();
     if (!j || !j.success) throw new Error((j && j.error) || 'create_failed');
@@ -308,6 +309,14 @@
       opts +
       '</select></label>' +
       '<label class="dl-field"><span class="dl-lbl">' +
+      esc(t('dialect.label.scope')) +
+      '</span>' +
+      '<select id="dlScope"><option value="value">' +
+      esc(t('dialect.label.scope_value')) +
+      '</option><option value="path">' +
+      esc(t('dialect.label.scope_path')) +
+      '</option></select></label>' +
+      '<label class="dl-field"><span class="dl-lbl">' +
       esc(t('dialect.label.target')) +
       '</span>' +
       '<select id="dlDialect">' +
@@ -321,7 +330,10 @@
       esc(t('dialect.label.notes')) +
       '</span>' +
       '<input id="dlNotes" type="text" maxlength="1000"></label>' +
-      '<p class="dl-scope-note">' +
+      '<label class="dl-field"><span><input type="checkbox" id="dlActivate"> ' +
+      esc(t('dialect.label.activate')) +
+      '</span></label>' +
+      '<p class="dl-scope-note" id="dlScopeNote">' +
       esc(t('dialect.label.scope_note')) +
       '</p>' +
       '<div class="dl-actions">' +
@@ -342,9 +354,27 @@
       dialectSel.value = '__new';
       newWrap.hidden = false;
     }
-    dialectSel.addEventListener('change', () => {
+    const scopeSel = document.getElementById('dlScope');
+    const labelSel = document.getElementById('dlLabel');
+    const updateScope = () => {
+      const allowed = ROLES.includes(labelSel.value);
+      scopeSel.querySelector('[value="path"]').disabled = !allowed;
+      if (!allowed) scopeSel.value = 'value';
+      document.getElementById('dlScopeNote').textContent = t(
+        scopeSel.value === 'path' ? 'dialect.label.scope_path_note' : 'dialect.label.scope_note',
+      );
+    };
+    scopeSel.addEventListener('change', updateScope);
+    labelSel.addEventListener('change', updateScope);
+    updateScope();
+    const updateDialect = () => {
       newWrap.hidden = dialectSel.value !== '__new';
-    });
+      document.getElementById('dlActivate').checked =
+        dialectSel.value === '__new' ||
+        dialects.some((d) => String(d.id) === dialectSel.value && d.is_default);
+    };
+    dialectSel.addEventListener('change', updateDialect);
+    updateDialect();
 
     root.addEventListener(
       'click',
@@ -365,16 +395,31 @@
           let dialectId = dialectSel.value;
           if (dialectId === '__new') {
             const name = (document.getElementById('dlNewName').value || '').trim() || 'My dialect';
-            dialectId = (await createDialect(name)).id;
+            dialectId = (await createDialect(name, document.getElementById('dlActivate').checked))
+              .id;
           }
           const label = document.getElementById('dlLabel').value;
           await saveMapping(dialectId, {
             signal_path: signalPath,
-            signal_value: String(sig.value),
+            match_scope: scopeSel.value,
+            ...(scopeSel.value === 'value' ? { signal_value: String(sig.value) } : {}),
             semantic_label: label,
             shape_fingerprint: sig.shapeSignature || null,
             notes: (document.getElementById('dlNotes').value || '').trim() || null,
           });
+          try {
+            const activated = await fetch('/api/dialects/' + encodeURIComponent(dialectId), {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ is_default: document.getElementById('dlActivate').checked }),
+            });
+            const result = await activated.json();
+            if (!activated.ok || !result.success) throw new Error('activation_failed');
+          } catch (_) {
+            if (window.closeModal) window.closeModal();
+            toast(t('dialect.label.saved_activation_failed'), 'error');
+            return;
+          }
           if (window.closeModal) window.closeModal();
           toast(t('dialect.label.saved', { label }), 'success');
         } catch (e) {

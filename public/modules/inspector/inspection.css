@@ -1,0 +1,75 @@
+.inspection-dialog {
+  width: min(92vw, 48rem);
+  max-height: 90dvh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+}
+.inspection-dialog input:not([type='checkbox']),
+.inspection-dialog select,
+.inspection-dialog textarea {
+  width: 100%;
+  min-width: 0;
+  font: inherit;
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--text);
+}
+.inspection-dialog textarea {
+  font-family: var(--font-mono);
+  resize: vertical;
+}
+.inspection-dialog p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.inspection-dialog ul {
+  margin: 0;
+  padding-left: var(--space-4);
+  overflow-wrap: anywhere;
+}
+.inspection-dialog hr {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+.inspection-dialog code {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.inspection-help {
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.inspection-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.inspection-toggle input[type='checkbox'] {
+  width: auto;
+  flex: 0 0 auto;
+  margin: 0;
+}
+.inspection-sender:not([hidden]) {
+  display: grid;
+  gap: var(--space-2);
+}
+#inspectionResult,
+#inspectionRouteResult {
+  display: grid;
+  gap: var(--space-2);
+}
+#inspectionError {
+  color: var(--danger);
+}
+#inspectionContextSummary:not([hidden]) {
+  display: block;
+  max-width: 24rem;
+  font-size: var(--fs-xs);
+  overflow-wrap: anywhere;
+}

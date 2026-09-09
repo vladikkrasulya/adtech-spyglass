@@ -1,6 +1,6 @@
 {
   "name": "ortbtools",
-  "version": "1.22.0",
+  "version": "1.23.0",
   "description": "OpenRTB inspector \u2014 paste a BidRequest/BidResponse, get human-readable validation, semantic crosscheck, creative preview.",
   "private": true,
   "workspaces": [

@@ -76,8 +76,10 @@ The detailed compatibility contract remains in [docs/api-v1.md](../../../docs/ap
 Individual logout clears the in-memory token and expires its cookie before
 surfacing durable-delete failure. That failure returns 500
 `logout_persistence_failed` with safe localized copy through the existing bounded
-5xx alert path. It does not claim an undeleted storage row cannot revive after a
-restart. Finding-catalog read/parse failures are safely logged and not cached;
+5xx alert path. Feature033 journals known-session revocation before SQLite deletion;
+uncertain starts invalidate prior sessions durably or stay unavailable. Raw cookies
+are never stored as the new versioned keyed lookup identities. Orderly shutdown
+must drain authentication before marking recovery state clean. Finding-catalog read/parse failures are safely logged and not cached;
 successful dictionaries retain the process cache, and repaired files can recover
 on a later request.
 
@@ -217,3 +219,9 @@ and regression guards in the same feature. Run the HTTP/privacy steps in
 [quickstart.md](../quickstart.md), then the complete repository gate.
 
 Finding-catalog dictionary load failures retain the compatible degraded response body but send `Cache-Control: no-store`. Both the process cache and external caches can therefore recover on the next request after repair; complete responses retain `public, max-age=300`.
+
+## Bounded inspection routes (033)
+
+`GET /api/inspection/profiles?locale=en` returns `{success:true,profiles}` under the public read limiter. `POST /api/inspection/schain` uses the Analyze limiter and a 256KiB transport cap; its `{input,declaredSender?,locale?}` body accepts an object or nonempty string of at most200000 characters. It returns `{success:true,inspection}` with `Cache-Control:no-store`. Shape/context failures are400; unexpected Core failures return static500 `inspection_failed`, without exception or pasted input details.
+
+Analyze accepts optional top-level `declaredSender:{asi,sid,provenance:'declared'}` and `declaredRoute:{adapterId,direction,revision,provenance:'declared'}`. Only supplied context adds the corresponding `inspection.schain` or `inspection.route` result. Omitted context preserves the default envelope. Unsupported declarations receive explicit unknown applicability. Inspection never fetches pasted URLs or persists their body.

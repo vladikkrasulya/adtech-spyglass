@@ -94,6 +94,9 @@
 
 /* ── Toast ── */
 .toast-container {
+  /* Notifications must not intercept clicks on the controls below the stack,
+     including the transparent gaps between messages. */
+  pointer-events: none;
   position: fixed;
   bottom: var(--space-4);
   right: var(--space-4);
@@ -101,6 +104,9 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+.toast :is(button, a, [data-toast-interactive]) {
+  pointer-events: auto;
 }
 .toast {
   padding: var(--space-3) var(--space-4);

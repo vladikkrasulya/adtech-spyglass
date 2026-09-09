@@ -1,7 +1,7 @@
 # Contract: Core Validator and CLI
 
 **Owner**: `packages/core/` and `packages/cli/`
-**Current versions**: Core `0.47.0`; CLI `0.1.4`
+**Current versions**: Core `0.48.0`; CLI `0.1.5`
 
 ## Public Core Surface
 
@@ -10,6 +10,7 @@ The root CommonJS module exports:
 - `validate`, `crosscheck`, and `mirror`;
 - `detectType`, `detectVersion`, and `detectFormat`;
 - `listDialects` and `listLocales`;
+- `inspectSchain`, `listInspectionProfiles`, and `evaluateDeclaredRoute`;
 - `decodeCategory`, `decodeCategories`, and `extractAllCategories`;
 - `rollupStatus` and `nativeAssetCrosscheck`;
 - `parseVastTimeline` and `VAST_DIAGNOSTICS` (retained package-root timeline API); and
@@ -537,3 +538,11 @@ Changes run focused API stability, validator, detector, rule/dialect, localizati
 and CLI tests first. Every new finding id must have all applicable locale messages and an IAB spec
 reference where the rule is source-mapped. Before merge, run the complete repository gate from
 [the baseline quickstart](../quickstart.md).
+
+## Supply-chain and declared-route inspection (033)
+
+The three pure inspection APIs are deterministic and do not fetch URLs or retain input. `inspectSchain(input, {locale, declaredSender})` accepts structured requests, serialized chains and explicit query carriers, and returns schemaVersion1, kind/status, source-located copies, findings, comparison provenance and sources. Invalid or incompatible material remains explicit; chain length alone is not an error. Valid copies are compared semantically without sorting node order. The optional sender is `{asi,sid,provenance:'declared'}`.
+
+`listInspectionProfiles({locale})` returns a bounded pinned-source catalog. `evaluateDeclaredRoute(input, {adapterId,direction,revision,provenance:'declared'}, {locale})` returns known/unknown applicability and source-linked statements. Absent, unsupported, incompatible or revision-mismatched declarations remain unknown. Field labels and payload endpoints never establish an actual route. [033 contract](../../033-close-remaining-questions/contracts/inspection.md).
+
+User mappings retain version1 exact-value behavior. Version2 normalizes numeric path indices and applies one of nine field-role labels without persisting an observed value. Exact mappings win; unsupported versions are ignored safely by the runtime and cannot silently export as a supported schema.

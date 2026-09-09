@@ -22,7 +22,13 @@ function partitionTests(root) {
     if (!file.endsWith('.test.js')) continue;
     const rel = path.join('tests', file);
     const source = fs.readFileSync(path.join(root, rel), 'utf8');
-    result[/puppeteer/.test(source) ? 'browser' : 'unit'].push(rel);
+    // The shared corpus driver can launch a real browser too. Those callers need
+    // the same serial attempts/preflight as files loading the engine directly;
+    // a browser-like filename alone also matches DOM-only tests.
+    const sharedBrowser =
+      /\brequire\s*\(\s*['"]\.\/corpus\/lib\/browser(?:\.js)?['"]\s*\)/.test(source) &&
+      /\blaunchBrowser\s*\(/.test(source);
+    result[/puppeteer/.test(source) || sharedBrowser ? 'browser' : 'unit'].push(rel);
   }
   return result;
 }

@@ -147,6 +147,8 @@ function reprefixFindings(findings, base, pathMap = {}) {
     f.path = remap(p);
     if (f.params && typeof f.params.path === 'string')
       f.params = { ...f.params, path: remap(f.params.path) };
+    if (f.id === 'schain.copy_conflict' && typeof f.params.otherPath === 'string')
+      f.params = { ...f.params, otherPath: remap(f.params.otherPath) };
     if (f.params && typeof f.params.field === 'string' && pathMap[p]) {
       f.params = { ...f.params, field: pathMap[p].split('.').pop() };
     }
@@ -342,6 +344,7 @@ function validate(payload, opts) {
           dialect,
           version,
           userDialect,
+          declaredSender: o.declaredSender,
           onFamilyFailure,
         })
           .concat(runFamily('consent', () => validateConsent(view), { findings: [] }).findings)
@@ -361,6 +364,7 @@ function validate(payload, opts) {
         dialect,
         version,
         userDialect,
+        declaredSender: o.declaredSender,
         onFamilyFailure,
       });
       if (pluginFindings.length) findings = findings.concat(pluginFindings);
@@ -658,6 +662,7 @@ const {
 } = require('./diff');
 const { adviseMigration25To26, MIGRATION_RULES } = require('./migrate');
 const { parseVastTimeline, VAST_DIAGNOSTICS } = require('./vast-timeline');
+const { inspectSchain, listInspectionProfiles, evaluateDeclaredRoute } = require('./inspection');
 
 module.exports = {
   validate,
@@ -668,6 +673,9 @@ module.exports = {
   detectFormat,
   listDialects,
   listLocales,
+  inspectSchain,
+  listInspectionProfiles,
+  evaluateDeclaredRoute,
   // IAB Content Taxonomy lookup — bundled English labels.
   decodeCategory,
   decodeCategories,

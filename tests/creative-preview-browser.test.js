@@ -608,8 +608,8 @@ test(
       );
 
       // Wrapped and unwrapped Native bodies normalize to the same safe
-      // synthetic frame. Wave 1 must not expose the server-fetch action on
-      // this newly reachable branch, because its contract adds no requests.
+      // synthetic frame. Wave 2 offers an explicit raster action for both;
+      // merely displaying the offer still makes no asset request.
       const native = {
         assets: [
           { id: 1, title: { text: 'Native parity marker' } },
@@ -632,7 +632,7 @@ test(
         '#creativePreview iframe',
         (frame) => /** @type {HTMLIFrameElement} */ (frame).srcdoc,
       );
-      assert.equal(await page.$('.creative-inline-assets'), null);
+      assert.ok(await page.$('.creative-inline-assets'));
 
       await analyze(page, JSON.stringify(native));
       await page.waitForFunction(
@@ -647,7 +647,7 @@ test(
         (frame) => /** @type {HTMLIFrameElement} */ (frame).srcdoc,
       );
       assert.equal(withoutProbeChannel(unwrappedSrcdoc), withoutProbeChannel(wrappedSrcdoc));
-      assert.equal(await page.$('.creative-inline-assets'), null);
+      assert.ok(await page.$('.creative-inline-assets'));
 
       // A missing classifier is a failed safety dependency, not permission to
       // restore the old catch-all. Abort that one asset and prove a URL stays

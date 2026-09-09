@@ -64,7 +64,7 @@ directly. ortbtools is on Docker's default bridge and publishes only to
 the connection, **no** caller reaches the container from loopback, whichever path it
 took; `ORTBTOOLS_TRUSTED_PROXIES` is what makes the forwarded address usable (§4.10).
 
-**SQLite** is the application's only mounted local store: one WAL-mode database
+**SQLite** stores the application data in one WAL-mode database
 whose schema is auto-applied at startup by `db.js`. When `CLICKHOUSE_*`
 credentials are configured, ClickHouse separately persists derived analytics,
 news drafts, and published blog records. The `/data` backup procedure in this
@@ -1430,3 +1430,13 @@ The completed Local Model Maximum cycle is indexed in
 [its SpecKit archive](../specs/011-local-model-maximum/archive/README.md). Research outputs are
 kept outside the live application data directory and never enter the production image as source
 overlays. The archive decision cancels further inference experiments; no scheduler was created.
+
+## Session recovery and restores (v1.23.0)
+
+`/data/session-recovery/checkpoint.json` is private versioned authentication recovery state (directory0700, files0600); `owner.sqlite` is an empty lock sidecar held exclusively for the process lifetime. It does not contain application tables. The OS releases ownership after a crash. The checkpoint contains a private HMAC key and bounded keyed revocation identities/expiries, never raw browser cookies. Do not print, publish or copy it into a report.
+
+Serving starts only after a durable dirty fence. Ordinary drained shutdown writes a clean checkpoint after all authentication work completes. A dirty, missing, incompatible or corrupted checkpoint causes durable invalidation of prior sessions before new authentication; inability to invalidate leaves the app unavailable. First upgrade invalidates legacy raw-token sessions. Users may need to log in again; saved encrypted payloads and account data are retained.
+
+Canonical SQLite/content backups deliberately do not carry a live recovery checkpoint. For database restore: stop the app, restore the verified database/content set using the existing procedure, move aside any current `session-recovery/` directory, then start the app and verify health plus fresh login. Do not reattach an unrelated clean checkpoint to restored session rows. Keyed session identities also prevent old application images from interpreting new raw cookies during rollback; users must log in again. Backup completeness remains SQLite plus persisted content, with external ClickHouse handled separately.
+
+Cloudflare Web Analytics automatic RUM injection is disabled for `ortbtools.com` (verified2026-09-09 in Manage site after save/reload). This removes the injected third-party beacon without expanding application CSP. First-party `/telemetry.js` and `/api/v1/telemetry/event` remain active with their existing privacy controls.

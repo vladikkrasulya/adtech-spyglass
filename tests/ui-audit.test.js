@@ -372,19 +372,26 @@ function jsFilesUnder(dir, acc = []) {
 /**
  * Every data-action a modal renderer can emit, mapped to the file that emits
  * it. "Modal renderer" = a file that writes into #modalRoot. The per-file
- * granularity is deliberate: these modules render nothing but modal chrome, so
- * every data-action in them ends up inside #modalRoot — including the ones
- * built in a helper (save-sample's suggestion banner is filled in long after
- * the card is written, which is precisely why eyeballing the innerHTML
- * assignment missed it).
+ * granularity includes markup built in helpers (save-sample's suggestion
+ * banner is filled in long after the card is written). Only HTML opening-tag
+ * attributes count as emitted actions: a consumed selector such as
+ * closest('[data-action="inspect-schain"]') does not render a modal button.
  */
+function renderedHtmlActions(source) {
+  return new Set(
+    [...source.matchAll(/<[a-z][^>]*\sdata-action\s*=\s*(["'])([a-z0-9-]+)\1/gi)].map(
+      (match) => match[2],
+    ),
+  );
+}
+
 function modalActionsByFile() {
   const out = new Map();
   for (const file of jsFilesUnder(path.join(PUBLIC_ROOT, 'modules'))) {
     const src = fs.readFileSync(file, 'utf8');
     if (!/modalRoot/.test(src)) continue;
     if (!/\.innerHTML\s*=/.test(src)) continue;
-    const actions = new Set([...src.matchAll(/data-action="([a-z0-9-]+)"/g)].map((m) => m[1]));
+    const actions = renderedHtmlActions(src);
     if (actions.size) out.set(path.relative(ROOT, file), actions);
   }
   return out;
@@ -426,6 +433,22 @@ function locallyHandled(relFile) {
 // belongs to another worktree owner. Subset, not equality, so FIXING it keeps
 // this green while a NEW dead verb anywhere fails.
 const KNOWN_DEAD_ACTIONS = new Set(['confirm-corpus-save']);
+
+test('modal action scan distinguishes emitted helper markup from consumed selectors without hiding unwired verbs', () => {
+  const actions = renderedHtmlActions(`
+    modalRoot.innerHTML = '<div><button data-action="modal-close">Close</button></div>';
+    function suggestion() { return '<button class="hint" data-action="unwired-helper">Choose</button>'; }
+    function other() { return "<button data-action='unwired-single-quoted'>Choose</button>"; }
+    root.addEventListener('click', event => event.target.closest('[data-action="toolbar-open"]'));
+    root.querySelector('[data-action="another-selector"]');
+  `);
+  assert.deepEqual([...actions].sort(), ['modal-close', 'unwired-helper', 'unwired-single-quoted']);
+  const handled = new Set(['modal-close']);
+  assert.deepEqual([...actions].filter((action) => !handled.has(action)).sort(), [
+    'unwired-helper',
+    'unwired-single-quoted',
+  ]);
+});
 
 test('every data-action rendered into #modalRoot reaches a handler', () => {
   const hostActions = modalHostActions();

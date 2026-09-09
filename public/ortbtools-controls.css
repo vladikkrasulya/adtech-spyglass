@@ -360,6 +360,10 @@ details.kt-lang-menu:not([open]) > .kt-lang-menu-list {
 
 /* 016 T046: the stored dialect view in the account cabinet. */
 .dialect-mappings {
+  min-width: 0;
+  max-width: 100%;
+  grid-template-columns: minmax(0, 1fr);
+  overflow-wrap: anywhere;
   margin-top: 0.75rem;
   display: grid;
   gap: 0.35rem;
@@ -369,9 +373,26 @@ details.kt-lang-menu:not([open]) > .kt-lang-menu-list {
   font-size: 0.9em;
 }
 .dialect-mapping-row {
+  min-width: 0;
   padding: 0.15rem 0 0.15rem 1rem;
   font-size: 0.88em;
 }
 .dialect-mapping-row code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   opacity: 0.8;
+}
+.dialect-mapping-field {
+  display: block;
+}
+.dialect-mapping-field[hidden] {
+  display: none;
+}
+.dialect-mappings .btn {
+  max-width: 100%;
+  white-space: normal;
+}
+#dialectDefault {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }

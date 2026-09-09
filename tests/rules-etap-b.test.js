@@ -96,7 +96,7 @@ test('schain: valid source.ext.schain → no schain findings', () => {
   assert.deepEqual(ids, []);
 });
 
-test('schain: valid ext.schain (oRTB 3.0 path) → no findings', () => {
+test('schain: valid ext.schain (historical 2.4 path) → no findings', () => {
   const req = { ext: { schain: validSchain() } };
   const out = schain.validate(req);
   assert.deepEqual(out, []);
@@ -215,7 +215,7 @@ test('schain: node.rid absent → warn-schain-node-rid-missing', () => {
   const out = schain.validate(reqWithSchain(sc));
   const f = out.find((x) => x.id === 'warn-schain-node-rid-missing');
   assert.ok(f);
-  assert.equal(f.level, 'warning');
+  assert.equal(f.level, 'info');
 });
 
 test('schain: node.domain absent → warn-schain-node-domain-missing', () => {

@@ -352,3 +352,26 @@ test('the rail renders line icons, not emoji', () => {
   unmount();
   w.close();
 });
+
+test('closed responsive navigation is inert across open/close, language and desktop resize', () => {
+  const { w, root, shell, unmount } = setup({ drawer: true });
+  assert.equal(root.hasAttribute('inert'), true, 'offcanvas links cannot receive Tab focus');
+  assert.equal(root.getAttribute('aria-hidden'), 'true');
+  shell.classList.add('is-nav-open');
+  w.dispatchEvent(new w.CustomEvent('kt:nav-drawer-state', { detail: { expanded: true } }));
+  assert.equal(root.hasAttribute('inert'), false, 'opening restores native focusability');
+  assert.equal(root.hasAttribute('aria-hidden'), false);
+  root.querySelector('a[data-route="/library"]').focus();
+  shell.classList.remove('is-nav-open');
+  w.dispatchEvent(new w.CustomEvent('kt:nav-drawer-state', { detail: { expanded: false } }));
+  assert.equal(root.hasAttribute('inert'), true);
+  assert.equal(w.document.activeElement, w.document.querySelector('[data-action="toggle-nav"]'));
+  switchLang(w, 'ru');
+  assert.equal(root.hasAttribute('inert'), true, 'language rebuild cannot expose hidden links');
+  w.matchMedia = () => ({ matches: false });
+  w.dispatchEvent(new w.Event('resize'));
+  assert.equal(root.hasAttribute('inert'), false, 'native zoom back to desktop exposes the rail');
+  assert.equal(root.hasAttribute('aria-hidden'), false);
+  unmount();
+  w.close();
+});

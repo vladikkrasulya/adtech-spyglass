@@ -37,6 +37,7 @@ const { TextDecoder } = require('node:util');
  */
 
 const { readJson, sendJson, sendError, makeError } = require('../../lib/http');
+const { readDeclaredContext } = require('../inspection/handler');
 // Stage-1 finding→source navigation — additive `finding.location` candidate.
 // Pure core module (no payload values, no side regex); side comes from the
 // per-pane validate() call context below.
@@ -106,6 +107,8 @@ function decodeBehaviorAdm(adm, admB64) {
  *   loadUserDialect?: Function,
  *   getDefaultDialectForUser?: Function,
  *   db?: any,
+ *   inspectSchain?: Function,
+ *   evaluateDeclaredRoute?: Function,
  * }} deps
  */
 function createAnalyzeModule(deps) {
@@ -131,6 +134,8 @@ function createAnalyzeModule(deps) {
     loadUserDialect,
     getDefaultDialectForUser,
     db,
+    inspectSchain,
+    evaluateDeclaredRoute,
   } = deps;
 
   function handleAnalyze(req, res, parsed) {
@@ -168,6 +173,7 @@ function createAnalyzeModule(deps) {
     readJson(req)
       .then((body) => {
         const { bidReq, bidRes } = body || {};
+        const { declaredSender, declaredRoute } = readDeclaredContext(body || {});
         // bidReq can now be either a parsed JSON object (oRTB BidRequest) OR
         // a URL string (clickunder/teaser/pop GET, decoded by
         // packages/core/decoders/request/). validate() in core handles the
@@ -237,6 +243,7 @@ function createAnalyzeModule(deps) {
             disabledRules,
             expectedVersion,
             userDialect,
+            declaredSender,
             // The browser parses before posting, so `bidReq` arrives as an
             // object and the duplicate keys and integer spellings are already
             // gone. `bidReqRaw` carries the text the operator actually pasted;
@@ -384,6 +391,18 @@ function createAnalyzeModule(deps) {
           sides,
           crosscheck: cross,
           meta: { locale, dialect, categories, format },
+          ...(declaredSender || declaredRoute
+            ? {
+                inspection: {
+                  ...(declaredSender && inspectSchain
+                    ? { schain: inspectSchain(bidReq, { locale, declaredSender }) }
+                    : {}),
+                  ...(declaredRoute && evaluateDeclaredRoute
+                    ? { route: evaluateDeclaredRoute(bidReq, declaredRoute, { locale }) }
+                    : {}),
+                },
+              }
+            : {}),
         });
 
         // Stage 5 — log to analytics.validation_logs after response is sent.

@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "frozen_at": "2026-09-09",
+  "data": "isolated synthetic accounts and fixtures only",
+  "locales": ["en", "uk", "ru"],
+  "themes": ["light", "dark"],
+  "native_browser_families": ["chromium", "firefox", "safari"],
+  "desktop_viewports": [
+    [1024, 768],
+    [1280, 720],
+    [1280, 800],
+    [1366, 768],
+    [1440, 900],
+    [1536, 864],
+    [1600, 900],
+    [1920, 1080],
+    [2560, 1440],
+    [3840, 2160]
+  ],
+  "layout_surfaces": ["inspector", "saved-library", "account-dialects"],
+  "layout_rule": "Each browser × viewport × locale × theme; overflow and clipped actionable controls, typography hierarchy and screenshots. Viewports are CSS dimensions, not physical panel claims.",
+  "journeys": [
+    "saved-empty",
+    "encrypted-locked-unlocked",
+    "legacy-record",
+    "long-title-filter",
+    "load-edit-delete-navigation",
+    "failed-load-account-isolation",
+    "history-ring-50-formats-contexts",
+    "history-reload-two-tabs",
+    "history-quota-clear-server-isolation",
+    "mapping-scope-exact-override-edit-delete-import-default"
+  ],
+  "journey_rule": "Each browser at 1366x768 and 1920x1080; locale/theme parity on mapping and all new UI; retain exact per-case evidence.",
+  "native_zoom_percent": [100, 125, 150, 200, 400],
+  "zoom_rule": "Each native browser, inspector/saved-library/account, both themes; actual browser control/readback, keyboard reachability. Browser unsupported exact levels remain explicit, never CSS substitution.",
+  "screen_reader": {
+    "engine": "macOS VoiceOver",
+    "journeys": [
+      "saved-library-navigate-unlock-load",
+      "history-navigate-clear",
+      "mapping-scope-edit-remove"
+    ],
+    "locales": ["en", "uk", "ru"],
+    "rule": "Actual reader focus/announcement observations, not inferred accessible names."
+  },
+  "physical_devices": {
+    "state": "inventory pending",
+    "rule": "Execute available real-device saved/history flows; record model/OS/browser. No available device is an explicit unavailable prerequisite, never a synthetic pass."
+  },
+  "result_policy": "Every frozen cell records pass/fail/open plus artifact or exact missing prerequisite. Do not infer one browser from another.",
+  "history_cases": {
+    "selection": "Deterministic first pair adding an uncovered format, context, or protocol label from loadCorpus().pairs; excludes declared HTTP400. Coverage is per dimension, not every Cartesian combination.",
+    "ids": [
+      "audio-daast-26-request-only",
+      "audio-inapp-26-podcast-companion",
+      "audio-web-25-mp3-legacy",
+      "audio-x-ctv-smartspeaker-postroll",
+      "audio-x-ortb30-placement-audio",
+      "banner-dooh-26-screen",
+      "cover-context-audio-25-unspecified",
+      "cover-context-native-25-ctv",
+      "cover-context-push-26-inapp",
+      "cover-context-video-25-ctv",
+      "cover-input-inpage-request-only",
+      "cover-input-pop-request-only",
+      "cover-vendor-banner-exads-json",
+      "cover-vendor-inpage-exads-url"
+    ],
+    "covered": [
+      "context:ctv",
+      "context:dooh",
+      "context:inapp",
+      "context:n/a",
+      "context:web",
+      "format:audio",
+      "format:banner",
+      "format:inpage",
+      "format:native",
+      "format:pop",
+      "format:push",
+      "format:video",
+      "protocol:jsonfeed",
+      "protocol:ortb-2.5",
+      "protocol:ortb-2.6",
+      "protocol:ortb-3.0",
+      "protocol:url-request"
+    ]
+  }
+}

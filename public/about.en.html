@@ -477,7 +477,7 @@
           <a href="#contact">Contact</a>
         </nav>
         <div class="doc-prose">
-          <span class="eyebrow">docs · <span data-ortbtools-version>v1.22.0</span></span>
+          <span class="eyebrow">docs · <span data-ortbtools-version>v1.23.0</span></span>
           <h1 style="margin-top: var(--space-3)">How to use ortbtools</h1>
           <p style="font-size: var(--fs-lg); color: var(--text)">
             A private inspector for OpenRTB traffic. Paste JSON, get a breakdown: whether the
@@ -587,6 +587,29 @@
             If <code>bid.adm</code> contains an HTML creative — ortbtools renders it in a sandboxed
             iframe (<code>sandbox="allow-scripts"</code>, no <code>allow-same-origin</code>). You
             see how it looks, with no risk to your session.
+          </p>
+          <p data-disclosure="creative-assets">
+            Native, push and HTML previews can load up to 12 unique raster images only after you
+            explicitly request it while signed in. The inventory lists hosts and image roles, with
+            per-resource results and retry for unresolved images. The server sends the complete
+            image URL, including query parameters, to its remote host; that host sees the server IP.
+            Images are returned as data URIs without enabling advertiser requests from your browser.
+            Remote stylesheets, fonts, scripts, frames and media bodies stay blocked. Editing,
+            clearing or replacing the creative cancels queued image requests; an already sent
+            request cannot be recalled.
+          </p>
+          <h3>Supply-chain inspection and reusable field roles</h3>
+          <p>
+            The Tools menu accepts a structured request, a serialized SChain or a query containing
+            one. It shows chain locations, node counts and findings with sources. You can explicitly
+            declare a sender and a pinned adapter profile for comparison; unknown applicability
+            stays visible. A payload label or endpoint does not prove the actual traffic route.
+          </p>
+          <p>
+            Custom dialects can assign one of nine field roles to a normalized path independently of
+            its value. Exact-value mappings take precedence. You can edit the scope, delete
+            mappings, activate the dialect and import or export it from your account; a field-role
+            mapping does not store the observed value.
           </p>
 
           <h3>Behavior tab — in-creative fraud detection</h3>
@@ -1374,7 +1397,7 @@ server formats localised text and returns 200 JSON</code></pre>
               font-size: var(--fs-sm);
             "
           >
-            <span data-ortbtools-version>v1.22.0</span> · openrtb 2.5 / 2.6 / 3.0 · native 1.x ·
+            <span data-ortbtools-version>v1.23.0</span> · openrtb 2.5 / 2.6 / 3.0 · native 1.x ·
             vast 4.x · <a href="/" style="color: var(--text-dim)">↗ ortbtools</a> ·
             <a href="https://ortbtools.com/" style="color: var(--text-dim)">ortbtools.com</a>
           </p>

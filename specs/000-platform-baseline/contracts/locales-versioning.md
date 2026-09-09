@@ -71,9 +71,9 @@ The repository contains three independently versioned surfaces:
 
 | Surface           | Current version | Source of truth              | Coupled repository surfaces                                        |
 | ----------------- | --------------- | ---------------------------- | ------------------------------------------------------------------ |
-| Web application   | `1.22.0`        | root `package.json`          | root lock metadata, `public/version.js`, and static HTML fallbacks |
-| `@ortbtools/core` | `0.47.0`        | `packages/core/package.json` | its package-lock workspace metadata and documented Core contract   |
-| `@ortbtools/cli`  | `0.1.4`         | `packages/cli/package.json`  | its package-lock workspace metadata and documented CLI contract    |
+| Web application   | `1.23.0`        | root `package.json`          | root lock metadata, `public/version.js`, and static HTML fallbacks |
+| `@ortbtools/core` | `0.48.0`        | `packages/core/package.json` | its package-lock workspace metadata and documented Core contract   |
+| `@ortbtools/cli`  | `0.1.5`         | `packages/cli/package.json`  | its package-lock workspace metadata and documented CLI contract    |
 
 The app's browser display form is `v` followed by the root package version. `public/version.js`
 paints that value into runtime markers. The no-JavaScript/static fallback in every localized About
@@ -154,3 +154,5 @@ Release `1.20.0` (2026-09-09) is the first app bump since `1.19.4`. It carries f
 App 1.20.1 (2026-09-09) corrects desktop interface typography and width constraints. Account titles and metadata use the same 13px/11px hierarchy as Samples, account and article headings have explicit sizes, and compact Inspector windows retain document scrolling. Core and CLI remain 0.46.0 and 0.1.3.
 
 Feature [032](../../032-close-cleanup-inventory/spec.md) closes the named maintenance inventory. App 1.22.0 includes current-run ownership, explicit incomplete analysis and observable account/catalog failures. Core 0.47.0 adds the documented normative request projections, vendor dispatch fixes, negative-floor warnings and family-failure completeness metadata. CLI 0.1.4 advances its Core dependency to `^0.47.0` without changing exit-code policy. New messages exist in en/uk/ru; public IDs retain the frozen legacy allowlist. Workspace versions do not imply npm publication.
+
+Feature [033](../../033-close-remaining-questions/spec.md) adds durable revocation, explicit raster resource completion, value-independent role mapping, SChain inspection and declared pinned-route context. App1.23.0, Core0.48.0 and CLI0.1.5 retain separate version lines; CLI follows Core through `^0.48.0`. All new browser/Core meaning has EN/UK/RU coverage. Repository versions do not assert a deployment or npm publication; the current release receipt owns those facts.

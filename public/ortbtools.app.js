@@ -34,6 +34,7 @@ import {
 // partner state + renderers) that the shell service delegates to when
 // Inspector happens to be mounted.
 import { createAnalysisRun } from '/modules/inspector/analysis-run.js';
+import { mountInspection } from '/modules/inspector/inspection.js';
 import { session } from '/core/session.js';
 import { enhanceSelectControls } from '/modules/inspector/select-control.js';
 import {
@@ -46,6 +47,9 @@ export async function mountInspector(root, ctx) {
   'use strict';
 
   const selectControls = enhanceSelectControls(root, ctx);
+  const inspection = mountInspection(root, ctx, {
+    onContextChange: () => clearResultsForEmpty(),
+  });
 
   // Utilities ($/escapeHtml/toast) and tab-badge helpers (setTabBadge,
   // severityFromFindings, severityFromCrosschecks) imported above from
@@ -85,6 +89,13 @@ export async function mountInspector(root, ctx) {
     },
     refreshPartners: () => refreshPartners(),
     refreshSamples: () => refreshSamples(),
+    onSessionChange: ({ user }) => {
+      const userId = user ? user.id : null;
+      if (userId === _savedLoadUserId) return;
+      _savedLoadUserId = userId;
+      _savedLoadGeneration++;
+      if (_pendingSavedLoad && _pendingSavedLoad.userId !== userId) consumeSavedLoad();
+    },
     renderAuthWidget: () => renderAuthWidget(),
     renderVerifyBanner: () => renderVerifyBanner(),
     partnerOptionsHtml: (sel) => partnerOptionsHtml(sel),
@@ -1103,6 +1114,12 @@ export async function mountInspector(root, ctx) {
   // Invalidates delayed work (currently server-side asset inlining) when a
   // newer preview replaces the creative it was started for.
   let _previewRenderRevision = 0;
+  let _assetBatchController = null;
+  function cancelAssetBatch() {
+    if (_assetBatchController) _assetBatchController.abort();
+    _assetBatchController = null;
+  }
+  ctx.signal.addEventListener('abort', cancelAssetBatch, { once: true });
 
   // Phase 4 — frozen-thread watchdog. The probe sends a 1Hz heartbeat
   // (creative-probe.js hook 15); the parent receiver below updates
@@ -1336,17 +1353,25 @@ export async function mountInspector(root, ctx) {
   }
 
   function buildProbedSrcdoc(creativeHtml) {
+    // An HTML5 doctype has to precede even our trusted probe/meta tags, or
+    // the browser silently switches the creative to quirks-mode layout.
+    const doctype = /^\s*<!doctype html\s*>/i.exec(creativeHtml);
+    const body = doctype ? creativeHtml.slice(doctype[0].length) : creativeHtml;
+    const documentPrefix = doctype ? doctype[0] : '';
     // Inject a restrictive Content-Security-Policy meta tag into the creative iframe
     // so no external images, scripts, fonts, or network beacons can load over HTTPS during preview.
     const cspMeta =
       "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' data:; img-src data: blob:; font-src data:; connect-src 'none'; media-src 'none'; frame-src 'none';\">";
     const channel = _probeSource ? freshProbeChannel() : null;
-    if (!channel) return { html: cspMeta + creativeHtml, channel: null };
+    if (!channel) return { html: documentPrefix + cspMeta + body, channel: null };
     // Wrap in a <script> at the very top so listeners are hooked before
     // creative HTML parses any inline handlers. The placeholder lives only in
     // the trusted probe source, never in payload markup.
     const probe = _probeSource.replace('__ORTBTOOLS_PROBE_CHANNEL__', channel);
-    return { html: '<script>' + probe + '</' + 'script>' + cspMeta + creativeHtml, channel };
+    return {
+      html: documentPrefix + '<script>' + probe + '</' + 'script>' + cspMeta + body,
+      channel,
+    };
   }
 
   function resetBehavior() {
@@ -1623,6 +1648,7 @@ export async function mountInspector(root, ctx) {
         _currentProbedIframe = iframe;
         _currentProbeChannel = probed.channel;
         el.appendChild(iframe);
+        maybeOfferAssetInlining(el, nativeHtml, { w: nw, h: nh });
         return;
       } catch (err) {
         // Now this actually fires. The old gate rejected an envelope-less
@@ -1800,6 +1826,7 @@ export async function mountInspector(root, ctx) {
 
   /** Drop the actions strip entirely — an empty one would still take margin. */
   function clearCreativeActions() {
+    cancelAssetBatch();
     const box = document.getElementById('creativeActions');
     if (box && box.parentNode) box.parentNode.removeChild(box);
   }
@@ -2157,76 +2184,118 @@ export async function mountInspector(root, ctx) {
   function maybeOfferAssetInlining(host, creativeHtml, dims) {
     const api = window.OrtbtoolsCreativeAssets;
     if (!api || !host) return;
-    let urls = [];
-    try {
-      urls = api.collectRemoteUrls(creativeHtml);
-    } catch (_e) {
-      return;
-    }
-    if (!urls.length) return;
+    const manifest = api.createManifest(creativeHtml);
+    if (!manifest.entries.length) return;
     const actions = creativeActionsHost(true);
     if (!actions) return;
-
+    const inventory = document.createElement('details');
+    inventory.className = 'creative-asset-inventory';
+    const summary = document.createElement('summary');
+    summary.textContent = t('creative.assets.inventory', { n: manifest.total, cap: manifest.cap });
+    const notice = document.createElement('p');
+    notice.textContent = t('creative.assets.disclosure');
+    const list = document.createElement('ol');
+    list.setAttribute('aria-live', 'polite');
+    inventory.append(summary, notice, list);
+    if (manifest.omitted) {
+      const capped = document.createElement('p');
+      capped.textContent = t('creative.assets.cap', { n: manifest.omitted, cap: manifest.cap });
+      inventory.appendChild(capped);
+    }
+    const renderInventory = () => {
+      list.textContent = '';
+      for (const entry of manifest.entries) {
+        const item = document.createElement('li');
+        item.dataset.assetStatus = entry.status;
+        item.textContent =
+          entry.host +
+          ' · ' +
+          entry.roles.map((role) => t('creative.assets.role.' + role)).join(', ') +
+          ' · ' +
+          t('creative.assets.status.' + entry.status);
+        if (entry.status === 'failed')
+          item.textContent +=
+            ' · ' +
+            t(
+              entry.code === 'unauthorized'
+                ? 'creative.assets.sign_in'
+                : 'creative.assets.resource_failed',
+            );
+        list.appendChild(item);
+      }
+    };
+    renderInventory();
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'btn btn-ghost btn-sm creative-inline-assets';
-    btn.textContent = t('creative.assets.load', { n: urls.length });
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'btn btn-ghost btn-sm creative-cancel-assets';
+    cancel.textContent = t('creative.assets.cancel');
+    cancel.hidden = true;
+    let attempted = false;
+    const updateButton = () => {
+      const remaining = manifest.entries.filter((entry) => entry.status !== 'loaded').length;
+      btn.disabled = remaining === 0;
+      btn.hidden = remaining === 0;
+      btn.textContent = t(attempted ? 'creative.assets.retry' : 'creative.assets.load', {
+        n: remaining,
+      });
+      cancel.hidden = true;
+    };
+    updateButton();
+    cancel.addEventListener('click', cancelAssetBatch);
     btn.addEventListener('click', async () => {
-      if (btn.disabled) return;
+      if (btn.disabled || ctx.signal.aborted) return;
       const requestedRevision = _previewRenderRevision;
       const requestedFrame = host.querySelector('iframe');
+      const current = () =>
+        !ctx.signal.aborted &&
+        _previewRenderRevision === requestedRevision &&
+        requestedFrame &&
+        requestedFrame.isConnected &&
+        host.querySelector('iframe') === requestedFrame;
+      cancelAssetBatch();
+      const controller = new AbortController();
+      _assetBatchController = controller;
+      attempted = true;
       btn.disabled = true;
       btn.textContent = t('creative.assets.loading');
+      cancel.hidden = false;
       try {
-        const res = await api.inlineAssets(creativeHtml);
-        if (
-          _previewRenderRevision !== requestedRevision ||
-          !requestedFrame ||
-          !requestedFrame.isConnected ||
-          host.querySelector('iframe') !== requestedFrame
-        )
-          return;
+        const res = await api.inlineAssets(creativeHtml, {
+          manifest,
+          signal: controller.signal,
+          onProgress: () => {
+            if (current()) renderInventory();
+          },
+        });
+        if (!current()) return;
+        renderInventory();
         if (res.inlined > 0) {
-          if (requestedFrame) {
-            // This is a new rendering of the same creative. Invalidate any
-            // other delayed work before updating parent-owned preview state.
-            _previewRenderRevision++;
-            resetBehavior();
-            setBehaviorCreativeAdm(res.html);
-            // The refusals about to be raised belong to this second render,
-            // not the first — otherwise the count doubles for every asset
-            // that is still remote after inlining.
-            resetRefusals();
-            renderRefusalLedger();
-            // Consent was given over a box that was empty, because the
-            // pictures had not arrived yet. Re-blur before they do: a reveal
-            // clicked on nothing is not a reveal of the artwork that lands a
-            // moment later, and the screenshot-safety guarantee is exactly
-            // about the artwork.
-            const safe = document.getElementById('creativePreviewSafe');
-            if (safe) safe.classList.remove('is-revealed');
-            const probed = buildProbedSrcdoc(res.html);
-            requestedFrame.srcdoc = probed.html;
-            _currentProbedIframe = requestedFrame;
-            _currentProbeChannel = probed.channel;
-          }
+          _previewRenderRevision++;
+          resetBehavior();
+          setBehaviorCreativeAdm(res.html);
+          resetRefusals();
+          renderRefusalLedger();
+          const safe = document.getElementById('creativePreviewSafe');
+          if (safe) safe.classList.remove('is-revealed');
+          const probed = buildProbedSrcdoc(res.html);
+          requestedFrame.srcdoc = probed.html;
+          _currentProbedIframe = requestedFrame;
+          _currentProbeChannel = probed.channel;
         }
-        toast(api.describe(res), res.inlined ? 'success' : 'error');
-        if (res.inlined && !res.failed.length) {
-          // Nothing left to ask for. Take the empty strip with it rather
-          // than leave a styled container holding no controls.
-          btn.remove();
-          if (!actions.children.length) clearCreativeActions();
-          return;
-        }
+        toast(api.describe(res), res.cancelled ? 'info' : res.inlined ? 'success' : 'error');
+        updateButton();
       } catch (_e) {
-        if (_previewRenderRevision !== requestedRevision) return;
-        toast(t('creative.assets.all_failed', { n: urls.length }), 'error');
+        if (!current()) return;
+        toast(t('creative.assets.all_failed', { n: manifest.entries.length }), 'error');
+        updateButton();
+      } finally {
+        if (_assetBatchController === controller) _assetBatchController = null;
       }
-      btn.disabled = false;
-      btn.textContent = t('creative.assets.load', { n: urls.length });
     });
-    actions.appendChild(btn);
+    actions.append(btn, cancel, inventory);
     void dims;
   }
 
@@ -4723,7 +4792,10 @@ export async function mountInspector(root, ctx) {
    * losing either side.
    */
   function clearResultsForEmpty() {
+    _savedLoadGeneration++;
+    if (_pendingSavedLoad) consumeSavedLoad();
     analysisRun.invalidate();
+    inspection.clear();
     _analyzedSnapshot = null;
     capturePristinePanels();
     for (const id of PRISTINE_PANEL_IDS) {
@@ -4773,6 +4845,7 @@ export async function mountInspector(root, ctx) {
    * must not look current.
    */
   function clearResultsForError(reason) {
+    inspection.clear();
     // This runs from a catch block, so it must not be the thing that throws
     // next: the panels below are all optional in the stripped /embed view.
     const paint = (id, html) => {
@@ -5149,6 +5222,7 @@ export async function mountInspector(root, ctx) {
           bidRes: res,
           bidReqRaw: rawReqBytes,
           bidResRaw: rawResBytes,
+          ...inspection.getContext(),
         };
         if (expectedVersion) body.opts = { expectedVersion };
         let r;
@@ -5209,6 +5283,7 @@ export async function mountInspector(root, ctx) {
           }
           return;
         }
+        inspection.setResult(j.inspection);
         if (j.success) {
           // Product telemetry: a counter only — the event carries no payload,
           // no findings and no status, just "an analysis completed in this
@@ -5522,8 +5597,10 @@ export async function mountInspector(root, ctx) {
         // Fresh analysis is always at index 0 — pin the active highlight
         // there so the user sees which row they just produced.
         _currentHistoryIdx = 0;
-        renderHistory();
+        // Storage quota recovery may trim the in-memory ring. Paint its final
+        // shape so visible entries and delegated row indices stay aligned.
         persistHistory();
+        renderHistory();
         if (resVal)
           toast(
             t('toast.analysis_complete', {
@@ -6138,6 +6215,9 @@ export async function mountInspector(root, ctx) {
   // Dirty flag — set on input into bidReq/bidRes after a successful load.
   // Used to: (a) warn before clobber on loadSample, (b) reset after save.
   let _isDirty = false;
+  let _pendingSavedLoad = null;
+  let _savedLoadGeneration = 0;
+  let _savedLoadUserId = session.user ? session.user.id : null;
 
   // ── Auth widget ───────────────────────────────────────────────
 
@@ -6770,6 +6850,8 @@ export async function mountInspector(root, ctx) {
         '</button></div>';
       return;
     }
+    await resumeSavedLoad();
+    if (ctx.signal.aborted || !session.user) return;
     const sel = $('partnerFilter');
     const v = sel.value;
     const qs = v === '' ? '' : '?partner_id=' + encodeURIComponent(v);
@@ -6909,7 +6991,75 @@ export async function mountInspector(root, ctx) {
   // diffJsonForMirror + truncate (≈220 LOC); they're now ES-imported
   // helpers inside the module. ~25KB stays out of the initial JS
   // bundle until a user actually opens mirror.
+  function consumeSavedLoad(discardCurated = false) {
+    _pendingSavedLoad = null;
+    const params = new URLSearchParams(location.search);
+    if (!params.has('saved')) return;
+    params.delete('saved');
+    if (discardCurated) params.delete('sample');
+    const query = params.toString();
+    history.replaceState(
+      history.state,
+      '',
+      location.pathname + (query ? '?' + query : '') + location.hash,
+    );
+  }
+
+  async function resumeSavedLoad() {
+    if (!_pendingSavedLoad || !session.hasSession()) return;
+    const pending = _pendingSavedLoad;
+    consumeSavedLoad();
+    if (!session.user || session.user.id !== pending.userId || ctx.signal.aborted) return;
+    await loadSample(pending.id);
+  }
+
+  async function beginSavedLoad() {
+    const params = new URLSearchParams(location.search);
+    if (!params.has('saved')) return;
+    const value = params.get('saved');
+    const id = Number(value);
+    if (
+      params.has('sample') ||
+      params.getAll('saved').length !== 1 ||
+      !/^[1-9]\d*$/.test(value || '') ||
+      !Number.isSafeInteger(id)
+    ) {
+      // Two different sources in one URL have no unambiguous operator intent.
+      // Consume both so the later curated-sample adapter cannot overwrite it.
+      consumeSavedLoad(true);
+      toast(t('toast.sample_load_failed'), 'error');
+      return;
+    }
+    if (!session.user) {
+      consumeSavedLoad();
+      toast(t('toast.crypto_session_lost'), 'error');
+      return;
+    }
+    _pendingSavedLoad = { id, userId: session.user.id };
+    if (session.hasSession()) return resumeSavedLoad();
+    // Keep the explicit ID through a reload while locked. The existing unlock
+    // flow calls refreshSamples after deriving the key, which resumes it once.
+    const pending = _pendingSavedLoad;
+    try {
+      const [, unlock] = await Promise.all([
+        import('/modules/unlock/i18n.js'),
+        import('/modules/unlock/index.js'),
+      ]);
+      if (
+        !ctx.signal.aborted &&
+        _pendingSavedLoad === pending &&
+        session.user?.id === pending.userId
+      )
+        unlock.openUnlockModal();
+    } catch {
+      if (!ctx.signal.aborted) toast(t('toast.sample_load_failed'), 'error');
+    }
+  }
+
   async function loadSample(id) {
+    // A manual selection supersedes a pending deep link, including a modal
+    // that the user closed before choosing another saved example.
+    if (_pendingSavedLoad) consumeSavedLoad();
     if (!session.hasSession()) {
       toast(t('toast.crypto_session_lost'), 'error');
       return;
@@ -6921,13 +7071,34 @@ export async function mountInspector(root, ctx) {
         return;
       }
     }
+    const generation = ++_savedLoadGeneration;
+    const userId = session.user ? session.user.id : null;
+    const before = { req: $('bidReq').value, res: $('bidRes').value };
+    const current = () =>
+      !ctx.signal.aborted &&
+      generation === _savedLoadGeneration &&
+      session.user?.id === userId &&
+      session.hasSession() &&
+      $('bidReq').value === before.req &&
+      $('bidRes').value === before.res;
+    let decoding = false;
     try {
       const j = await session.api('GET', 'api/samples/' + id, undefined, { signal: ctx.signal });
+      if (!current()) return;
       const s = j.sample;
-      // Decrypt locally — server returned opaque ciphertext + IVs.
-      const reqText = await session.decryptBlob(s.req_iv, s.bid_req);
-      const resText = await session.decryptBlob(s.res_iv, s.bid_res);
-      if (ctx.signal.aborted) return; // unmounted during fetch/decrypt — don't fill a remount's editors
+      if (
+        !s ||
+        s.id !== id ||
+        typeof s.bid_req !== 'string' ||
+        (s.bid_res != null && typeof s.bid_res !== 'string')
+      )
+        throw new Error('Invalid saved sample');
+      // IV presence distinguishes ciphertext from legacy plaintext for each
+      // body independently. A missing response remains empty in either format.
+      decoding = true;
+      const reqText = s.req_iv ? await session.decryptBlob(s.req_iv, s.bid_req) : s.bid_req || '';
+      const resText = s.res_iv ? await session.decryptBlob(s.res_iv, s.bid_res) : s.bid_res || '';
+      if (!current()) return; // stale account, selection, editor, or unmounted context
       setEditorValue('bidReq', reqText);
       setEditorValue('bidRes', resText);
       updateCharCount('bidReq');
@@ -6940,7 +7111,7 @@ export async function mountInspector(root, ctx) {
       };
       _isDirty = false;
       toast(t('toast.loaded', { title: s.title }), 'success');
-    } catch (e) {
+    } catch (_e) {
       // Most common cause: tampered ciphertext or wrong DEK (e.g. cookie
       // outlived the in-memory DEK after a page reload without re-login).
       // AES-GCM doesn't tell us *which* (tamper vs key mismatch are
@@ -6948,9 +7119,8 @@ export async function mountInspector(root, ctx) {
       // back in" — fixes both legitimate causes (rotated DEK, stale
       // session DEK reference). Don't echo the raw exception name —
       // 'OperationError' is meaningless to non-cryptographers.
-      if (ctx.signal.aborted) return; // unmounted — swallow the abort, don't toast into a remount
-      console.error('[loadSample]', e);
-      toast(t('toast.decrypt_failed_with_hint'), 'error');
+      if (!current()) return;
+      toast(t(decoding ? 'toast.decrypt_failed_with_hint' : 'toast.sample_load_failed'), 'error');
     }
   }
 
@@ -8145,6 +8315,8 @@ export async function mountInspector(root, ctx) {
     renderVerifyBanner();
     if (ctx.signal.aborted) return;
     await refreshPartners();
+    if (ctx.signal.aborted) return;
+    await beginSavedLoad();
     if (ctx.signal.aborted) return;
     refreshSamples();
 

@@ -11,6 +11,7 @@
  */
 
 const TTL_MS = 60 * 1000;
+const { ROLE_LABELS } = require('./key-role-vocabulary');
 
 // Per-db cache: WeakMap so closed databases get GC'd. Inner Map keyed
 // by dialectId (number) holds `{dialect, expiresAt}`.
@@ -38,15 +39,39 @@ function loadUserDialect(db, dialectId, opts) {
 
   const rows = db
     .prepare(
-      `SELECT signal_path, signal_value, semantic_label, shape_fingerprint, params
+      `SELECT id, signal_path, signal_value, semantic_label, shape_fingerprint, params, version
        FROM dialect_mappings
        WHERE dialect_id = ?`,
     )
     .all(dialectId);
 
   const lookupMap = new Map();
+  const pathMap = new Map();
   for (const row of rows) {
-    lookupMap.set(`${row.signal_path}::${row.signal_value}`, row);
+    if (row.version === 1) lookupMap.set(`${row.signal_path}::${row.signal_value}`, row);
+    else if (
+      row.version === 2 &&
+      row.signal_value === '' &&
+      ROLE_LABELS.includes(row.semantic_label) &&
+      /^(?:imp\[\]\.ext|ext)(?:\.[a-zA-Z_][a-zA-Z0-9_]*|\[\])*$/u.test(row.signal_path)
+    ) {
+      const existing = pathMap.get(row.signal_path);
+      // API rejects duplicates. A malformed legacy/imported database still
+      // resolves deterministically instead of depending on query order.
+      if (!existing || row.id < existing.id)
+        pathMap.set(row.signal_path, { ...row, match_scope: 'path' });
+    }
+  }
+
+  function lookupMapping(path, value) {
+    const normalized = String(path).replace(/\[\d+\]/g, '[]');
+    const serialized = stringifyValue(value);
+    return (
+      lookupMap.get(`${path}::${serialized}`) ||
+      lookupMap.get(`${normalized}::${serialized}`) ||
+      pathMap.get(normalized) ||
+      null
+    );
   }
 
   const dialect = {
@@ -58,15 +83,17 @@ function loadUserDialect(db, dialectId, opts) {
       if (!finding || !finding.path) return false;
       const value = extractValue(finding);
       if (value === undefined) return false;
-      const mapping = lookupMap.get(`${finding.path}::${stringifyValue(value)}`);
+      const mapping = lookupMapping(finding.path, value);
       if (!mapping) return false;
+      if (mapping.match_scope === 'path')
+        return (
+          finding.level === 'question' && finding.id === 'dialects.question.unknown_ext_signal'
+        );
       if (finding.level === 'question') return true;
       return mapping.semantic_label === 'ignore' || mapping.semantic_label === 'informational';
     },
 
-    lookupMapping(path, value) {
-      return lookupMap.get(`${path}::${stringifyValue(value)}`) || null;
-    },
+    lookupMapping,
   };
 
   let inner = dbCache.get(db);

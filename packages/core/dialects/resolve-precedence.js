@@ -86,6 +86,7 @@ function combine({ savedMapping, legacy, role }) {
       answer: {
         label: savedMapping.semantic_label,
         source: 'saved-mapping',
+        ...(savedMapping.match_scope === 'path' ? { match_scope: 'path' } : {}),
         ...(savedMapping.notes ? { notes: savedMapping.notes } : {}),
       },
     };

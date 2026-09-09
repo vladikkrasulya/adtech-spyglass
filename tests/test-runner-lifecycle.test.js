@@ -318,6 +318,31 @@ test('test partition keeps unconventional browser filenames in the serial phase'
   });
 });
 
+test('test partition serializes shared real-browser driver consumers while keeping DOM-only tests parallel', (t) => {
+  const root = fixture(t);
+  const driver = './corpus/lib/' + 'browser';
+  fs.writeFileSync(
+    path.join(root, 'tests/inspection-browser.test.js'),
+    `const { launchBrowser } = require('${driver}'); launchBrowser();`,
+  );
+  fs.writeFileSync(
+    path.join(root, 'tests/saved-history.test.js'),
+    `const B = require(\n  "${driver}.js"\n); B.launchBrowser();`,
+  );
+  fs.writeFileSync(
+    path.join(root, 'tests/dom-browser.test.js'),
+    "const { JSDOM } = require('jsdom');",
+  );
+  fs.writeFileSync(
+    path.join(root, 'tests/refusal.test.js'),
+    `const { classifySandboxRefusal } = require('${driver}');`,
+  );
+  assert.deepEqual(partitionTests(root), {
+    unit: ['tests/dom-browser.test.js', 'tests/refusal.test.js'],
+    browser: ['tests/inspection-browser.test.js', 'tests/saved-history.test.js'],
+  });
+});
+
 test('runner preserves analytics opt-out while allowing explicitly configured synthetic collectors', async (t) => {
   const root = fixture(t);
   const file = 'tests/collector.test.js';

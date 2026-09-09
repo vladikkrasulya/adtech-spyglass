@@ -289,6 +289,16 @@ function syncCollapseTab(root) {
     ? !!(shell && shell.classList.contains('is-nav-open'))
     : !isNavCollapsed();
   btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  // A translated off-canvas panel is still keyboard-focusable. Match its
+  // interaction/reader visibility to the same breakpoint and drawer state.
+  const hidden = isDrawerMode() && !expanded;
+  const restoreFocus = hidden && root.contains(document.activeElement);
+  root.toggleAttribute('inert', hidden);
+  if (hidden) root.setAttribute('aria-hidden', 'true');
+  else root.removeAttribute('aria-hidden');
+  if (restoreFocus) {
+    document.querySelector('[data-action="toggle-nav"]')?.focus();
+  }
 }
 
 function highlight(root) {
@@ -374,7 +384,19 @@ export function mountNav(root) {
   }
   bindCollapse();
   const onViewportChange = () => syncCollapseTab(root);
-  const onDrawerState = () => syncCollapseTab(root);
+  const onDrawerState = (event) => {
+    syncCollapseTab(root);
+    if (isDrawerMode() && event.detail?.expanded) {
+      root.querySelector('.kt-nav__item[aria-current="page"], .kt-nav__item')?.focus();
+    }
+  };
+  const onDrawerKey = (event) => {
+    if (event.key === 'Escape' && isDrawerMode() && shellRoot?.classList.contains('is-nav-open')) {
+      event.preventDefault();
+      onCollapse(event);
+    }
+  };
+  root.addEventListener('keydown', onDrawerKey);
   window.addEventListener('resize', onViewportChange);
   window.addEventListener('kt:nav-drawer-state', onDrawerState);
 
@@ -553,6 +575,9 @@ export function mountNav(root) {
     window.removeEventListener('kt:lang-change', onLang);
     window.removeEventListener('resize', onViewportChange);
     window.removeEventListener('kt:nav-drawer-state', onDrawerState);
+    root.removeEventListener('keydown', onDrawerKey);
+    root.removeAttribute('inert');
+    root.removeAttribute('aria-hidden');
     root.innerHTML = '';
   };
 }

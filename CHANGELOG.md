@@ -6,6 +6,21 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.23.0 — close the remaining product questions (2026-09-09)
+
+- Make logout and password-reset revocation survive failed SQLite deletion and process restarts. Private bounded recovery state fences uncertain starts; orderly shutdown drains authentication before checkpointing. Upgrading old sessions or restoring without trusted recovery state requires login again.
+- Add value-independent field roles with exact-value precedence, account-scoped editing/removal/default activation and atomic schema2 import/export; retain schema1 exact mappings.
+- Complete the explicit raster preview action for responsive images, Native/push assets and inline CSS images. Preserve full-document styles, show individual failures/retry, and cancel stale creative batches. Toasts no longer intercept unrelated controls.
+- Add serialized/query SChain inspection, grounded cross-field findings, declared-sender comparison and pinned adapter applicability with explicit unknown states. No inspection fetches pasted URLs or infers a traffic route.
+- Resolve all nineteen frozen adapter witnesses through direct, offline pinned-source execution; retain the historical audit and evidence for four changed dispositions.
+- Show retry after saved-library server failures and clear prior-account rows on logout. Keep history rows aligned with quota recovery. Replace fixed sample-loading pauses with response/editor readiness and a held-response regression.
+- Open the selected saved example from the Library in Inspector, retain its selection through unlock and correctly load legacy plaintext bodies. Cancel late loads after Clear, editor changes or account changes. Keep focused Account navigation links visible at high browser zoom.
+
+**Core 0.48.0 / CLI 0.1.5 (SpecKit 033)**
+
+- Export pure `inspectSchain`, `listInspectionProfiles` and `evaluateDeclaredRoute`; ship their bounded pinned profile catalog. Add source-backed SChain findings and typed sender context while preserving existing finding identities.
+- Support version2 path-role mappings with legacy exact-value precedence. CLI advances its Core dependency to `^0.48.0`; workspace version changes are not an npm publication.
+
 ### v1.22.0 — close the named maintenance inventory (2026-09-09)
 
 - Keep every Inspector result attached to the analysis that produced it. Editing, clearing, replacing a run or leaving the page invalidates late validation and Intel responses, including the first analysis. Shared auction descriptors preserve the selected creative and its original source identity across OpenRTB versions.

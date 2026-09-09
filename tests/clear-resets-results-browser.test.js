@@ -110,6 +110,99 @@ function stopChild(proc) {
 }
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+const flowStates = new WeakMap();
+
+function flowState(page) {
+  if (!flowStates.has(page)) {
+    const state = {
+      stage: 'initial',
+      sampleRequests: 0,
+      sampleResponses: 0,
+      analysisRequests: 0,
+      analysisResponses: 0,
+    };
+    page.on('request', (request) => {
+      const name = new URL(request.url()).pathname;
+      if (name === '/api/v1/sample') state.sampleRequests++;
+      if (name === '/api/analyze') state.analysisRequests++;
+    });
+    page.on('response', (response) => {
+      const name = new URL(response.url()).pathname;
+      if (name === '/api/v1/sample') state.sampleResponses++;
+      if (name === '/api/analyze') state.analysisResponses++;
+    });
+    flowStates.set(page, state);
+  }
+  return flowStates.get(page);
+}
+
+async function stageDiagnostics(page) {
+  const state = await page.evaluate(() => ({
+    requestLength:
+      /** @type {HTMLTextAreaElement} */ (document.getElementById('bidReq'))?.value.length || 0,
+    responseLength:
+      /** @type {HTMLTextAreaElement} */ (document.getElementById('bidRes'))?.value.length || 0,
+    analysisState:
+      document.querySelector('[data-analysis-state]')?.getAttribute('data-analysis-state') ||
+      'absent',
+    analyzeDisabled: !!(
+      /** @type {HTMLButtonElement} */ (document.getElementById('analyzeBtn'))?.disabled
+    ),
+  }));
+  return { ...flowState(page), ...state };
+}
+
+async function loadDemoAndWait(page) {
+  const state = flowState(page);
+  state.stage = 'sample-response';
+  // Arm before the real action, and await both response completion and editor
+  // population. A returned HTTP response alone is not editor readiness.
+  const pending = page
+    .waitForResponse(
+      (response) => {
+        const url = new URL(response.url());
+        return url.pathname === '/api/v1/sample' && url.searchParams.get('type') === 'clean-banner';
+      },
+      { timeout: 30_000 },
+    )
+    .then(
+      (response) => ({ response }),
+      () => ({ response: null }),
+    );
+  try {
+    const clicked = await page.evaluate(() => {
+      const menu = /** @type {HTMLDetailsElement} */ (document.querySelector('.kt-example-menu'));
+      if (menu) menu.open = true;
+      const item = /** @type {HTMLButtonElement} */ (
+        document.querySelector('[data-action="load-demo"][data-type="clean-banner"]')
+      );
+      if (!item) return false;
+      item.click();
+      return true;
+    });
+    assert.equal(clicked, true, 'the deterministic sample menu item must exist');
+    const { response } = await pending;
+    if (!response || !response.ok()) throw new Error('sample response failed');
+    const sample = await response.json();
+    if (!sample.success || !sample.bid_request || !sample.bid_response)
+      throw new Error('sample shape failed');
+    state.stage = 'sample-editors';
+    await page.waitForFunction(
+      (request, responseBody) =>
+        /** @type {HTMLTextAreaElement} */ (document.getElementById('bidReq'))?.value === request &&
+        /** @type {HTMLTextAreaElement} */ (document.getElementById('bidRes'))?.value ===
+          responseBody &&
+        /** @type {HTMLButtonElement} */ (document.getElementById('analyzeBtn'))?.disabled ===
+          false,
+      { timeout: 30_000 },
+      JSON.stringify(sample.bid_request, null, 2),
+      JSON.stringify(sample.bid_response, null, 2),
+    );
+    state.stage = 'sample-ready';
+  } catch {
+    throw new Error('sample readiness failed: ' + JSON.stringify(await stageDiagnostics(page)));
+  }
+}
 
 /**
  * Wait for an Analyze click to actually finish, instead of sleeping a fixed
@@ -130,13 +223,16 @@ const delay = (ms) => new Promise((r) => setTimeout(r, ms));
  * @param {number} [timeoutMs]
  */
 async function waitForVerdict(page, timeoutMs = 30000) {
+  flowState(page).stage = 'analysis-verdict';
   const started = Date.now();
   for (;;) {
     const shot = await page.evaluate(photograph);
     if (shot.verdictShown) return shot;
     const waited = Date.now() - started;
     if (waited > timeoutMs) {
-      throw new Error(`analysis never showed a verdict (waited ${waited}ms)`);
+      throw new Error(
+        `analysis never showed a verdict (waited ${waited}ms): ${JSON.stringify(await stageDiagnostics(page))}`,
+      );
     }
     await delay(150);
   }
@@ -263,13 +359,7 @@ test(
       assert.equal(before.verdictShown, false, 'a freshly loaded page should state no verdict');
 
       // Load the built-in demo and analyse it.
-      await page.evaluate(() => {
-        const menu = document.querySelector('.kt-example-menu');
-        if (menu) /** @type {any} */ (menu).open = true;
-        const demo = document.querySelector('[data-action="load-demo"]');
-        if (demo) /** @type {any} */ (demo).click();
-      });
-      await delay(1200);
+      await loadDemoAndWait(page);
       await page.evaluate(() => {
         /** @type {any} */ (document.getElementById('analyzeBtn')).click();
       });
@@ -353,13 +443,49 @@ test(
       // catch calls clearResultsForError; only a browser can see whether the
       // panels actually came down. Analyse something good, then analyse
       // something broken, and require nothing of the first to survive.
-      await page.evaluate(() => {
-        const menu = document.querySelector('.kt-example-menu');
-        if (menu) /** @type {any} */ (menu).open = true;
-        const demo = document.querySelector('[data-action="load-demo"]');
-        if (demo) /** @type {any} */ (demo).click();
+      // Reproduce the old timing boundary deliberately: hold the second sample
+      // beyond the former pause. The helper must remain pending, and Analyze
+      // must not be requested with the still-empty editors.
+      /** @type {()=>void} */
+      let releaseSample;
+      let sampleRequested;
+      const held = new Promise((resolve) => {
+        releaseSample = () => resolve(undefined);
       });
-      await delay(1200);
+      const requested = new Promise((resolve) => {
+        sampleRequested = resolve;
+      });
+      const intercept = async (request) => {
+        if (new URL(request.url()).pathname === '/api/v1/sample') {
+          sampleRequested();
+          await held;
+        }
+        if (!request.isInterceptResolutionHandled()) await request.continue();
+      };
+      await page.setRequestInterception(true);
+      page.on('request', intercept);
+      let ready = false;
+      const beforeRequests = flowState(page).analysisRequests;
+      const loading = loadDemoAndWait(page).then(() => {
+        ready = true;
+      });
+      try {
+        await requested;
+        await delay(1250); // injected latency, never used as a readiness signal
+        assert.equal(ready, false, 'sample readiness must wait for the held response');
+        assert.equal(flowState(page).analysisRequests, beforeRequests);
+        assert.equal(
+          await page.evaluate(
+            () => /** @type {HTMLTextAreaElement} */ (document.getElementById('bidReq')).value,
+          ),
+          '',
+        );
+      } finally {
+        releaseSample();
+        await loading;
+        await page.setRequestInterception(false);
+        page.off('request', intercept);
+      }
       await page.evaluate(() => {
         /** @type {any} */ (document.getElementById('analyzeBtn')).click();
       });
@@ -529,7 +655,7 @@ test(
           const btn = document.querySelector('[data-action="analyze"]');
           if (btn) /** @type {any} */ (btn).click();
         });
-        await new Promise((r) => setTimeout(r, 3000));
+        await waitForVerdict(page);
       };
 
       await typeIn(PAYLOAD_A);
@@ -555,14 +681,8 @@ test(
       await analyse();
       assert.ok((await findingCount()) > 0, 're-analysis should restore findings');
 
-      const loaded = await page.evaluate(() => {
-        const item = document.querySelector('[data-action="load-demo"]');
-        if (!item) return false;
-        /** @type {any} */ (item).click();
-        return true;
-      });
-      if (loaded) {
-        await new Promise((r) => setTimeout(r, 2500));
+      await loadDemoAndWait(page);
+      {
         assert.equal(
           await findingCount(),
           0,

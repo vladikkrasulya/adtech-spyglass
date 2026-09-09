@@ -1,7 +1,7 @@
 # Platform Architecture: Current Implementation
 
 **Observed**: 2026-08-11
-**Applies to**: App `1.22.0`, Core `0.47.0`, CLI `0.1.4`
+**Applies to**: App `1.23.0`, Core `0.48.0`, CLI `0.1.5`
 
 This is the as-built component map. It explains ownership and dependency direction; durable reasons
 for architectural choices belong in indexed ADRs.
