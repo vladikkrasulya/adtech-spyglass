@@ -1070,10 +1070,21 @@
       uk: 'Не вдалося завантажити приклад',
       ru: 'Не удалось загрузить пример',
     },
-    'error.generic': {
-      en: 'Error',
-      uk: 'Помилка',
-      ru: 'Ошибка',
+    'verdict.incomplete': {
+      en: 'Analysis incomplete — some checks could not run.',
+      uk: 'Аналіз неповний — частину перевірок не вдалося виконати.',
+      ru: 'Анализ неполный — часть проверок не удалось выполнить.',
+    },
+    'status.incomplete': { en: 'incomplete', uk: 'неповний', ru: 'неполный' },
+    'toast.partner_count_failed': {
+      en: 'Could not determine how many samples are linked to this partner.',
+      uk: 'Не вдалося визначити, скільки прикладів пов’язано з цим партнером.',
+      ru: 'Не удалось определить, сколько примеров связано с этим партнёром.',
+    },
+    'toast.logout_failed': {
+      en: 'Local session cleared. The server could not confirm logout; please try again.',
+      uk: 'Локальну сесію очищено. Сервер не підтвердив вихід; спробуй ще раз.',
+      ru: 'Локальная сессия очищена. Сервер не подтвердил выход; попробуй ещё раз.',
     },
     'tooltip.peek_no_load': {
       en: 'Peek without loading',
@@ -1272,14 +1283,11 @@
     },
     'cabinet.pill.encrypted': { en: 'IV present', uk: 'IV є', ru: 'IV есть' },
     'cabinet.pill.plain': { en: 'no IV', uk: 'без IV', ru: 'без IV' },
-    'cabinet.pill.items': { en: '{n} items', uk: '{n} записів', ru: '{n} записей' },
-    'cabinet.pill.empty': { en: 'empty', uk: 'порожньо', ru: 'пусто' },
     'cabinet.recent.empty': {
       en: 'No saved samples yet — go to ortbtools and save your first bid.',
       uk: 'Збережених запитів ще немає — перейди у ortbtools і збережи перший bid.',
       ru: 'Сохранённых запросов ещё нет — перейди в ortbtools и сохрани первый bid.',
     },
-    'cabinet.recent.loading': { en: 'Loading…', uk: 'Завантаження…', ru: 'Загрузка…' },
     'cabinet.untitled': { en: '(untitled)', uk: '(без назви)', ru: '(без названия)' },
     'cabinet.no_analyses': {
       en: '— (no analyses yet)',

@@ -80,11 +80,10 @@
  *             `info`. The old scheme called all 23 of them `info`, inventing a
  *             severity for records that never had one.
  *
- * UNKNOWN     an id present in messages/*.json that no call site emits. Today:
- *             `response.seatbid_required` and `request.30.item.placement_invalid`
- *             — message text and a spec-refs.json entry, no emitter. They are
- *             reported as UNKNOWN so the catalog says "I do not know" instead
- *             of defaulting them to `info` and looking authoritative.
+ * UNKNOWN     an id present in messages/*.json that has no statically resolved
+ *             emission site. Report UNKNOWN instead of inventing an `info`
+ *             severity. This describes a supported fallback, not a claim that
+ *             the current catalog contains any such id.
  *
  * ── CONTRACT ────────────────────────────────────────────────────────────────
  *

@@ -13,6 +13,8 @@ const {
 const result = parseVastTimeline(xml);
 ```
 
+The supported package root also exports `parseVastTimeline` and `VAST_DIAGNOSTICS`: `require('@ortbtools/core')`. Their identities and behavior match this submodule. This extraction API is independent of which fields the Inspector currently presents.
+
 Successful results contain `version`, an XML-ordered `ads` list, a deterministic `timeline`, and `notes`. Notes explain why an extractor-owned field is empty or degenerate and disclose the parser's intentional recovery or normalization of input that a strict XML consumer may treat differently. They cover missing version metadata, no supported timeline events, an unparseable duration, an unknown or conflicting Ad branch, non-conforming character references, adjacent attributes without a separator, and normalized literal attribute whitespace. They do not duplicate the VAST validation judgments owned by `rules-vast.js`. Each Ad distinguishes `inline`, `wrapper`, or structurally incomplete `unknown` content and includes:
 
 - every `Impression` occurrence, including duplicates;

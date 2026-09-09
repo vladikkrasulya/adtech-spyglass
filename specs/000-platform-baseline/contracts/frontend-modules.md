@@ -134,6 +134,25 @@ watchdog, window facades, session adapter, and preview state are scoped to the c
 on cleanup. Mutations intentionally allowed to finish after navigation must still avoid painting or
 toasting into a later mount.
 
+## Analysis ownership and maintenance boundaries (032)
+
+Each Inspector mount owns an analysis generation and abort controller. Editing, clearing,
+replacing a run, or unmounting invalidates it even before the first successful result. A run
+captures both lexical inputs before awaiting work; only the current generation may commit
+results, Intel, history, exports, previews, or button state. One reset path clears its artifacts.
+
+The generated source-aware auction view supplies context strips, slots and matched impression
+dimensions while preserving original bid identity for the selected creative. Vendor selection
+remains a separate adapter. Finding badges and details use structured side/origin metadata,
+including temporary dialect findings; legacy response-prefix removal is cosmetic. The API's
+unprefixed `sides` results retain independent metadata alongside the legacy aggregate result.
+
+Incomplete validation has an explicit localized UI state even when its warning is filtered.
+Onboarding and verification banners coexist in an owned banner stack. Each locale shell keeps
+a persistent polite `role="status"` toast region. Partner requests require a non-array object
+with `success === true` and valid consumed fields. Built-in dialect identities come from the
+generated shared registry, while temporary dialects remain session-local.
+
 ## Inspector Display Density
 
 Desktop type does not scale with viewport width. Editor/finding body text uses 13px, metadata 11–12px, and the verdict 17px at normal browser zoom. The shell bounds the workbench to 2200px; the desktop split bounds results to 800px and optional context to 200–240px, leaving the remaining space for the payload. Context takes a real grid column above 1100px and retains its existing drawer behavior below that breakpoint. Native browser zoom remains available. Shared styles serve all three locales and both themes.
@@ -158,7 +177,7 @@ asset-inlining/network action for Native. The pre-existing explicit banner asset
 route and limits; when it repoints a banner frame, it also replaces the static-analysis source with
 the rewritten HTML and creates a new probe generation.
 
-Inspector activation awaits the one-time probe source fetch before Analyze is exposed. The runtime
+Each analysis awaits the one-time probe source fetch before rendering or executing a creative. The runtime
 `/creative-probe.js` URL receives the file's content hash from the static rewriter, preventing a stale
 cached probe from being paired with a fresh parent receiver. The parent inlines the probe before the
 creative and keeps the expected iframe window identity.

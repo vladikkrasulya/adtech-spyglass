@@ -190,3 +190,21 @@ test('handoff reports a missing target instead of touching the other editor', as
   assert.equal(dom.window.document.getElementById('bidReq').value, '');
   dom.window.close();
 });
+
+test('browser graph loader shares in-flight dependencies and still rejects actual cycles', async () => {
+  const shared = createBrowserEsmLoader({ realmSalt: 'shared-auction-dependency' });
+  const [classifier, handoff] = await Promise.all([
+    shared.import('/core/auction-shape.js'),
+    shared.import('/modules/inspector/specimen-handoff.js'),
+  ]);
+  assert.equal(typeof classifier.classifyAuctionPayload, 'function');
+  assert.ok(handoff);
+  const cyclic = createBrowserEsmLoader({
+    realmSalt: 'cyclic-auction-dependency',
+    substitutions: {
+      '/core/cycle-a.js': "import '/core/cycle-b.js';",
+      '/core/cycle-b.js': "import '/core/cycle-a.js';",
+    },
+  });
+  await assert.rejects(cyclic.import('/core/cycle-a.js'), /cycle is unsupported/);
+});

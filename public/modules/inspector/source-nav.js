@@ -470,7 +470,7 @@
    */
   function markClipped(p) {
     if (!p.editor || !p.el) return;
-    let more = false;
+    let more;
     try {
       more = p.el.scrollWidth - p.el.clientWidth - p.el.scrollLeft > 1;
     } catch (_e) {
@@ -801,7 +801,7 @@
   function onCaretMoved(side) {
     const p = panes && panes[side];
     if (!p || !p.marks.length) return hidePopover();
-    let pos = null;
+    let pos;
     try {
       pos = p.el.selectionStart;
     } catch (_e) {

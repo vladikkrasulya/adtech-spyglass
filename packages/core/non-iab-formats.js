@@ -51,6 +51,9 @@ const FLAG_HINT_KEYS = ['pop', 'popup', 'popunder', 'clickunder', 'pushunder', '
 // markers (e.g. imp.ext.allowShock) and no canonical hint. `sizeID:[0]` is
 // handled separately (array shape, not a flag value).
 const POP_SHAPE_FLAG_KEYS = ['allowMT', 'allowLayer', 'allowShock', 'viewOnClick', 'directLink'];
+function isPopShapeFlagValue(value) {
+  return [true, false, 0, 1, '0', '1', 'true', 'false'].includes(value);
+}
 
 /**
  * Normalise a format name for lookup: lowercase + strip hyphens/underscores
@@ -149,16 +152,7 @@ function scanExtForFormatHints(ext, basePath, userDialect) {
     // Absent key → ext[k] is undefined, which isn't in the permitted set
     // below, so it's skipped — no separate presence check needed.
     const v = ext[k];
-    if (
-      v === true ||
-      v === false ||
-      v === 0 ||
-      v === 1 ||
-      v === '0' ||
-      v === '1' ||
-      v === 'true' ||
-      v === 'false'
-    ) {
+    if (isPopShapeFlagValue(v)) {
       pushHint('pop', k);
     }
   }
@@ -259,6 +253,7 @@ module.exports = {
   // allow-flags to a `pop` label. Duplicating the list there would leave two
   // half-tables to keep in sync — the drift this file's header warns about.
   POP_SHAPE_FLAG_KEYS,
+  isPopShapeFlagValue,
   normaliseFormatName,
   scanExtForFormatHints,
   isPopFormat,

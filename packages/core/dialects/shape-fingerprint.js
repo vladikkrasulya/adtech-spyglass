@@ -1,4 +1,5 @@
 'use strict';
+const { POP_SHAPE_FLAG_KEYS, isPopShapeFlagValue } = require('../non-iab-formats');
 
 /**
  * Generic oRTB shape analysis. No vendor identifiers — describes format
@@ -84,17 +85,10 @@ function analyzeShape(payloadNode) {
   // Boolean *presence* (true OR false) of allow* flags is the signal — vendor
   // would not include them otherwise. All-zero banner + sizeID:[0] are
   // additional pop tells. instl:1 paired with ext.limit:1 is a weak corroborator.
-  if (typeof ext.allowMT === 'boolean') {
+  for (const key of POP_SHAPE_FLAG_KEYS) {
+    if (!isPopShapeFlagValue(ext[key])) continue;
     popScore += 1.0;
-    popSignals.push('ext.allowMT:bool');
-  }
-  if (typeof ext.allowLayer === 'boolean') {
-    popScore += 1.0;
-    popSignals.push('ext.allowLayer:bool');
-  }
-  if (typeof ext.allowShock === 'boolean') {
-    popScore += 1.0;
-    popSignals.push('ext.allowShock:bool');
+    popSignals.push(`ext.${key}:${typeof ext[key] === 'boolean' ? 'bool' : 'flag'}`);
   }
   if (banner && banner.w === 0 && banner.h === 0) {
     popScore += 1.0;

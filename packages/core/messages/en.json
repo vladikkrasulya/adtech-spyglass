@@ -395,5 +395,8 @@
   "feed.adon3.price_invalid": "Adon3 price must be a non-negative decimal string. Preserve its exact precision; do not convert it to an OpenRTB numeric price.",
   "feed.native.field_invalid": "Native material field {field} has an invalid value or type.",
   "feed.native.price_invalid": "Native material cpc must be a finite non-negative number.",
-  "feed.native.field_missing": "Native material omits {field}; the creative may render incompletely."
+  "feed.native.field_missing": "Native material omits {field}; the creative may render incompletely.",
+  "feed.inpage.field_invalid": "In-page material: supplied {field} is invalid. Use an HTTP(S) URL for impurl and a non-empty string for advertiser.",
+  "floor.negative": "A supplied floor is negative. Use a non-negative number; this floor cannot support an above/below-floor verdict.",
+  "internal.rule_family_failed": "Validation family {family} could not finish. Analysis is incomplete; remaining families were checked."
 }

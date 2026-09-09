@@ -1,4 +1,5 @@
 'use strict';
+const { classifyPrice } = require('./price-value');
 
 /**
  * Semantic crosscheck between BidRequest and BidResponse. Goes beyond schema
@@ -11,6 +12,7 @@
  */
 
 const { isObj } = require('./helpers');
+const { buildRequestView, buildResponseView, flattenBids } = require('./auction-view');
 const { isExadsRequest, isExadsResponse } = require('./vendor-exads');
 const { CROSS_LEVELS, makeCross } = require('./findings');
 const { isVastShape } = require('./format-detect');
@@ -247,16 +249,28 @@ function crosscheck(req, res, _ctx) {
     // resolveDealFloor() is the exact match rules/price-floor's resolveFloor()
     // already used on the validation side, so the two engines name the same
     // effective floor instead of one silently ignoring the deal. A matched
-    // deal's floor governs at ANY value, including exactly 0: a Deal is a
+    // deal's non-negative floor governs, including exactly 0: a Deal is a
     // self-contained economic object (oRTB 2.6 §3.2.12) so an explicit
     // deal.bidfloor of 0 is still an explicit floor, and no_floor_set must
     // not fire for it even when imp.bidfloor itself is absent or malformed.
-    const dealFloor = resolveDealFloor(bid, imp);
+    // Positive 3.0 deal economics remain outside this adapter's historical
+    // eligibility. A matched negative original deal must nevertheless veto an
+    // impression-floor verdict; never replace unusable explicit deal terms.
+    const item30 =
+      reqView.version === '3.0' && resView.v30 && reqView.items.find((item) => item.imp === imp);
+    const deals30 = item30 && Array.isArray(item30.raw.deal) ? item30.raw.deal : [];
+    const deal30Index =
+      entry.raw.deal == null
+        ? -1
+        : deals30.findIndex((deal) => isObj(deal) && deal.id === entry.raw.deal);
+    const negativeDeal30 = deal30Index >= 0 && classifyPrice(deals30[deal30Index].flr).negative;
+    const dealFloor = negativeDeal30
+      ? { floor: deals30[deal30Index].flr, floorCur: undefined, unusable: true }
+      : resolveDealFloor(bid, imp);
     const floorRaw = dealFloor ? dealFloor.floor : imp.bidfloor;
     const floorPresent =
       !!dealFloor || (floorRaw !== undefined && floorRaw !== null && floorRaw !== '');
-    const hasExplicitFloor =
-      !!dealFloor || (typeof floorRaw === 'number' && Number.isFinite(floorRaw));
+    const hasExplicitFloor = classifyPrice(floorRaw).nonNegative;
     // Present but unusable: distinct from absent, because "absent" has a
     // spec-defined meaning (no minimum = 0) that we CAN compare against,
     // while a garbage floor leaves us with no number at all.
@@ -270,9 +284,11 @@ function crosscheck(req, res, _ctx) {
           'crosscheck.bid.no_floor_set',
           false,
           CROSS_LEVELS.WARN,
-          impIdx >= 0
-            ? `${reqView.impBase}[${impIdx}].${reqView.floorLeaf}`
-            : `${reqView.impBase}.${reqView.floorLeaf}`,
+          negativeDeal30
+            ? `${item30.path}.deal[${deal30Index}].flr`
+            : impIdx >= 0
+              ? `${reqView.impBase}[${impIdx}].${reqView.floorLeaf}`
+              : `${reqView.impBase}.${reqView.floorLeaf}`,
           { impid: bid.impid },
         ),
       );
@@ -280,7 +296,7 @@ function crosscheck(req, res, _ctx) {
     }
     const floor = hasExplicitFloor ? floorRaw : 0;
     const priceRaw = bid.price;
-    const priceIsValid = typeof priceRaw === 'number' && Number.isFinite(priceRaw) && priceRaw >= 0;
+    const priceIsValid = classifyPrice(priceRaw).nonNegative;
     if (!priceIsValid) {
       out.push(
         C('crosscheck.bid.price_invalid', false, CROSS_LEVELS.CRIT, `${bp}.${leaf.price}`, {
@@ -829,248 +845,6 @@ function crosscheckVideoMedia(video, bid, media, path, baseParams) {
  */
 
 /** Leaf field names as 2.x spells them. Frozen: shared by every 2.x bid. */
-const LEAF_2X = Object.freeze({
-  impid: 'impid',
-  price: 'price',
-  cat: 'cat',
-  adomain: 'adomain',
-  adm: 'adm',
-});
-
-/**
- * The `openrtb.<key>` node of a 3.0 envelope, or null when the payload isn't
- * one. Mirrors detect.js's envelope test: presence of the envelope child is
- * what makes a payload 3.0, `ver` is not consulted (a broken `ver` is still a
- * 3.0 attempt, and validate() already reports it).
- */
-function inner30(payload, key) {
-  if (!isObj(payload) || !isObj(payload.openrtb)) return null;
-  const node = payload.openrtb[key];
-  return isObj(node) ? node : null;
-}
-
-/**
- * Request view, or null when there is no request to crosscheck against.
- *
- * @param {any} req
- * @returns {{id:unknown, cur:unknown, imp:Array<any>, base:string, impBase:string,
- *            floorLeaf:string, bcat:unknown, badv:unknown, wseat?:unknown, bseat?:unknown}|null}
- */
-function buildRequestView(req) {
-  if (!isObj(req)) return null;
-  const r30 = inner30(req, 'request');
-  if (r30 && Array.isArray(r30.item)) {
-    // AdCOM puts the blocklists on `context.restrictions`; a few feeds hang the
-    // same object off the request root. Read both — the alternative is silently
-    // running bcat/badv against an empty set and reporting "cat_clean" on a bid
-    // the publisher blocks.
-    const restrictions =
-      (isObj(r30.context) && isObj(r30.context.restrictions) && r30.context.restrictions) ||
-      (isObj(r30.restrictions) && r30.restrictions) ||
-      {};
-    return {
-      id: r30.id,
-      cur: r30.cur,
-      imp: r30.item.map(projectItem30),
-      base: 'openrtb.request.',
-      impBase: 'openrtb.request.item',
-      floorLeaf: 'flr',
-      bcat: restrictions.bcat,
-      badv: restrictions.badv,
-    };
-  }
-  if (!Array.isArray(req.imp)) return null;
-  return {
-    id: req.id,
-    cur: req.cur,
-    imp: req.imp,
-    base: '',
-    impBase: 'imp',
-    floorLeaf: 'bidfloor',
-    bcat: req.bcat,
-    badv: req.badv,
-    wseat: req.wseat,
-    bseat: req.bseat,
-  };
-}
-
-/**
- * One 3.0 `item` → the 2.x `imp` fields the rules below read.
- * Non-objects pass through untouched so the R4 null-tolerance downstream
- * (`isObj(imp)` in the index loop) still sees what it expects.
- */
-function projectItem30(item) {
-  if (!isObj(item)) return item;
-  const spec = isObj(item.spec) ? item.spec : {};
-  const placement = isObj(spec.placement) ? spec.placement : {};
-  // AdCOM/OpenRTB 3.0 spells the currency field `flrcur`, not `flrcu`
-  // (openrtb-3.0-FINAL.md:517, 586). The old typo read `item.flrcu`, which no
-  // conforming Item ever carries, so floorCur silently defaulted to 'USD' for
-  // every 3.0 payload regardless of the real value — feature 022 / DEF-105.
-  const out = { id: item.id, bidfloor: item.flr, bidfloorcur: item.flrcur };
-  if (isObj(placement.display)) {
-    // AdCOM DisplayPlacement carries one fixed w/h plus `displayfmt[]`
-    // alternatives — the same split 2.x makes between banner.w/h and
-    // banner.format[].
-    const d = placement.display;
-    if (d.nativefmt !== undefined) {
-      const nativefmt = d.nativefmt;
-      out.native = {
-        request: isObj(nativefmt)
-          ? {
-              assets: Array.isArray(nativefmt.asset)
-                ? nativefmt.asset.map((asset) =>
-                    isObj(asset) ? { ...asset, required: asset.req } : asset,
-                  )
-                : nativefmt.asset,
-            }
-          : nativefmt,
-      };
-    }
-    // A Native-only display placement has no banner alternative. Keep the
-    // alternative when the sender actually supplies banner dimensions/formats.
-    if (
-      d.nativefmt === undefined ||
-      d.displayfmt !== undefined ||
-      d.w !== undefined ||
-      d.h !== undefined
-    ) {
-      out.banner = {
-        w: d.w,
-        h: d.h,
-        format: Array.isArray(d.displayfmt) ? d.displayfmt : undefined,
-      };
-    }
-  }
-  if (placement.video != null) out.video = placement.video;
-  return out;
-}
-
-/**
- * Response view, or null when `res` is not an object at all. A missing or
- * empty `seatbid` is NOT null here: the caller distinguishes no-bid (with
- * `nbr`) from an empty response, and that decision stays where it was.
- *
- * @param {any} res
- * @returns {{id:unknown, nbr:unknown, cur:unknown, seatbid:unknown, base:string, v30:boolean}|null}
- */
-function buildResponseView(res) {
-  if (!isObj(res)) return null;
-  const r30 = inner30(res, 'response');
-  if (r30) {
-    return {
-      id: r30.id,
-      nbr: r30.nbr,
-      cur: r30.cur,
-      seatbid: r30.seatbid,
-      base: 'openrtb.response.',
-      v30: true,
-    };
-  }
-  return { id: res.id, nbr: res.nbr, cur: res.cur, seatbid: res.seatbid, base: '', v30: false };
-}
-
-/**
- * Flatten `seatbid[].bid[]` into one entry per REAL bid, each carrying the
- * display path of the bid and the leaf names to append to it. Skipping
- * non-objects here (R4: `seatbid:[null]`, `bid:[null]`) keeps the numbering
- * identical to the nested forEach this replaced — sNum/bNum are still the
- * array positions as written, so a payload with a null seat doesn't renumber
- * the seats after it.
- *
- * @param {{seatbid:any, base:string, v30:boolean}} view
- * @returns {Array<{bid:any, path:string, leaf:Object, sNum:number, bNum:number}>}
- */
-function flattenBids(view) {
-  const out = [];
-  const seats = Array.isArray(view.seatbid) ? view.seatbid : [];
-  seats.forEach((sb, sbi) => {
-    if (!isObj(sb)) return;
-    const bids = Array.isArray(sb.bid) ? sb.bid : [];
-    bids.forEach((bid, bi) => {
-      if (!isObj(bid)) return;
-      const path = `${view.base}seatbid[${sbi}].bid[${bi}]`;
-      const entry = view.v30
-        ? projectBid30(bid, path)
-        : { bid: bid, path: path, leaf: LEAF_2X, sNum: 0, bNum: 0 };
-      entry.sNum = sbi + 1;
-      entry.bNum = bi + 1;
-      out.push(entry);
-    });
-  });
-  return out;
-}
-
-/**
- * One 3.0 bid → the 2.x bid fields the rules read, plus the leaf names that
- * point back at where each of them actually lives.
- */
-function projectBid30(bid, path) {
-  // The 3.0 spec nests the AdCOM Ad object under `media.ad`; this repo's own
-  // rules-response-30.js reads `media.adomain` / `media.display` straight off
-  // media, which is what most real 3.0 traffic ships. Accept both, and record
-  // which one was found so the finding path names the field the user pasted
-  // rather than the one the spec would have preferred.
-  const media = isObj(bid.media) ? bid.media : {};
-  const wrapped = isObj(media.ad);
-  const ad = wrapped ? media.ad : media;
-  const mediaPath = wrapped ? 'media.ad' : 'media';
-  const display = isObj(ad.display) ? ad.display : null;
-  const video = isObj(ad.video) ? ad.video : null;
-  // Which subobject the markup came from decides the adm path. Display first,
-  // matching the order the 2.x rules resolve a creative in.
-  const admFrom =
-    display && typeof display.adm === 'string'
-      ? 'display'
-      : video && typeof video.adm === 'string'
-        ? 'video'
-        : null;
-  const projected = {
-    id: bid.id,
-    impid: bid.item,
-    price: bid.price,
-    cat: ad.cat,
-    adomain: ad.adomain,
-    adm: admFrom === 'display' ? display.adm : admFrom === 'video' ? video.adm : undefined,
-    w: display ? display.w : undefined,
-    h: display ? display.h : undefined,
-    ext: bid.ext,
-  };
-  if (display && display.native !== undefined) {
-    const native = display.native;
-    projected.native = isObj(native)
-      ? {
-          ...native,
-          assets: Array.isArray(native.asset)
-            ? native.asset.map((asset) =>
-                isObj(asset)
-                  ? { ...asset, ...(asset.image !== undefined ? { img: asset.image } : {}) }
-                  : asset,
-              )
-            : native.asset,
-        }
-      : native;
-  }
-  return {
-    bid: projected,
-    path: path,
-    leaf: {
-      impid: 'item',
-      price: 'price',
-      cat: `${mediaPath}.cat`,
-      adomain: `${mediaPath}.adomain`,
-      adm:
-        display && display.native !== undefined
-          ? mediaPath
-          : admFrom
-            ? `${mediaPath}.${admFrom}.adm`
-            : mediaPath,
-    },
-    sNum: 0,
-    bNum: 0,
-  };
-}
-
 // Try to parse a native payload that may be wrapped in 1-3 layers of
 // base64. Some SSPs ship adm as `base64(JSON)`; a smaller subset double-
 // or triple-wrap (Prebid passthrough, vendor obfuscation). Depth cap of

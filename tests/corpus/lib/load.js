@@ -60,7 +60,9 @@ function readCaseFile(file) {
   try {
     parsed = JSON.parse(text);
   } catch (err) {
-    throw new Error(`${path.relative(CORPUS_DIR, file)}: invalid JSON — ${err.message}`);
+    throw new Error(`${path.relative(CORPUS_DIR, file)}: invalid JSON — ${err.message}`, {
+      cause: err,
+    });
   }
   const problems = validateCase(parsed);
   if (problems.length) {

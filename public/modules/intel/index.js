@@ -92,12 +92,20 @@
     }
     for (const f of spec.fields) {
       if (!f || typeof f.path !== 'string') continue;
+      const side =
+        f.path === 'req' || f.path.startsWith('req.')
+          ? 'request'
+          : f.path === 'res' || f.path.startsWith('res.')
+            ? 'response'
+            : null;
+      const origin = side ? { side, path: f.path.slice(4) } : null;
       const value = resolvePath(payloadPair, f.path);
       if (f.required && value === undefined) {
         findings.push({
           id: 'temp.field_required',
           level: 'error',
           path: f.path,
+          origin,
           params: { dialectName, fieldPath: f.path },
           msg: 'Required by "' + dialectName + '": missing `' + f.path + '`',
           specRef: null,
@@ -109,6 +117,7 @@
           id: 'temp.field_wrong_type',
           level: 'warning',
           path: f.path,
+          origin,
           params: {
             dialectName,
             fieldPath: f.path,

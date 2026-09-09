@@ -193,8 +193,10 @@ function clearSession() {
 async function signOut() {
   try {
     await api('POST', 'api/auth/logout');
-  } catch {
-    /* logout is idempotent — ignore failures, still wipe locally */
+  } catch (_e) {
+    clearSession();
+    toast(t('toast.logout_failed'), 'error');
+    return;
   }
   clearSession();
   toast(t('toast.signed_out'), 'success');
@@ -225,7 +227,7 @@ async function ensureBooted(force) {
   if (_bootPromise && !force) return _bootPromise;
   const startedGen = _authGen;
   _bootPromise = (async () => {
-    let me = null;
+    let me;
     try {
       me = await api('GET', 'api/auth/me');
     } catch {

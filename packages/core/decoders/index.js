@@ -55,7 +55,7 @@ function decode(payload, opts) {
 
   for (const dec of DECODERS) {
     if (dec.rawFormat && dec.rawFormat !== rawFormat) continue;
-    let claimed = false;
+    let claimed;
     try {
       claimed = !!dec.detect(payload, parsed);
     } catch (e) {

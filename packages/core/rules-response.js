@@ -1,11 +1,12 @@
 'use strict';
+const { classifyPrice } = require('./price-value');
 
 /**
  * IAB OpenRTB 2.x BidResponse validation rules. Pure spec — dialect-specific
  * macro/header/seat rules layer on top via ctx.dialect.validateResponse.
  */
 
-const { isObj, isStr, isNum } = require('./helpers');
+const { isObj, isStr } = require('./helpers');
 const { isValidDomain } = require('./utils/domain');
 const { LEVELS, makeFinding } = require('./findings');
 // Static creative scan — the same engine that fires `behavior.static.*` from
@@ -168,7 +169,7 @@ function validateResponse(res, ctx) {
       if (!isStr(b.impid)) {
         findings.push(F('response.bid.impid_required', LEVELS.ERROR, `${bp}.impid`, params));
       }
-      if (!isNum(b.price)) {
+      if (!classifyPrice(b.price).finite) {
         findings.push(F('response.bid.price_required', LEVELS.ERROR, `${bp}.price`, params));
       }
       if (b.mtype !== undefined && (!Number.isInteger(b.mtype) || b.mtype < 1 || b.mtype > 4)) {

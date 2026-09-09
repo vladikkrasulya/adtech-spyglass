@@ -51,7 +51,7 @@ function collect() {
     try {
       r = core.validate(payload, { locale: 'en' });
     } catch (e) {
-      throw new Error(`validate threw on ${f}: ${e.message}`);
+      throw new Error(`validate threw on ${f}: ${e.message}`, { cause: e });
     }
     const { side, kind } = sideAndKind(r);
     FL.attachLocations(r.findings, { side, kind, canonical: r.urlRequest });

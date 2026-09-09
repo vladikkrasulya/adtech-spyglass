@@ -180,10 +180,8 @@ test('a declared side is never overridden by the other pane, even when its own i
 });
 
 test('findings with no location contract keep the old heuristic, fallback and all', () => {
-  // Browser-side temp-dialect findings are pushed onto validation.findings
-  // after the server attached locations to everything else, so they arrive
-  // with no side at all. Dropping the heuristic would have regressed them
-  // from "a guess" to "nothing".
+  // Older findings can lack structured origin. Keep their compatibility
+  // fallback; current temporary findings now carry explicit origin.
   const win = { __ortbtoolsLast: { req: { cur: ['USD'] }, res: { seatbid: [{ bid: [{}] }] } } };
   const { resolveFindingValue } = loadSlices(['getJsonAtPath', 'resolveFindingValue'], {
     window: win,
@@ -215,7 +213,7 @@ test('the side reaches the detail body through the markup, not through a second 
   );
   assert.match(
     APP_SRC,
-    /const r = resolveFindingValue\(path, id, side\);/,
+    /const r = resolveFindingValue\(valuePath, id, side\);/,
     'the detail body must pass the declared side down',
   );
 });

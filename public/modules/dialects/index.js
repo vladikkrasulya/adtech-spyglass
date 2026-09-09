@@ -286,7 +286,7 @@ const BUILTIN_DIALECTS = [
 // inspector will validate against. The page can no longer contradict itself.
 
 const DIALECT_STORAGE_KEY = 'ortbtools_dialect_v1';
-const KNOWN_DIALECTS = new Set(['iab', 'ext-rtb', 'inpage-push']);
+const KNOWN_DIALECTS = new Set(window.OrtbtoolsDialectRegistry.ids);
 
 function isTempDialect(value) {
   return typeof value === 'string' && value.startsWith('temp:');
@@ -315,7 +315,7 @@ function activeDialect() {
  * unusable one in the address bar is the same lie in slower motion.
  */
 function takeUrlDialect() {
-  let requested = null;
+  let requested;
   try {
     const url = new URL(location.href);
     requested = url.searchParams.get('dialect');

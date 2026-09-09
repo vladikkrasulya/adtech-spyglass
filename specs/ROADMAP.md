@@ -1,6 +1,6 @@
 # Current Roadmap
 
-**Last reconciled**: 2026-09-08
+**Last reconciled**: 2026-09-09
 
 This file contains only active status, ordering, dependencies, and next gates. Feature detail belongs
 in the linked feature package, durable rationale in [ADRs](./DECISIONS.md), and completed history in
@@ -11,6 +11,14 @@ Current release: **v1.21.0** (2026-09-09), deployed through the standing path, c
 Completed maintenance: [019 Close audited project debt](./019-close-project-debt/spec.md) shipped as [v1.19.4](https://github.com/vladikkrasulya/adtech-spyglass/releases/tag/v1.19.4) on 2026-09-07. Q1/Q5–Q7, email/event-log verification, Blog integrity, dependency PRs 78–80, release records and local-work reconciliation are closed. [Its inventory](./019-close-project-debt/inventory.md) records the evidence, retained maintenance baseline and separate future capabilities.
 
 ## Active Queue
+
+[032 Close the cleanup inventory](./032-close-cleanup-inventory/spec.md) is active by the owner's
+explicit request to close all 26 remaining maintenance records. It also handles the separately
+recorded negative floor and evidence-backed CL-08/09 dispositions. This is separate from the
+completed 020 corpus defect ledger. [Tasks](./032-close-cleanup-inventory/tasks.md) own the bounded
+Core/UI/HTTP/infrastructure phases; [ADR-018](./decisions/ADR-018-maintenance-boundaries-and-degradation.md)
+records retained compatibility and explicit degraded-analysis semantics. Current production stays
+v1.21.0 until the settled release passes repository, hosted, backup and exact-SHA deployment gates.
 
 [028 Vendor request dialects and Core recognition](./028-vendor-request-dialects/spec.md) is complete and shipped in `v1.20.0`: delivered as `edd4568`, landed as `9dcfda8` after a rebase onto the preview work, hosted CI green. It was built on verified main `d3173a5` after PR #83. Codex owns Core/backend work for the five-group, 24-case brief plus five supplemental DEF-151 recognition cases; Opus owns public preview. Core 0.46.0 and CLI dependency `^0.46.0` preserve the app/CLI version lines. Only proven Core/HTTP deviations are narrowed; browser records and the two pending Kadam assertion decisions remain explicit. [Tasks](./028-vendor-request-dialects/tasks.md) and [verification](./028-vendor-request-dialects/verification.md) own remaining integration, corpus, isolated browser, local CI and hosted delivery gates.
 

@@ -3,21 +3,24 @@
 
 <!-- ── Header ── -->
 <!-- Phase 8: unverified-email banner. Shown only when logged-in user has NULL email_verified_at. -->
-<div
-  id="verifyBanner"
-  style="
-    display: none;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-3);
-    padding: var(--space-2) var(--space-3);
-    background: rgba(255, 180, 60, 0.12);
-    border-bottom: 1px solid rgba(255, 180, 60, 0.4);
-    font-size: var(--fs-sm);
-  "
->
-  <span>Verify your email address — it improves account security.</span>
-  <button class="btn btn-ghost btn-sm" data-action="verify-email">send email</button>
+<div class="inspector-banners">
+  <div data-onboarding-anchor></div>
+  <div
+    id="verifyBanner"
+    style="
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      padding: var(--space-2) var(--space-3);
+      background: rgba(255, 180, 60, 0.12);
+      border-bottom: 1px solid rgba(255, 180, 60, 0.4);
+      font-size: var(--fs-sm);
+    "
+  >
+    <span>Verify your email address — it improves account security.</span>
+    <button class="btn btn-ghost btn-sm" data-action="verify-email">send email</button>
+  </div>
 </div>
 <header class="workbar">
   <button
@@ -955,7 +958,7 @@
     <span class="footer-sep">·</span>
     <span style="color: var(--text-dim)"
       >engine
-      <span id="engineVer" style="color: var(--text)" data-ortbtools-version>v1.21.0</span></span
+      <span id="engineVer" style="color: var(--text)" data-ortbtools-version>v1.22.0</span></span
     >
     <span class="footer-extras">
       <span class="footer-sep">·</span>

@@ -66,6 +66,21 @@ stability promise.
 
 ## Current Route Families
 
+Feature [032](../../032-close-cleanup-inventory/spec.md) adds `sides.request` and
+`sides.response` to Analyze: each is the original located, unprefixed validation
+result or null. The existing combined envelope and message prefixes remain.
+Contained rule-family faults keep the normal success envelope with explicit
+unfiltered completeness metadata; no incomplete combined result reports clean.
+The detailed compatibility contract remains in [docs/api-v1.md](../../../docs/api-v1.md).
+
+Individual logout clears the in-memory token and expires its cookie before
+surfacing durable-delete failure. That failure returns 500
+`logout_persistence_failed` with safe localized copy through the existing bounded
+5xx alert path. It does not claim an undeleted storage row cannot revive after a
+restart. Finding-catalog read/parse failures are safely logged and not cached;
+successful dictionaries retain the process cache, and repaired files can recover
+on a later request.
+
 ### Public Read and Analysis
 
 | Family          | Routes                                                                            | Behavior                                                                                                           |
@@ -200,3 +215,5 @@ access boundary changes. Stable analyze changes also update `docs/api-v1.md`. Co
 third-party flow changes update [data retention](./data-retention.md), privacy/security documents,
 and regression guards in the same feature. Run the HTTP/privacy steps in
 [quickstart.md](../quickstart.md), then the complete repository gate.
+
+Finding-catalog dictionary load failures retain the compatible degraded response body but send `Cache-Control: no-store`. Both the process cache and external caches can therefore recover on the next request after repair; complete responses retain `public, max-age=300`.

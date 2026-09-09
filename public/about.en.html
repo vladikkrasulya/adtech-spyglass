@@ -477,7 +477,7 @@
           <a href="#contact">Contact</a>
         </nav>
         <div class="doc-prose">
-          <span class="eyebrow">docs · <span data-ortbtools-version>v1.21.0</span></span>
+          <span class="eyebrow">docs · <span data-ortbtools-version>v1.22.0</span></span>
           <h1 style="margin-top: var(--space-3)">How to use ortbtools</h1>
           <p style="font-size: var(--fs-lg); color: var(--text)">
             A private inspector for OpenRTB traffic. Paste JSON, get a breakdown: whether the
@@ -725,6 +725,13 @@
           <p style="font-size: var(--fs-lg); color: var(--text)">
             ortbtools looks at your payload from three angles at once. Each layer answers its own
             question; together they give the full picture.
+          </p>
+
+          <p>
+            If a rule family fails, the Inspector marks the analysis as incomplete even when warning
+            filters hide its finding. Editing or clearing an input cancels the current analysis; an
+            older response cannot replace your new result. A negative floor receives a warning and
+            is excluded from the price comparison.
           </p>
 
           <h3>Layer 1 — Static (schema)</h3>
@@ -1367,7 +1374,7 @@ server formats localised text and returns 200 JSON</code></pre>
               font-size: var(--fs-sm);
             "
           >
-            <span data-ortbtools-version>v1.21.0</span> · openrtb 2.5 / 2.6 / 3.0 · native 1.x ·
+            <span data-ortbtools-version>v1.22.0</span> · openrtb 2.5 / 2.6 / 3.0 · native 1.x ·
             vast 4.x · <a href="/" style="color: var(--text-dim)">↗ ortbtools</a> ·
             <a href="https://ortbtools.com/" style="color: var(--text-dim)">ortbtools.com</a>
           </p>

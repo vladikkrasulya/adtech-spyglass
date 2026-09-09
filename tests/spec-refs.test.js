@@ -477,6 +477,9 @@ async function mountSectionModule({ specifier, url, lang, realmSalt, payload }) 
     url,
   });
   const { window } = dom;
+  window.eval(
+    fs.readFileSync(path.join(__dirname, '..', 'public/core/dialect-registry.js'), 'utf8'),
+  );
   const root = window.document.getElementById('app-root');
 
   const browserFetch = async (input) => {

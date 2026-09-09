@@ -6,6 +6,20 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.22.0 — close the named maintenance inventory (2026-09-09)
+
+- Keep every Inspector result attached to the analysis that produced it. Editing, clearing, replacing a run or leaving the page invalidates late validation and Intel responses, including the first analysis. Shared auction descriptors preserve the selected creative and its original source identity across OpenRTB versions.
+- Apply the four impression rule families to normative AdCOM request fields, align redirect and value-feed dispatch with validation, and validate supplied In-Page Push fields. Negative impression and deal floors now produce warnings and cannot earn a misleading economic verdict.
+- Report incomplete validation when a rule family fails, even when its warning is filtered. The HTTP result adds independently located request/response results while preserving the legacy aggregate and finding identities.
+- Restore first-visit onboarding alongside verification notices, add persistent accessible toast regions, reject malformed partner responses and show logout persistence failure after clearing local session state. Failed finding dictionaries are logged and retried instead of cached empty.
+- Consolidate built-in dialects and price classification, remove cited dead code, enforce two previously disabled lint rules, and retain the documented public VAST timeline utility. Browser test processes now have private ownership and retain failed-attempt evidence through a retry.
+- Reconcile all 26 originally open cleanup entries individually. CL-08 closes by a documented capability-boundary decision; CL-09 closes with an assertion-level inventory that explicitly retains uncovered combinations. The separate negative-floor defect is also repaired. This does not claim every possible maintenance proposal or testing combination is complete.
+
+**Core 0.47.0 / CLI 0.1.4 (SpecKit 032)**
+
+- Add `floor.negative`, `feed.inpage.field_invalid` and `internal.rule_family_failed`, with three-locale catalogs and public specification references. Preserve both existing price diagnostic IDs and exact/prefix suppression behavior.
+- Add unfiltered `completeness` metadata to degraded results; keep ordinary parse errors and CLI exit policy unchanged. CLI advances its Core dependency to `^0.47.0`; these workspace versions are not an npm publication.
+
 ### v1.21.0 — the creative on screen is the one that is selected (2026-09-09)
 
 - Show the price the response actually named. An OpenRTB 3.0 bid of EUR 1.25 displayed as `$1.25`, because currency and identifiers were read from the outside of a 3.0 envelope instead of from the payload inside it. A resolved material's own price now reaches the chip as well, instead of a placeholder, and a bid that carries a price with nothing renderable shows that price rather than a fabricated zero.

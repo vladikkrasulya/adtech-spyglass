@@ -202,7 +202,7 @@ function createAuth({ Users, Sessions, logger }) {
         Sessions.create({ token, userId: user.id, expiresAt, ip, ua });
       } catch (e) {
         log.error && log.error({ err: e.message }, 'session DB write failed');
-        throw new Error('session_persistence_failed');
+        throw new Error('session_persistence_failed', { cause: e });
       }
     }
     sessions.set(token, { userId: user.id, expiresAt, ip, ua });
@@ -212,19 +212,26 @@ function createAuth({ Users, Sessions, logger }) {
 
   function destroySession(req, res) {
     const token = getCookieToken(req);
+    let persistenceError;
     if (token) {
       sessions.delete(token);
       if (Sessions) {
         try {
           Sessions.destroy(token);
         } catch (e) {
-          log.error && log.error({ err: e.message }, 'session DB delete failed');
+          persistenceError = new Error('session_persistence_failed', { cause: e });
+          log.error && log.error({ operation: 'session_delete' }, 'session DB delete failed');
         }
       }
     }
     const parts = [`${COOKIE_NAME}=`, 'Path=/', 'HttpOnly', 'SameSite=Lax', 'Max-Age=0'];
     if (isHttps(req)) parts.push('Secure');
     res.setHeader('Set-Cookie', parts.join('; '));
+    // Local cleanup must finish even when durable deletion fails. The route
+    // must still know that a restart could reload the undeleted session.
+    if (persistenceError) {
+      throw persistenceError;
+    }
   }
 
   async function register({ email, password }, req) {

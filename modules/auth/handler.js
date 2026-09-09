@@ -74,6 +74,12 @@ const EMAIL_UNSENT_PUBLIC_MSG = {
 
 const EMAIL_LOCALES = new Set(['en', 'uk', 'ru']);
 
+const LOGOUT_FAILED_PUBLIC_MSG = {
+  en: 'The server could not confirm session removal.',
+  uk: 'Сервер не зміг підтвердити завершення сесії.',
+  ru: 'Сервер не смог подтвердить завершение сессии.',
+};
+
 /**
  * @param {{
  *   auth: any,
@@ -200,8 +206,20 @@ function createAuthRoutesModule(deps) {
   }
 
   function handleLogout(req, res) {
-    auth.destroySession(req, res);
-    return sendJson(res, 200, { success: true });
+    try {
+      auth.destroySession(req, res);
+      return sendJson(res, 200, { success: true });
+    } catch (_e) {
+      // destroySession already expired the cookie and cleared its local Map.
+      // sendError uses the existing bounded 5xx alert path; never forward the
+      // persistence exception, which can contain private database details.
+      return sendError(
+        res,
+        500,
+        'logout_persistence_failed',
+        LOGOUT_FAILED_PUBLIC_MSG[resolveEmailLocale(null, req)],
+      );
+    }
   }
 
   // Per-user preferences. Currently just `locale` — the language the user

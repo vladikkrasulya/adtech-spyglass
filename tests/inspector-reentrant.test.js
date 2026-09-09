@@ -339,24 +339,16 @@ test('static: all four drag window-listeners are scoped to ctx.signal', () => {
 });
 
 test('static: the in-flight analyze is aborted on unmount and its render paths guard on ctx.signal.aborted', () => {
-  // abort-on-unmount cleanup
+  assert.match(APP, /createAnalysisRun\(ctx\.signal/, 'controller belongs to the current mount');
   assert.match(
     APP,
-    /ctx\.addCleanup\(\(\) => \{\s*if \(_analyzeAbort\)/s,
-    'expected an addCleanup that aborts _analyzeAbort on unmount',
+    /if \(!analysisRun\.isCurrent\(run\)\) return;/,
+    'every async commit checks run identity',
   );
-  // success-render stale/abort guard
   assert.match(
     APP,
-    /if \(myReqId !== _analyzeReqSeq \|\| ctx\.signal\.aborted\) return;/,
-    'success render must bail when the module unmounted',
-  );
-  // catch-render abort guard — the guard sits immediately before the
-  // "backend offline" paint in the analyze catch.
-  assert.match(
-    APP,
-    /if \(ctx\.signal\.aborted\) return;\s*console\.warn\('Backend unavailable/,
-    'analyze catch must bail on abort before painting',
+    /if \(!analysisRun\.isCurrent\(run\) \|\| \(e && e\.name === 'AbortError'\)\) return;/,
+    'failed stale requests cannot paint errors',
   );
   // quality-tick chain guard (allow the explanatory comment before it)
   assert.match(
@@ -413,7 +405,7 @@ test('static: DEF-205 — an explicit paste starts new lexical provenance instea
   // would otherwise be wiped by us on the very next line).
   assert.match(
     APP,
-    /function setEditorValue\(id, text\) \{\s*const el = \$\(id\);\s*if \(!el\) return;[\s\S]{0,900}?if \(id === 'bidReq'\) _prettyPrintedReq = null;\s*else if \(id === 'bidRes'\) _prettyPrintedRes = null;/,
+    /function setEditorValue\(id, text, analysisFormatting = false\) \{\s*const el = \$\(id\);\s*if \(!el\) return;[\s\S]{0,900}?if \(id === 'bidReq'\) _prettyPrintedReq = null;\s*else if \(id === 'bidRes'\) _prettyPrintedRes = null;/,
     'setEditorValue must null the pretty-print marker for the pane it writes, before writing',
   );
 });
@@ -483,12 +475,12 @@ test('static: DEF-200 — a structured HTTP failure (429 or any other non-empty_
   // response again.
   assert.match(
     APP,
-    /if \(!r\.ok \|\| j\.success !== true\) \{[\s\S]{0,80}?const code = j && j\.code;/,
+    /if \([\s\S]{0,50}?!r\.ok \|\|[\s\S]{0,50}?j\.success !== true[\s\S]{0,160}?const code = j && j\.code;/,
     'the failure branch must be exhaustive: anything that is not an explicit success lands here',
   );
   assert.match(
     APP,
-    /if \(!r\.ok \|\| j\.success !== true\) \{[\s\S]{0,700}?code === 'empty_payload'\)[\s\S]{0,400}?toast\(t\('toast\.nothing_to_analyze'\), 'info'\);[\s\S]{0,150}?\} else \{[\s\S]{0,500}?if \(!ctx\.signal\.aborted\) clearResultsForError\(errMsg\);/,
+    /j\.success !== true[\s\S]{0,900}?code === 'empty_payload'\)[\s\S]{0,400}?toast\(t\('toast\.nothing_to_analyze'\), 'info'\);[\s\S]{0,150}?\} else \{[\s\S]{0,500}?if \(!ctx\.signal\.aborted\) clearResultsForError\(errMsg\);/,
     'every non-empty_payload structured failure (429 included) must call clearResultsForError, guarded the same way as the network-throw catch',
   );
   assert.match(

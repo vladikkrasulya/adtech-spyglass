@@ -51,6 +51,12 @@ const BEHAVIOR_ADM_MAX_BYTES = 1024 * 1024;
 const BEHAVIOR_ADM_B64_MAX_LENGTH = 4 * Math.ceil(BEHAVIOR_ADM_MAX_BYTES / 3);
 const STRICT_BASE64_RE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 
+// Preserve the legacy flat envelope's display prefix. The additive per-side
+// result retains the original messages and uses attached locations for side.
+function tagResponseSide(findings) {
+  return findings.map((finding) => ({ ...finding, msg: '[response] ' + finding.msg }));
+}
+
 function decodeBehaviorAdm(adm, admB64) {
   // `adm` remains accepted for API compatibility. The browser uses adm_b64:
   // its deterministic 4/3 expansion cannot be amplified by JSON escaping.
@@ -223,8 +229,9 @@ function createAnalyzeModule(deps) {
         // bidRes is present produced a misleading payload.unknown_type error
         // that masked perfectly valid response findings.
         let validation;
+        const sides = { request: null, response: null };
         if (hasReq) {
-          validation = validate(bidReq, {
+          const reqValidation = validate(bidReq, {
             locale,
             dialect,
             disabledRules,
@@ -237,11 +244,13 @@ function createAnalyzeModule(deps) {
             rawText: typeof body.bidReqRaw === 'string' ? body.bidReqRaw : undefined,
           });
           // Side = request (call context), kind = url for string GET requests.
-          attachLocations(validation.findings, {
+          attachLocations(reqValidation.findings, {
             side: 'request',
             kind: typeof bidReq === 'string' ? 'url' : 'ortb',
-            canonical: validation.urlRequest,
+            canonical: reqValidation.urlRequest,
           });
+          sides.request = reqValidation;
+          validation = { ...reqValidation, findings: reqValidation.findings.slice() };
           if (hasRes) {
             const resValidation = validate(bidRes, {
               locale,
@@ -253,17 +262,16 @@ function createAnalyzeModule(deps) {
               rawText: bidResRaw,
             });
             attachLocations(resValidation.findings, { side: 'response', kind: 'ortb' });
+            sides.response = resValidation;
             if (resValidation.findings && resValidation.findings.length) {
               validation.findings = validation.findings.concat(
-                resValidation.findings.map((f) =>
-                  Object.assign({}, f, { msg: '[response] ' + f.msg }),
-                ),
+                tagResponseSide(resValidation.findings),
               );
             }
           }
         } else {
           // Response-only path. Validate bidRes and prefix findings for clarity.
-          validation = validate(bidRes, {
+          const resValidation = validate(bidRes, {
             locale,
             dialect,
             disabledRules,
@@ -271,10 +279,9 @@ function createAnalyzeModule(deps) {
             userDialect,
             rawText: bidResRaw,
           });
-          attachLocations(validation.findings, { side: 'response', kind: 'ortb' });
-          validation.findings = validation.findings.map((f) =>
-            Object.assign({}, f, { msg: '[response] ' + f.msg }),
-          );
+          attachLocations(resValidation.findings, { side: 'response', kind: 'ortb' });
+          sides.response = resValidation;
+          validation = { ...resValidation, findings: tagResponseSide(resValidation.findings) };
         }
 
         // Recompute status from the union of request+response findings using
@@ -288,6 +295,22 @@ function createAnalyzeModule(deps) {
             : (validation.findings || []).some((f) => f.level === 'warning')
               ? 'warnings'
               : 'clean';
+
+        // Completeness is independent of displayed/filtered warnings. Do not
+        // erase a failed response family when the legacy envelope starts with
+        // request metadata, or report a filtered incomplete result as clean.
+        const incompleteSides = Object.values(sides).filter(
+          (side) => side && side.completeness && side.completeness.complete === false,
+        );
+        if (incompleteSides.length) {
+          validation.completeness = {
+            complete: false,
+            failedFamilies: [
+              ...new Set(incompleteSides.flatMap((side) => side.completeness.failedFamilies)),
+            ].sort(),
+          };
+          if (validation.status === 'clean') validation.status = 'warnings';
+        }
 
         // URL-style request (string bidReq) is not in scope for crosscheck /
         // IAB category extraction — those walk oRTB JSON paths. Format
@@ -358,6 +381,7 @@ function createAnalyzeModule(deps) {
         sendJson(res, 200, {
           success: true,
           validation,
+          sides,
           crosscheck: cross,
           meta: { locale, dialect, categories, format },
         });

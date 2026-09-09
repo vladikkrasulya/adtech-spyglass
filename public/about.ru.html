@@ -477,7 +477,7 @@
           <a href="#contact">Контакт</a>
         </nav>
         <div class="doc-prose">
-          <span class="eyebrow">docs · <span data-ortbtools-version>v1.21.0</span></span>
+          <span class="eyebrow">docs · <span data-ortbtools-version>v1.22.0</span></span>
           <h1 style="margin-top: var(--space-3)">Как пользоваться ortbtools</h1>
           <p style="font-size: var(--fs-lg); color: var(--text)">
             Приватный инспектор OpenRTB-трафика. Вставь JSON, получи разбор: правильно ли
@@ -721,6 +721,13 @@
           <p style="font-size: var(--fs-lg); color: var(--text)">
             ortbtools смотрит на твой payload одновременно с трёх ракурсов. Каждый слой отвечает на
             свой вопрос; вместе они дают полную картину.
+          </p>
+
+          <p>
+            Если группа правил не отработала, Inspector помечает анализ как неполный, даже когда
+            фильтр скрывает соответствующее предупреждение. Редактирование или очистка ввода
+            отменяет текущий анализ: старый ответ не заменит новый результат. Отрицательный флор
+            получает предупреждение и исключается из сравнения цены.
           </p>
 
           <h3>Слой 1 — Static (схема)</h3>
@@ -1367,7 +1374,7 @@ findings[]: { id, level, path, params, msg, specRef }
               font-size: var(--fs-sm);
             "
           >
-            <span data-ortbtools-version>v1.21.0</span> · openrtb 2.5 / 2.6 / 3.0 · native 1.x ·
+            <span data-ortbtools-version>v1.22.0</span> · openrtb 2.5 / 2.6 / 3.0 · native 1.x ·
             vast 4.x · <a href="/ru/" style="color: var(--text-dim)">↗ ortbtools</a> ·
             <a href="https://ortbtools.com/" style="color: var(--text-dim)">ortbtools.com</a>
           </p>

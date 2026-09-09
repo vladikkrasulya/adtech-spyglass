@@ -51,17 +51,13 @@ const {
 } = require('./findings');
 const { resolve, listLocales, FALLBACK_LOCALE } = require('./messages');
 
-const dialectIab = require('./dialects/iab');
-const dialectExtRtb = require('./dialects/ext-rtb');
-const dialectInPagePush = require('./dialects/inpage-push');
+const dialectRegistry = require('./dialect-registry');
+const { projectRequestForRules, projectResponsePairRequest } = require('./auction-view');
 const specRefs = require('./spec-refs.json');
-
-const DIALECTS = {
-  iab: dialectIab,
-  'ext-rtb': dialectExtRtb,
-  'inpage-push': dialectInPagePush,
-};
-const DEFAULT_DIALECT = 'iab';
+const DIALECTS = Object.fromEntries(
+  dialectRegistry.ids.map((id) => [id, require(`./dialects/${id}`)]),
+);
+const DEFAULT_DIALECT = dialectRegistry.defaultId;
 
 /**
  * Validate a pasted payload. Auto-detects type. Returns a result object with
@@ -124,92 +120,6 @@ function refusalFindings(refusal) {
 }
 
 /**
- * ── The 3.0 rule blackout, and how it is lifted ─────────────────────────────
- *
- * Version dispatch below routes a 3.0 payload to `validateRequest30` /
- * `validateResponse30` and nothing else. Everything that runs OUTSIDE that
- * dispatch — the eleven rule plugins, `validateConsent`, `validateTcfPermission`
- * — kept receiving the root envelope and kept reading 2.x paths on it:
- * `req.imp`, `req.tmax`, `req.cur`, `source.schain`, `user.consent`. In a 3.0
- * envelope every one of those lives under `openrtb.request.…`, so all of them
- * matched nothing and returned empty. A 3.0 request with a broken SupplyChain,
- * a negative `tmax`, a currency code that is not ISO-4217 and an implausible TC
- * string came back `status:'clean'` with a single INFO note. The plugin
- * registry meanwhile advertises "ext.schain (oRTB 3.0)" in its own comment.
- *
- * The fix is a projection, not a rewrite: hand those rules the sub-objects they
- * were written for, then stamp the real 3.0 path back onto whatever they
- * report, so a finding still points at the node the operator can click.
- *
- * What is deliberately NOT projected is `context.device` (and `context.site` /
- * `context.app`). AdCOM's Device is not oRTB 2.x's Device wearing a new
- * address: `os` is an integer from an enumerated list where 2.x has a free
- * string, and the device kind is `type`, not `devicetype`. The `client-hints`
- * plugin reads exactly those two as 2.x strings, so feeding it an AdCOM Device
- * would not be applying a rule to 3.0 — it would be asserting 2.x facts about
- * an object that does not have them. That gap is real and stays visible here
- * rather than being papered over with a rule that happens to produce output.
- */
-const CONTEXT_ROOTS_30 = new Set(['regs', 'user']);
-
-/**
- * Fields of a 3.0 Request whose name AND meaning survive unchanged from 2.x,
- * plus the two `context` children AdCOM defines the same way 2.6 does.
- *
- * `seat` / `wseat` are excluded on purpose: 3.0 replaced 2.x's `wseat[]` +
- * `bseat[]` pair with a `seat[]` list plus a `wseat` FLAG that says whether the
- * list is a whitelist. Same word, inverted type — the one shape of collision
- * that reads as harmless and is not.
- */
-const REQUEST_KEYS_30 = ['id', 'test', 'at', 'tmax', 'cur', 'source', 'ext'];
-
-function project30Request(req30) {
-  const ctx = isObj(req30.context) ? req30.context : {};
-  /** @type {Record<string, any>} */
-  const view = {};
-  for (const k of REQUEST_KEYS_30) {
-    if (req30[k] !== undefined) view[k] = req30[k];
-  }
-  for (const k of CONTEXT_ROOTS_30) {
-    if (ctx[k] !== undefined) view[k] = ctx[k];
-  }
-  return view;
-}
-
-/**
- * Project a 3.0 paired-request envelope into the minimal 2.x-shaped `ctx.req`
- * the ORTB_RESPONSE plugin pass needs (feature 022 / DEF-105).
- *
- * `opts.pairReq` for a 3.0 pair is the RAW envelope
- * `{openrtb:{request:{...}}}`, not a 2.x BidRequest — its `cur` lives at
- * `openrtb.request.cur`, not at the top level rules/currency's
- * `ctx.req.cur` read expects. Passing the raw envelope straight through (as
- * this did before) left `req.cur` reading `undefined`, so
- * rules/currency/index.js silently defaulted the allowed-currency set to
- * `['USD']` regardless of what the request actually permitted — an EUR
- * response against a request that explicitly allowed EUR came back as a
- * false `err-bid-currency-mismatch`.
- *
- * Deliberately projects ONLY `cur` — never `.item`/`.imp` — so
- * rules/price-floor's `ctx.req.imp` guard stays exactly as unmet for 3.0 as
- * it always was; extending this to a full item→imp projection would newly
- * activate the per-bid floor compare for every 3.0 pair, which is out of
- * DEF-105's scope and has no corpus coverage of its own.
- *
- * A non-3.0-envelope `pairReq` (2.x pairing, standalone paste, or a
- * mismatched pairing) passes through unchanged.
- *
- * @param {any} pairReq
- * @returns {object|null}
- */
-function project30ResponsePairReq(pairReq) {
-  if (isObj(pairReq) && isObj(pairReq.openrtb) && isObj(pairReq.openrtb.request)) {
-    return { cur: pairReq.openrtb.request.cur };
-  }
-  return pairReq || null;
-}
-
-/**
  * Re-address findings produced against a projected view.
  *
  * A finding with an empty path is an envelope-level statement and stays that
@@ -219,44 +129,83 @@ function project30ResponsePairReq(pairReq) {
  *
  * @param {Array<any>} findings
  * @param {string} base          e.g. 'openrtb.request'
- * @param {string} [contextBase] e.g. 'openrtb.request.context'
+ * @param {Record<string,string>} [pathMap] projected to original relative paths
  * @returns {Array<any>} the same array, mutated in place
  */
-function reprefixFindings(findings, base, contextBase) {
+function reprefixFindings(findings, base, pathMap = {}) {
+  const keys = Object.keys(pathMap).sort((a, b) => b.length - a.length);
+  const remap = (path) => {
+    if (!path) return path;
+    const key = keys.find(
+      (k) => path === k || path.startsWith(k + '.') || path.startsWith(k + '['),
+    );
+    return `${base}.${key ? pathMap[key] + path.slice(key.length) : path}`;
+  };
   for (const f of findings) {
     const p = f.path;
     if (typeof p !== 'string' || p === '') continue;
-    const head = p.split(/[.[]/, 1)[0];
-    const prefix = contextBase && CONTEXT_ROOTS_30.has(head) ? contextBase : base;
-    f.path = `${prefix}.${p}`;
+    f.path = remap(p);
+    if (f.params && typeof f.params.path === 'string')
+      f.params = { ...f.params, path: remap(f.params.path) };
+    if (f.params && typeof f.params.field === 'string' && pathMap[p]) {
+      f.params = { ...f.params, field: pathMap[p].split('.').pop() };
+    }
   }
   return findings;
 }
 
 function validate(payload, opts) {
   const o = opts || {};
+  const failedFamilies = new Set();
+  const onFamilyFailure = (family) => failedFamilies.add(family);
+  const familyFindings = [];
+  const runFamily = (family, validateFamily, fallback) => {
+    try {
+      return validateFamily();
+    } catch {
+      onFamilyFailure(family);
+      familyFindings.push(
+        makeFinding('internal.rule_family_failed', LEVELS.WARNING, '', { family }),
+      );
+      return fallback;
+    }
+  };
   // `opts.rawText` is the payload exactly as it arrived, before any parse.
   // Three defects exist only there — a duplicate key, an integer past 2^53-1,
   // a raw control character in a string — and `JSON.parse` erases all three
   // before any other rule in this package can look. Optional: callers that do
   // not hold the text simply do not get those findings.
-  const rawFindings = validateRawJson(typeof o.rawText === 'string' ? o.rawText : '').findings;
+  const rawFindings = runFamily(
+    'raw-json',
+    () => validateRawJson(typeof o.rawText === 'string' ? o.rawText : ''),
+    { findings: [] },
+  ).findings;
   // Fields a receiver will ignore without saying so. Runs on the parsed
   // object, so unlike the raw scan it needs nothing extra from the caller.
-  const unknownFieldFindings = isObj(payload) ? validateUnknownFields(payload).findings : [];
+  const unknownFieldFindings = isObj(payload)
+    ? runFamily('unknown-fields', () => validateUnknownFields(payload), { findings: [] }).findings
+    : [];
   // A TCF consent string that decodes into different consent rather than
   // failing to decode. Reads `user.consent` and its pre-2.6 home.
-  const consentFindings = isObj(payload) ? validateConsent(payload).findings : [];
+  const consentFindings = isObj(payload)
+    ? runFamily('consent', () => validateConsent(payload), { findings: [] }).findings
+    : [];
   // A consent bit the same string contradicts. Needs no vendor list: publisher
   // restrictions travel inside the string.
-  const permissionFindings = isObj(payload) ? validateTcfPermission(payload).findings : [];
+  const permissionFindings = isObj(payload)
+    ? runFamily('tcf-permission', () => validateTcfPermission(payload), { findings: [] }).findings
+    : [];
   // Shadows the module-level `finalize` for the rest of this function so every
   // exit path carries the raw findings. There are seven returns and adding the
   // merge at each of them is how one gets forgotten.
   const finalize = (result, ...rest) =>
     finalizeResult(
       Object.assign({}, result, {
+        ...(failedFamilies.size
+          ? { completeness: { complete: false, failedFamilies: [...failedFamilies].sort() } }
+          : {}),
         findings: rawFindings.concat(
+          familyFindings,
           unknownFieldFindings,
           consentFindings,
           permissionFindings,
@@ -311,7 +260,10 @@ function validate(payload, opts) {
     // computed and then discarded, and the operator is told their feed URL is
     // not a JSON object.
     const findings = canonical && canonical.ok === false ? refusalFindings(canonical) : [];
-    const r = canonical && canonical.ok === false ? { findings } : validateUrlRequest(canonical);
+    const r =
+      canonical && canonical.ok === false
+        ? { findings }
+        : runFamily('request.url', () => validateUrlRequest(canonical), { findings: [] });
     const out = finalize(
       {
         type: TYPES.URL_REQUEST,
@@ -346,7 +298,7 @@ function validate(payload, opts) {
 
   const t = detectType(payload);
   const version = detectVersion(payload);
-  let findings = [];
+  let findings;
   let resolvedType = t;
 
   // ── Ambiguity surfacing (mechanism audit 2026-06-11). The detector
@@ -379,22 +331,28 @@ function validate(payload, opts) {
     // payload produces wholly irrelevant findings ("imp_required",
     // "no_site_or_app", etc.) so we route by version BEFORE rule dispatch.
     if (version && version.version === VERSIONS.V_3_0) {
-      findings = validateRequest30(payload, { dialect });
+      findings = runFamily('request.3.0', () => validateRequest30(payload, { dialect }), []);
       // See the projection note above: the plugin / consent / TCF groups are
       // written against 2.x paths, so on 3.0 they get the sub-objects those
       // paths describe and their findings are re-addressed afterwards.
       const req30 = isObj(pl.openrtb) && isObj(pl.openrtb.request) ? pl.openrtb.request : null;
       if (req30) {
-        const view = project30Request(req30);
-        const projected = runRulePlugins(view, 'ORTB_REQUEST', { dialect, version, userDialect })
-          .concat(validateConsent(view).findings)
-          .concat(validateTcfPermission(view).findings);
-        findings = findings.concat(
-          reprefixFindings(projected, 'openrtb.request', 'openrtb.request.context'),
-        );
+        const { payload: view, pathMap } = projectRequestForRules(req30);
+        const projected = runRulePlugins(view, 'ORTB_REQUEST', {
+          dialect,
+          version,
+          userDialect,
+          onFamilyFailure,
+        })
+          .concat(runFamily('consent', () => validateConsent(view), { findings: [] }).findings)
+          .concat(
+            runFamily('tcf-permission', () => validateTcfPermission(view), { findings: [] })
+              .findings,
+          );
+        findings = findings.concat(reprefixFindings(projected, 'openrtb.request', pathMap));
       }
     } else {
-      findings = validateRequest(payload, { dialect, version });
+      findings = runFamily('request.2x', () => validateRequest(payload, { dialect, version }), []);
       // Plugin pass — modular rules from packages/core/rules/<name>/.
       // Plugins join findings BEFORE dedup+sort in finalize(), so a
       // plugin can't shadow a legacy finding accidentally. See
@@ -403,6 +361,7 @@ function validate(payload, opts) {
         dialect,
         version,
         userDialect,
+        onFamilyFailure,
       });
       if (pluginFindings.length) findings = findings.concat(pluginFindings);
     }
@@ -410,7 +369,7 @@ function validate(payload, opts) {
     // Same version dispatch on the response side. 3.0 BidResponse lives
     // under `openrtb.response` and uses `bid.item` (not 2.x `bid.impid`).
     if (version && version.version === VERSIONS.V_3_0) {
-      findings = validateResponse30(payload);
+      findings = runFamily('response.3.0', () => validateResponse30(payload), []);
       // Same projection as the request side. The 3.0 Response object carries
       // `cur` and `seatbid[].bid[].price` under exactly those names, so the
       // currency and price-floor plugins apply verbatim once they are handed
@@ -425,16 +384,21 @@ function validate(payload, opts) {
           dialect,
           version,
           userDialect,
-          // See project30ResponsePairReq() above — the raw envelope has no
+          onFamilyFailure,
+          // See projectResponsePairRequest() above — the raw envelope has no
           // top-level `cur`, so the currency plugin needs it projected.
-          req: project30ResponsePairReq(o.pairReq),
+          req: projectResponsePairRequest(o.pairReq),
         });
         findings = findings.concat(
           hasEnv30 ? reprefixFindings(projected, 'openrtb.response') : projected,
         );
       }
     } else {
-      findings = validateResponse(payload, { dialect, version });
+      findings = runFamily(
+        'response.2x',
+        () => validateResponse(payload, { dialect, version }),
+        [],
+      );
       // Plugin pass — response-side. Modular rules with appliesTo:'ORTB_RESPONSE'
       // run here. Paired req context may be available via opts.pairReq when
       // the caller (e.g. analyze handler) supplies it for floor/currency checks.
@@ -443,16 +407,23 @@ function validate(payload, opts) {
         dialect,
         version,
         userDialect,
+        onFamilyFailure,
         req: o.pairReq || null,
       });
       if (responsePluginFindings.length) findings = findings.concat(responsePluginFindings);
     }
   } else if (t === TYPES.VENDOR_REQUEST) {
-    const r = validateExadsRequest(payload);
+    const r = runFamily('request.exads', () => validateExadsRequest(payload), {
+      findings: [],
+      type: t,
+    });
     findings = r.findings;
     resolvedType = r.type;
   } else if (t === TYPES.VENDOR_FEED) {
-    const r = validateFeedResponse(payload);
+    const r = runFamily('response.feed', () => validateFeedResponse(payload), {
+      findings: [],
+      type: t,
+    });
     findings = r.findings;
     resolvedType = r.type;
   } else if (t === TYPES.JSON_FEED) {
@@ -575,14 +546,23 @@ function crosscheck(req, res, opts) {
   return findings.map((f) => decorate(f, locale));
 }
 
+/** @returns {{type:any,version:any,status:string,findings:any[],completeness?:{complete:boolean,failedFamilies:string[]},urlRequest?:any}} */
 function finalizeResult(result, statusOverride, locale, disabledRules, strictness) {
   let raw = applyDisabledRules(result.findings, disabledRules);
   raw = dedupFindings(raw);
   raw = sortFindings(raw);
   raw = applyStrictness(raw, strictness);
   const decorated = raw.map((f) => decorate(f, locale));
-  const status = statusOverride || rollupStatus(raw);
-  return { type: result.type, version: result.version, status, findings: decorated };
+  let status = statusOverride || rollupStatus(raw);
+  if (result.completeness && result.completeness.complete === false && status === 'clean')
+    status = 'warnings';
+  return {
+    type: result.type,
+    version: result.version,
+    status,
+    findings: decorated,
+    ...(result.completeness ? { completeness: result.completeness } : {}),
+  };
 }
 
 function decorate(f, locale) {

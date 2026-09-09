@@ -271,7 +271,13 @@
          the ONLY #modalRoot/#toastContainer in the DOM (the inspector
          template no longer declares its own copy). See /core/modal-host.js. -->
     <div id="modalRoot"></div>
-    <div class="toast-container" id="toastContainer"></div>
+    <div
+      class="toast-container"
+      id="toastContainer"
+      role="status"
+      aria-live="polite"
+      aria-relevant="additions text"
+    ></div>
     <script src="/version.js?v=1"></script>
     <script src="/telemetry.js?v=1"></script>
     <script src="/ortbtools-crypto.js?v=1"></script>
@@ -290,6 +296,8 @@
     <!-- The creative classifier decides what an `adm` IS before anything decides
          how to show it; /core/vast-shape.js is the one canonical VAST detector it
          delegates to, so the preview and the format detector cannot disagree. -->
+    <script src="/core/auction-view.js?v=1" defer></script>
+    <script src="/core/dialect-registry.js?v=1" defer></script>
     <script src="/core/vast-shape.js?v=1" defer></script>
     <script src="/modules/inspector/creative-classify.js?v=1" defer></script>
     <script type="module" src="/shell-boot.js"></script>

@@ -29,7 +29,7 @@ function createHealthModule({ db, auth, Users, sendJson, sentryReady }) {
   const buildSha = process.env.BUILD_SHA || 'dev';
 
   function handleHealth(req, res) {
-    let dbOk = false;
+    let dbOk;
     try {
       db.prepare('SELECT 1').get();
       dbOk = true;

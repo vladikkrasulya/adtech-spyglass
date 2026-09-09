@@ -52,12 +52,11 @@
     const segs = [];
     const ident = /[A-Za-z_][A-Za-z0-9_-]*/y;
     const idx = /\[(\d+)\]/y;
-    let i = 0;
     ident.lastIndex = 0;
     let m = ident.exec(display);
     if (!m || m.index !== 0) return null;
     segs.push(m[0]);
-    i = ident.lastIndex;
+    let i = ident.lastIndex;
     while (i < display.length) {
       const c = display[i];
       if (c === '.') {

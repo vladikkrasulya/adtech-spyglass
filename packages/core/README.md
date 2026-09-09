@@ -12,7 +12,7 @@ Use this package when an application, service, or local tool needs the same dete
 
 ## Package status
 
-The repository Core version is `0.46.0`; the CLI remains `0.1.3` with dependency `^0.46.0`. These are workspace versions, not evidence of an npm publication.
+The repository Core version is `0.47.0`; the CLI is `0.1.4` with dependency `^0.47.0`. These are workspace versions, not evidence of an npm publication.
 
 `@ortbtools/core` is not currently published to the npm registry. Inside this monorepo it is available as an npm workspace. Registry installation instructions will be added after the first verified public release.
 
@@ -71,6 +71,7 @@ Validates a `BidRequest`, `BidResponse`, supported vendor-feed payload, or recog
 - `type` — detected OpenRTB, URL-request, JSON Feed, or vendor-feed label
 - `version` — `{ version, confidence, signals[] }`
 - `status` — rollup: `'clean' | 'warnings' | 'errors' | 'invalid'`
+- `completeness` — present after a caught rule-family fault as `{ complete: false, failedFamilies: [...] }`; family IDs are sorted and contain no exception or payload text. This metadata survives filtering, and an incomplete result cannot have status `clean`.
 - `findings[]` — list of `{ id, level, path, params, specRef, msg }`; `specRef` is a URL or `null`
 
 Options:
@@ -92,11 +93,26 @@ Options:
 3. **disabledRules**: `validate(req, { disabledRules: ['regs.*'] })` filters before dedup/sort. Accepts exact ids or trailing-`*` prefixes. Empty / falsy → no filter.
 4. **strictness**: supported values are `'pedantic'` (default), `'normal'`, `'lax'`; unset or unrecognised → `'pedantic'`. Applied after dedup+sort, so ordering contract still holds on the filtered set.
 
+The [finding ID policy](../../specs/032-close-cleanup-inventory/contracts/finding-id-policy.md) freezes the compatibility allowlist. Legacy finding IDs, including historical hyphenated IDs, are retained. New IDs use dotted lowercase names; message copy is not a rule identifier. `response.bid.price_required` and `err-bid-price-negative` deliberately retain their different finite-number and non-negative-number trigger sets.
+
 CI consumers can rely on this exact ordering — they don't need to re-sort.
 
 ### `crosscheck(req, res, opts?)`
 
 Semantic comparison between request and response: id alignment, currency, `bid.impid` resolution, `price` vs `bidfloor`, `bcat`/`badv` enforcement, banner size match, native asset back-reference, VAST detection, auction summary.
+
+Request validation emits `floor.negative` warnings for negative supplied impression/item/deal floors. Crosscheck excludes those unusable floors from above/below-floor verdicts. A matched negative deal never falls back to the impression floor. Zero and absent floors retain their existing behavior. Positive 3.0 deal comparisons remain outside crosscheck's existing eligibility; the negative matched-deal veto does not activate them. Response plugins receive only the currency of an enveloped 3.0 paired request.
+
+### `parseVastTimeline(xml)` and `VAST_DIAGNOSTICS`
+
+These retained package-root exports provide deterministic static VAST extraction and its frozen diagnostic catalog:
+
+```js
+const { parseVastTimeline, VAST_DIAGNOSTICS } = require('@ortbtools/core');
+const timeline = parseVastTimeline(xml);
+```
+
+See [the extractor contract](vast-timeline/README.md) for limits, Wrapper handling and result fields. The package API does not promise that every extracted field has a dedicated Inspector panel; static extraction and Inspector presentation are separate capabilities.
 
 ### `detectVersion(payload)`
 

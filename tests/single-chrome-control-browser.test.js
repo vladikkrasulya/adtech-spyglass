@@ -289,7 +289,7 @@ test(
         const readState = () =>
           page.evaluate(() => {
             const label = document.querySelector('[data-theme-label]');
-            let stored = null;
+            let stored;
             try {
               stored = localStorage.getItem('kt-theme');
             } catch (_e) {

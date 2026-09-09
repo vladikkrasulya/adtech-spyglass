@@ -18,7 +18,11 @@
  */
 
 const { isObj } = require('./helpers');
-const { isNativeFeedMaterial } = require('./rules-feed');
+const {
+  isNativeFeedMaterial,
+  isInpageFeedMaterial,
+  detectSingleBidShape,
+} = require('./rules-feed');
 const { isExadsRequest, isExadsResponse } = require('./vendor-exads');
 const { isAdon3Response } = require('./vendor-adon3');
 
@@ -186,36 +190,7 @@ function collectMatches(payload, paths) {
 //   Bid-price feed — `notification_url` or `bid_price` + `link`
 //   Bid-redirect   — `redirecturl` + `bid` (small object, ≤6 keys)
 function looksLikeJsonFeedSingle(o) {
-  // Each predicate uses a key unique enough that no other format we care
-  // about ships it. `bid` / `link` alone are too generic — those check that
-  // they appear *together* with a vendor-specific neighbour.
-  if ('clickUrl' in o) return true; // value-feed (camelCase is unique)
-  if ('notification_url' in o) return true; // bid-price feed
-  if ('bid_price' in o) return true; // bid-price feed
-  if ('redirecturl' in o) return true; // bid-redirect feed
-  // Push-materials single object — the baseline shape most push auctions
-  // respond with (owner ruling 2026-08-26; spec 013), not a vendor dialect.
-  // No single key is unique enough here, so the claim needs the three-way
-  // co-occurrence that spells "a priced, clickable creative": a price key,
-  // a click key, and at least one creative key. Values are deliberately not
-  // inspected — a push bid with `cpc:"0.03"` must be recognized and then
-  // told its cpc is a string by feed.push.bid_string_type, not bounced back
-  // to payload.unknown_type.
-  const hasPrice = 'cpc' in o || 'price' in o;
-  // `clickurl` (all-lowercase) is the product's own committed in-page card
-  // feed alias, already recognized by format-detect.js's click set; recognize
-  // it here too so the single-object classifier does not bounce it to
-  // payload.unknown_type.
-  const hasClick = 'click_url' in o || 'link' in o || 'clickurl' in o;
-  const hasCreative =
-    'title' in o ||
-    'description' in o ||
-    'image' in o ||
-    'image_url' in o ||
-    'icon' in o ||
-    'icon_url' in o;
-  if (hasPrice && hasClick && hasCreative) return true;
-  return false;
+  return !!detectSingleBidShape(o) || isInpageFeedMaterial(o);
 }
 
 // Lazy-load to avoid a require cycle: decoders/request/index.js pulls

@@ -126,6 +126,20 @@ finding text and now receives English.
 
 Notes:
 
+- **Per-side results** → `sides.request` and `sides.response` each contain the
+  supplied side's validation result, or `null` when absent. They retain their own
+  `type`, `version`, `status` and source-located `findings`; messages are unprefixed.
+  The legacy combined `validation` and response message prefixes remain available.
+  Equal finding IDs/paths in different documents are not deduplicated together.
+- **Incomplete analysis** → a contained internal rule-family failure adds a
+  localized `internal.rule_family_failed` warning and
+  `completeness: { complete: false, failedFamilies: [...] }` to the affected side
+  and the combined validation result. Family identifiers contain no exception or
+  input text. Completeness survives finding filters, and the combined status
+  cannot be `clean`. This completed but degraded analysis uses HTTP 200 with
+  `success: true`; malformed JSON, invalid envelopes and other documented request
+  errors still use the error contract below. See [ADR-018](../specs/decisions/ADR-018-maintenance-boundaries-and-degradation.md).
+
 - **Both sides sent** → `validation.findings` is the union; response-side
   findings get a `[response] ` message prefix. `validation.status` rolls up
   across the union.
@@ -229,3 +243,5 @@ Errors use the same envelope shown for `/api/analyze`.
   breaking change for callers that omit `?locale=`.
 - This document: `docs/api-v1.md` — contract revisions are listed in
   `CHANGELOG.md`.
+
+Finding-catalog dictionary load failures retain the compatible degraded response body but send `Cache-Control: no-store`. Both the process cache and external caches can therefore recover on the next request after repair; complete responses retain `public, max-age=300`.

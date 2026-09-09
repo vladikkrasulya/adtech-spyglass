@@ -90,10 +90,25 @@ async function api(method, url, body) {
   const absUrl = /^https?:|^\//.test(url) ? url : '/' + url;
   const r = await fetch(absUrl, init);
   const j = await r.json().catch(() => ({}));
-  if (!r.ok || j.success === false) {
-    const err = new Error(j.error || 'http ' + r.status);
+  const record = j && typeof j === 'object' && !Array.isArray(j);
+  const valid =
+    record &&
+    j.success === true &&
+    (method !== 'POST' ||
+      (j.partner &&
+        typeof j.partner === 'object' &&
+        !Array.isArray(j.partner) &&
+        Number.isInteger(j.partner.id) &&
+        j.partner.id > 0 &&
+        typeof j.partner.name === 'string' &&
+        j.partner.name.trim().length > 0)) &&
+    (method !== 'GET' || (Number.isInteger(j.count) && j.count >= 0));
+  if (!r.ok || !valid) {
+    const err = new Error(
+      (record && j.error) || (r.ok ? t('toast.unreadable_response') : 'http ' + r.status),
+    );
     err.status = r.status;
-    err.code = j.code;
+    err.code = record ? j.code : undefined;
     throw err;
   }
   return j;
@@ -197,18 +212,20 @@ function pluralKeySuffix(n) {
 export async function deletePartner(id) {
   // Fetch count first so the user sees how many samples are about to
   // become unassigned. Cheap (single COUNT query). Falls back to the
-  // generic confirm if the count endpoint blips.
+  // generic confirm with an explicit unavailable-count notice if the read fails.
   let count = null;
   try {
     const r = await api('GET', 'api/partners/' + id + '/samples-count');
     count = r && typeof r.count === 'number' ? r.count : null;
   } catch (_e) {
-    /* fall back to generic confirm */
+    toast(t('toast.partner_count_failed'), 'error');
   }
   const message =
-    count != null && count > 0
-      ? t('confirm.delete_partner_with_count_' + pluralKeySuffix(count), { count })
-      : t('confirm.delete_partner');
+    count === null
+      ? t('toast.partner_count_failed') + '\n\n' + t('confirm.delete_partner')
+      : count > 0
+        ? t('confirm.delete_partner_with_count_' + pluralKeySuffix(count), { count })
+        : t('confirm.delete_partner');
   if (!confirm(message)) return;
   try {
     await api('DELETE', 'api/partners/' + id);

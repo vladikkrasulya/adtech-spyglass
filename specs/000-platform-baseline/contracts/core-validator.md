@@ -1,7 +1,7 @@
 # Contract: Core Validator and CLI
 
 **Owner**: `packages/core/` and `packages/cli/`
-**Current versions**: Core `0.46.0`; CLI `0.1.3`
+**Current versions**: Core `0.47.0`; CLI `0.1.4`
 
 ## Public Core Surface
 
@@ -11,7 +11,8 @@ The root CommonJS module exports:
 - `detectType`, `detectVersion`, and `detectFormat`;
 - `listDialects` and `listLocales`;
 - `decodeCategory`, `decodeCategories`, and `extractAllCategories`;
-- `rollupStatus` and `nativeAssetCrosscheck`; and
+- `rollupStatus` and `nativeAssetCrosscheck`;
+- `parseVastTimeline` and `VAST_DIAGNOSTICS` (retained package-root timeline API); and
 - the public type, version, format, context, protocol, and finding-level constants.
 
 Specialized CommonJS subpaths provide behavior analysis, Intel/discovery helpers, and the Node-only
@@ -98,8 +99,10 @@ mappings where supplied.
 Built-in dialects are `iab`, `ext-rtb`, and `inpage-push`; an unknown slug falls back to `iab`.
 Baseline request/response rules remain in the versioned flat validators. New modular groups are
 explicitly registered in `packages/core/rules/index.js`; directories are not auto-discovered. Plugin
-findings join baseline findings before finalization. A plugin exception is logged and isolated so it
-does not crash the whole validation call.
+findings join baseline findings before finalization. Baseline and plugin family
+exceptions are isolated with a safe family-only warning and explicit completeness
+metadata; failed plugin applicability checks are contained as well as validation.
+Exception/input details are not exposed in findings.
 
 A user-dialect object may suppress questions for already mapped extension signals and can contribute
 format hints. It does not replace the IAB baseline.
@@ -199,10 +202,13 @@ no floor verdict, and the auction summary counts only usable prices.
 The effective floor is resolved by one shared function, `resolveDealFloor(bid, imp)`, exported from
 `packages/core/rules/price-floor/index.js` and imported by `packages/core/crosscheck.js`, so the
 validation and crosscheck engines can never name different floors for the same pair. When `bid.dealid`
-matches an `imp.pmp.deals[].id` whose `bidfloor` is a finite number, that floor governs at any value
+matches an `imp.pmp.deals[].id` whose `bidfloor` is a finite nonnegative number, that floor governs,
 including `0`, denominated in the deal's own `bidfloorcur`, which never inherits `imp.bidfloorcur`
 (oRTB 2.6 §3.2.12). Otherwise the impression floor applies with its existing absent, explicit and
-unusable branches unchanged. A negative floor is not flagged by any rule today and prints as stated.
+unusable branches unchanged. A supplied negative impression or deal floor emits
+`floor.negative` at its original source path. A matched negative deal remains an
+unusable effective floor and does not fall back to a different impression floor.
+Neither engine emits an above/below-floor verdict for that unusable floor.
 
 On the OpenRTB 3.0 path the item projection reads the floor currency from `flrcur`, and a paired 3.0
 request reaches the response rule pass projected to `{cur}` from `openrtb.request.cur` so a permitted
@@ -477,6 +483,34 @@ narrowed, and browser records remain until an individual case has current comple
 The two Kadam hidden-placement assertions and four peer-owned inpage preview contradictions retain
 explicit decision ownership. [028 verification](../../028-vendor-request-dialects/verification.md)
 records current gates; this contract does not claim hosted delivery, npm publication or deployment.
+
+## Maintenance Boundaries (032)
+
+The deterministic `auction-view` module owns source-aware request/response facts,
+original item/bid identity and paths. Its generated browser copy shares those
+facts with Inspector strip/slots and selected-dimension resolution. Consumer
+adapters remain explicit: normative 3.0 request-plugin placement/item facts are
+mapped individually, including parameter paths, while the paired response-plugin
+request retains its currency-only boundary. Existing bare/enveloped classifier
+precedence and crosscheck eligibility remain. In particular, the negative matched
+3.0 deal veto does not claim newly implemented positive 3.0 deal comparisons.
+
+`internal.rule_family_failed` reports contained family faults. Unfiltered
+`completeness: { complete: false, failedFamilies: [...] }` remains present even
+when strictness or disabled-rule filtering hides the warning. Incomplete results
+cannot report clean status. IDs identify stable families, are sorted uniquely and
+contain no exception or payload text. Complete ordinary results retain existing
+output semantics. [ADR-018](../../decisions/ADR-018-maintenance-boundaries-and-degradation.md)
+records this intentional failure contract.
+
+Price classification is shared while preserving the different trigger conditions
+of `response.bid.price_required` and `err-bid-price-negative`; this cleanup does
+not remove the two diagnostics where both previously applied. Legacy finding IDs
+are frozen compatibility keys; new IDs use dotted lowercase naming.
+
+`parseVastTimeline` and `VAST_DIAGNOSTICS` remain package-root exports identical
+to the direct timeline module. Inspector does not currently consume the timeline;
+library support is not a claim of browser integration.
 
 ## CLI Contract
 

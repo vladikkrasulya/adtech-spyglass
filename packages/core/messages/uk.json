@@ -394,5 +394,8 @@
   "feed.adon3.price_invalid": "Adon3 price має бути невід’ємним десятковим рядком. Зберігайте точність; не перетворюйте його на числову ціну OpenRTB.",
   "feed.native.field_invalid": "Поле Native-матеріалу {field} має некоректне значення або тип.",
   "feed.native.price_invalid": "cpc Native-матеріалу має бути скінченним невід’ємним числом.",
-  "feed.native.field_missing": "Native-матеріал не містить {field}; креатив може відобразитися неповністю."
+  "feed.native.field_missing": "Native-матеріал не містить {field}; креатив може відобразитися неповністю.",
+  "feed.inpage.field_invalid": "In-page матеріал: передане поле {field} некоректне. Для impurl потрібен HTTP(S) URL, для advertiser — непорожній рядок.",
+  "floor.negative": "Переданий floor від’ємний. Вкажіть невід’ємне число; цей floor не дає підстав для висновку про ціну вище чи нижче порога.",
+  "internal.rule_family_failed": "Група перевірок {family} не завершила роботу. Аналіз неповний; решта груп виконала перевірки."
 }

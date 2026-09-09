@@ -52,13 +52,14 @@
  *
  * Response: { ok: true, count: N, lang,
  *             items: [{id, severity, severities, family, message, specRef}] }
- * Cache-Control: public, max-age=300
+ * Cache-Control: public, max-age=300 on success; no-store for a degraded load
  */
 
 const fs = require('fs');
 const path = require('path');
 const { sendJson, sendError } = require('../../lib/http');
 const severityRegistry = require('../../packages/core/severity-registry');
+const log = require('../../lib/logger').child('findings');
 
 const CORE_DIR = path.join(__dirname, '..', '..', 'packages', 'core');
 const MESSAGES_DIR = path.join(CORE_DIR, 'messages');
@@ -66,14 +67,23 @@ const SPEC_REFS_PATH = path.join(CORE_DIR, 'spec-refs.json');
 
 const VALID_LANGS = new Set(['en', 'uk', 'ru']);
 
-// Load and cache parsed JSON files (process-lifetime cache — restart clears it)
+// Cache only successful dictionaries. A repaired file can recover on the next
+// request after a read/parse failure instead of requiring a process restart.
 const _cache = {};
 function loadJson(filePath) {
   if (!_cache[filePath]) {
     try {
-      _cache[filePath] = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new TypeError('Expected a catalog dictionary');
+      }
+      _cache[filePath] = parsed;
     } catch (_e) {
-      _cache[filePath] = {};
+      log.warn(
+        { file: path.relative(CORE_DIR, filePath) },
+        'finding-catalog: dictionary load failed',
+      );
+      return null;
     }
   }
   return _cache[filePath];
@@ -89,7 +99,7 @@ function handleFindingCatalog(req, res) {
     const specRefs = loadJson(SPEC_REFS_PATH);
 
     const items = [];
-    for (const [id, message] of Object.entries(messages)) {
+    for (const [id, message] of Object.entries(messages || {})) {
       // Skip internal comment keys
       if (id.startsWith('_')) continue;
       if (typeof message !== 'string') continue;
@@ -101,11 +111,11 @@ function handleFindingCatalog(req, res) {
         severities: sev.levels.length ? sev.levels : [sev.severity],
         family: sev.family,
         message,
-        specRef: specRefs[id] || '',
+        specRef: specRefs?.[id] || '',
       });
     }
 
-    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.setHeader('Cache-Control', messages && specRefs ? 'public, max-age=300' : 'no-store');
     sendJson(res, 200, { ok: true, count: items.length, lang, items });
   } catch (e) {
     sendError(res, 500, 'catalog_failed', e.message);

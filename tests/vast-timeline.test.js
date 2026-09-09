@@ -579,3 +579,14 @@ test('canonical source has no network, DOM, clock, randomness, or findings primi
   assert.doesNotMatch(source, /\bDate\.now\s*\(|\bMath\.random\s*\(/);
   assert.doesNotMatch(source, /\b(?:F|makeFinding)\s*\(/);
 });
+
+test('retained VAST timeline package-root exports match the extractor contract', () => {
+  const core = require('../packages/core');
+  const direct = require('../packages/core/vast-timeline');
+  assert.equal(core.parseVastTimeline, direct.parseVastTimeline);
+  assert.equal(core.VAST_DIAGNOSTICS, direct.VAST_DIAGNOSTICS);
+  assert.ok(Object.isFrozen(core.VAST_DIAGNOSTICS));
+  const xml =
+    '<VAST version="3.0"><Ad><InLine><Impression>https://example.test/i</Impression></InLine></Ad></VAST>';
+  assert.deepEqual(core.parseVastTimeline(xml), direct.parseVastTimeline(xml));
+});

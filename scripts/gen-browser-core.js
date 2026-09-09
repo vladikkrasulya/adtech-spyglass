@@ -16,6 +16,8 @@ const crypto = require('crypto');
 const ROOT = path.join(__dirname, '..');
 // canonical → browser copy (verbatim; the UMD-lite wrapper runs in both envs).
 const PAIRS = [
+  ['packages/core/auction-view.js', 'public/core/auction-view.js'],
+  ['packages/core/dialect-registry.js', 'public/core/dialect-registry.js'],
   ['packages/core/source-map.js', 'public/core/source-map.js'],
   // The Diff tab must apply exactly the rules tests/semantic-diff.test.js pins,
   // so the engine is mirrored rather than reimplemented. registry.js first:

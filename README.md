@@ -182,11 +182,19 @@ See [the CLI README](./packages/cli/README.md) and
 ```bash
 npm test          # full node:test suite
 npm run ci        # prettier:check → eslint → typecheck → coverage
+npm run test:browser # serial browser files with owned process cleanup
 ```
 
-The tracked `.githooks/pre-push` runs `npm run ci` only for direct pushes from
-local `main`; feature branches rely on GitHub CI, so run the full gate before
-opening or merging a pull request.
+Full and browser-only verification require installed workspace dependencies and executable
+Chrome/Chromium; set `CHROME_BIN` when it is outside the usual installation paths. A missing
+browser fails the preflight. `node scripts/run-tests.js --unit-only` explicitly selects only Node
+tests and is not the full release gate. Each run and attempt owns its temporary data and browser
+profiles. A failed attempt retains stdout, stderr and `attempts.json` in the reported private
+temporary directory, including when its single retry passes; a retry alone does not establish
+the failure's cause.
+
+The tracked `.githooks/pre-push` runs `npm run ci` for every push targeting remote `main`,
+including a feature branch pushed to `main`. Hosted CI additionally verifies packages and Docker.
 
 ## Configuration
 

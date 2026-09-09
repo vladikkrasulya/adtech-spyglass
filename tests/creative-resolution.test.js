@@ -97,7 +97,10 @@ function loadHelpers() {
   // `window` only so activeLocaleTag can read the UI locale; the browser
   // corpus suite is where the real one is exercised. `en` matches the locale
   // that suite drives, so a price string asserted here reads the same there.
-  return factory((s) => String(s == null ? '' : s), { tLocale: () => 'en' });
+  return factory((s) => String(s == null ? '' : s), {
+    tLocale: () => 'en',
+    OrtbtoolsAuctionView: require('../packages/core/auction-view'),
+  });
 }
 
 function fixture(relPath) {
@@ -869,4 +872,46 @@ test('the four carrier predicates reach exactly the documented cases across ever
     'pop-ppcmate-json-material',
     'pop-ppcmate-json-multi',
   ]);
+});
+
+test('shared auction view: selected dimensions follow its matching impression across all 2.x and 3.0 items', () => {
+  const { resolveCreativeAt } = loadHelpers();
+  const req2 = {
+    id: 'dimensions',
+    imp: [
+      { id: 'small', banner: { w: 300, h: 250 } },
+      { id: 'wide', banner: { w: 728, h: 90 } },
+    ],
+  };
+  const bid2 = { id: 'selected', impid: 'wide', adm: '<p>own</p>' };
+  const res2 = { seatbid: [{ bid: [bid2] }] };
+  assert.deepEqual(resolveCreativeAt(req2, res2, 0, 0).previewDims, { w: 728, h: 90 });
+  assert.equal(resolveCreativeAt(req2, res2, 0, 0).bid, bid2);
+  const req3 = {
+    openrtb: {
+      ver: '3.0',
+      request: {
+        id: 'dimensions',
+        item: req2.imp.map((imp) => ({ id: imp.id, spec: { placement: { display: imp.banner } } })),
+      },
+    },
+  };
+  const bid3 = { id: 'selected', item: 'wide', media: { display: { adm: '<p>own 3</p>' } } };
+  const res3 = { openrtb: { response: { seatbid: [{ bid: [bid3] }] } } };
+  assert.deepEqual(resolveCreativeAt(req3, res3, 0, 0).previewDims, { w: 728, h: 90 });
+  assert.equal(
+    resolveCreativeAt(req3, res3, 0, 0).bid,
+    bid3,
+    'normalization never replaces original creative identity',
+  );
+  assert.deepEqual(
+    resolveCreativeAt(req3.openrtb.request, res3.openrtb.response, 0, 0).previewDims,
+    { w: 728, h: 90 },
+  );
+  bid3.item = 'not-present';
+  assert.equal(
+    resolveCreativeAt(req3, res3, 0, 0).previewDims,
+    null,
+    'an unmatched item does not borrow the first impression',
+  );
 });

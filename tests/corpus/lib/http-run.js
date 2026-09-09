@@ -151,7 +151,7 @@ async function postAnalyzeRaw(baseUrl, rawBody, opts = {}) {
     return { status: 0, body: null, text: '', transportError: String(reason) };
   }
   const text = await resp.text();
-  let body = null;
+  let body;
   try {
     body = JSON.parse(text);
   } catch (_e) {

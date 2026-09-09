@@ -1,4 +1,5 @@
 'use strict';
+const { negativeFloorFindings } = require('./floor-values');
 
 /**
  * IAB OpenRTB 3.0 BidRequest validation — envelope + item + context + placement deep validation.
@@ -74,6 +75,7 @@ function validateRequest30(payload, _ctx) {
     if (!isStr(it.id)) {
       findings.push(F('request.30.item.id_required', LEVELS.ERROR, `${ip}.id`, { num }));
     }
+    findings.push(...negativeFloorFindings(it.flr, `${ip}.flr`, it.deal, `${ip}.deal`, 'flr'));
     // qty is INFO/WARN — defaults to 1 per spec; surface only when it's
     // present-but-bogus, not on absent.
     if (it.qty != null && (!isNum(it.qty) || it.qty <= 0)) {

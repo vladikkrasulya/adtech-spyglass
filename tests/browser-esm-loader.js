@@ -95,14 +95,19 @@ function createBrowserEsmLoader({ realmSalt, substitutions = {}, transforms = {}
   }
 
   const built = new Map();
-  const building = new Set();
-
-  async function build(specifier) {
+  function build(specifier, ancestors = []) {
     const { clean, filePath } = canonicalRootSpecifier(specifier);
+    if (ancestors.includes(clean))
+      return Promise.reject(new Error(`browser module cycle is unsupported: ${clean}`));
     if (built.has(clean)) return built.get(clean);
-    if (building.has(clean)) throw new Error(`browser module cycle is unsupported: ${clean}`);
-    building.add(clean);
+    // Concurrent entries can legitimately share a dependency. Cache its in-flight
+    // build; only a dependency on an ancestor is a cycle.
+    const pending = buildSource(clean, filePath, [...ancestors, clean]);
+    built.set(clean, pending);
+    return pending;
+  }
 
+  async function buildSource(clean, filePath, ancestors) {
     let source;
     if (Object.hasOwn(substitutions, clean)) {
       source = substitutionSource(substitutions[clean], { specifier: clean, filePath });
@@ -119,7 +124,7 @@ function createBrowserEsmLoader({ realmSalt, substitutions = {}, transforms = {}
     for (const match of source.matchAll(ROOT_IMPORT_RE)) dependencies.add(match[3]);
     const dependencyUrls = new Map();
     for (const dependency of dependencies) {
-      dependencyUrls.set(dependency, await build(dependency));
+      dependencyUrls.set(dependency, await build(dependency, ancestors));
     }
 
     source = source.replace(
@@ -146,8 +151,6 @@ function createBrowserEsmLoader({ realmSalt, substitutions = {}, transforms = {}
       .update(source)
       .digest('hex');
     const dataUrl = `data:text/javascript;base64,${Buffer.from(source).toString('base64')}#${digest}`;
-    built.set(clean, dataUrl);
-    building.delete(clean);
     return dataUrl;
   }
 

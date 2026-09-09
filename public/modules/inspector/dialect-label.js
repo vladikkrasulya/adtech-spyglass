@@ -154,7 +154,7 @@
     _pickerAbort = new AbortController();
     const listenerSignal = _pickerAbort.signal;
 
-    let dialects = [];
+    let dialects;
     try {
       dialects = await listDialects();
     } catch (e) {

@@ -373,5 +373,8 @@
   "feed.adon3.price_invalid": "https://adon3.com/docs/xml/response",
   "feed.native.field_invalid": "https://wiki.kadam.net/en/index.php?title=OpenRTB/Feed_Integration_SSP",
   "feed.native.price_invalid": "https://wiki.kadam.net/en/index.php?title=OpenRTB/Feed_Integration_SSP",
-  "feed.native.field_missing": "https://wiki.kadam.net/en/index.php?title=OpenRTB/Feed_Integration_SSP"
+  "feed.native.field_missing": "https://wiki.kadam.net/en/index.php?title=OpenRTB/Feed_Integration_SSP",
+  "feed.inpage.field_invalid": "https://github.com/vladikkrasulya/adtech-spyglass/blob/main/specs/032-close-cleanup-inventory/spec.md",
+  "floor.negative": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#324-object-imp",
+  "internal.rule_family_failed": "https://github.com/vladikkrasulya/adtech-spyglass/blob/main/specs/decisions/ADR-018-maintenance-boundaries-and-degradation.md"
 }

@@ -33,6 +33,7 @@ import {
 // it registers an ADAPTER (below) for the Inspector-only bits (sample/dirty/
 // partner state + renderers) that the shell service delegates to when
 // Inspector happens to be mounted.
+import { createAnalysisRun } from '/modules/inspector/analysis-run.js';
 import { session } from '/core/session.js';
 import { enhanceSelectControls } from '/modules/inspector/select-control.js';
 import {
@@ -238,7 +239,7 @@ export async function mountInspector(root, ctx) {
     format(id, btn) {
       try {
         const el = $(id);
-        el.value = JSON.stringify(JSON.parse(el.value), null, 2);
+        setEditorValue(id, JSON.stringify(JSON.parse(el.value), null, 2));
         updateCharCount(id);
         updateJsonBadge(id);
         flashButtonStatus(btn, 'button.status.formatted');
@@ -299,8 +300,7 @@ export async function mountInspector(root, ctx) {
   };
 
   window.clearInput = function (id, btn) {
-    $(id).value = '';
-    updateCharCount(id);
+    setEditorValue(id, '');
     // Clear → drop the loaded-sample anchor so the next save starts fresh.
     _currentSampleId = null;
     _currentSampleMeta = null;
@@ -401,7 +401,7 @@ export async function mountInspector(root, ctx) {
   //   2. localStorage — survives reloads
   //   3. 'iab' — safe default
   const DIALECT_STORAGE_KEY = 'ortbtools_dialect_v1';
-  const KNOWN_DIALECTS = new Set(['iab', 'ext-rtb', 'inpage-push']);
+  const KNOWN_DIALECTS = new Set(window.OrtbtoolsDialectRegistry.ids);
 
   function isTempDialect(value) {
     return typeof value === 'string' && value.startsWith('temp:');
@@ -904,7 +904,10 @@ export async function mountInspector(root, ctx) {
 
       let vKey;
       let vIcon;
-      if (status === 'invalid') {
+      if (validation.completeness && validation.completeness.complete === false) {
+        vKey = 'verdict.incomplete';
+        vIcon = TRIANGLE;
+      } else if (status === 'invalid') {
         vKey = 'verdict.invalid';
         vIcon = TRIANGLE;
       } else if (errCount) {
@@ -2479,6 +2482,15 @@ export async function mountInspector(root, ctx) {
   // parameters extracted from the BidRequest JSON. Injected once into the
   // DOM between .format-bar and .tab-bar; updated on every analyze.
   function renderAnalysisStrip(req, findings) {
+    const view = window.OrtbtoolsAuctionView.buildRequestView(req, { consumer: 'ui' });
+    if (view) {
+      req = {
+        ...view.body,
+        ...view.context,
+        imp: view.imp,
+        cur: view.cur,
+      };
+    }
     if (!req || typeof req !== 'object') {
       const existing = document.getElementById('analysisStrip');
       if (existing) existing.hidden = true;
@@ -2492,7 +2504,7 @@ export async function mountInspector(root, ctx) {
     //    d) low-confidence engine fallback (prefixed with ≈)
     //    e) '?' if nothing found
     let _version = '?';
-    if (req.openrtb && req.openrtb.ver) {
+    if ((view && view.version === '3.0') || (req.openrtb && req.openrtb.ver)) {
       _version = 'oRTB 3.0';
     } else if (req.ext && req.ext.openrtb_version) {
       // Explicit self-declaration in payload — highest trust for 2.x
@@ -2910,42 +2922,23 @@ export async function mountInspector(root, ctx) {
       // ("[res…" was the first thing the user saw in the Info group). The
       // side moves into a badge; the sentence starts with its own words.
       let msg = String(f.msg || '');
-      let side = '';
       const sideTag = msg.match(/^\[(request|response)\]\s+/);
-      if (sideTag) {
-        side = sideTag[1];
-        msg = msg.slice(sideTag[0].length);
-      }
+      if (sideTag) msg = msg.slice(sideTag[0].length);
+      const locSide = f.location && f.location.primary ? f.location.primary.side : null;
+      const originSide = f.origin && f.origin.side;
+      const side =
+        locSide === 'request' || locSide === 'response'
+          ? locSide
+          : originSide === 'request' || originSide === 'response'
+            ? originSide
+            : '';
+      const authoritativeSide = side;
       const cut = msg.indexOf('. ');
       const title = cut > 0 ? msg.slice(0, cut + 1) : msg;
       const rest = cut > 0 ? msg.slice(cut + 2) : '';
       const sideBadge = side
         ? '<span class="finding-side">' + escapeHtml(t('finding.side.' + side)) + '</span>'
         : '';
-
-      // ── Which pane does this finding actually talk about? ────────────────
-      // `location.primary.side` is the authoritative answer and the only one
-      // allowed to be believed: finding-location.js derives it from the
-      // validate() call context and its header carries a HARD RULE against
-      // ever re-deriving it from an id or a path. The "[response] " prefix
-      // parsed above is the older, weaker signal — a display hack that only
-      // ever tagged the response half — so it stays as the fallback for
-      // findings that arrive without the location contract at all. That is a
-      // real population, not a theoretical one: the temp-dialect runtime
-      // (OrtbtoolsIntel.applyToFindings) pushes its own findings onto
-      // validation.findings in the browser, after the server attached
-      // locations to everything it produced.
-      //
-      // Carried on the <details> because the detail body is rendered lazily
-      // from `d.dataset` on first open, long after this closure is gone.
-      // Until it was, that body guessed the side with a regex over the
-      // finding id — precisely what the contract forbids — and got
-      // err-bid-currency-invalid wrong in the most confusing way available:
-      // its id has no `response.` prefix and its path is a bare `cur`, so the
-      // guess said "request", the panel printed the REQUEST's ["USD"], and
-      // the badge two lines above it said "response".
-      const locSide = f.location && f.location.primary ? f.location.primary.side : null;
-      const authoritativeSide = locSide === 'request' || locSide === 'response' ? locSide : side;
 
       // The `· line N` suffix is a placeholder here and filled by a post-pass
       // over the rendered list. The line can only be known by resolving the
@@ -3093,6 +3086,12 @@ export async function mountInspector(root, ctx) {
         escapeHtml(f.id || '') +
         '" data-finding-path="' +
         escapeHtml(f.path || '') +
+        '" data-finding-value-path="' +
+        escapeHtml(
+          !f.location && f.origin && typeof f.origin.path === 'string'
+            ? f.origin.path
+            : f.path || '',
+        ) +
         '" data-finding-level="' +
         escapeHtml(lvl || '') +
         '" data-finding-side="' +
@@ -3196,7 +3195,7 @@ export async function mountInspector(root, ctx) {
     for (const chip of root.querySelectorAll('.finding-path')) {
       const slot = chip.querySelector('.finding-line');
       if (!slot) continue;
-      let loc = null;
+      let loc;
       try {
         loc = JSON.parse(chip.getAttribute('data-loc') || 'null');
       } catch (_e) {
@@ -3938,15 +3937,13 @@ export async function mountInspector(root, ctx) {
     // 031: a 3.0 response nests its seatbid under the envelope. Without this
     // unwrap a multi-bid 3.0 response enumerated ZERO candidates and offered
     // no selector at all, while the resolver below could resolve them.
-    const envelope = unwrapResponseEnvelope(res);
-    if (envelope && typeof envelope === 'object' && Array.isArray(envelope.seatbid)) {
-      const out = [];
-      envelope.seatbid.forEach((seat, seatIndex) => {
-        (Array.isArray(seat && seat.bid) ? seat.bid : []).forEach((bid, bidIndex) => {
-          out.push({ seatIndex, bidIndex, marker: (bid && bid.crid) || (bid && bid.id) || '' });
-        });
-      });
-      return out;
+    const view = window.OrtbtoolsAuctionView.buildResponseView(res, { consumer: 'ui' });
+    if (view) {
+      return window.OrtbtoolsAuctionView.flattenBids(view).map(({ raw, sNum, bNum }) => ({
+        seatIndex: sNum - 1,
+        bidIndex: bNum - 1,
+        marker: (raw && raw.crid) || (raw && raw.id) || '',
+      }));
     }
     const materials = Array.isArray(res)
       ? res
@@ -4015,8 +4012,13 @@ export async function mountInspector(root, ctx) {
    * }}
    */
   function resolveCreativeAt(req, res, seatIndex, bidIndex) {
-    // DEF-151: a 3.0 response nests everything under `openrtb.response`.
-    const envelope = unwrapResponseEnvelope(res);
+    const responseView = window.OrtbtoolsAuctionView.buildResponseView(res, { consumer: 'ui' });
+    const descriptor =
+      responseView &&
+      window.OrtbtoolsAuctionView.flattenBids(responseView).find(
+        (entry) => entry.sNum - 1 === seatIndex && entry.bNum - 1 === bidIndex,
+      );
+    const envelope = responseView ? responseView.body : unwrapResponseEnvelope(res);
     const seatbidArr =
       envelope && typeof envelope === 'object' && Array.isArray(envelope.seatbid)
         ? envelope.seatbid
@@ -4029,7 +4031,9 @@ export async function mountInspector(root, ctx) {
     let identity = null;
     if (seatbidArr) {
       seat = seatbidArr[seatIndex] || null;
-      bid = (seat && Array.isArray(seat.bid) && seat.bid[bidIndex]) || {};
+      bid = descriptor
+        ? descriptor.raw
+        : (seat && Array.isArray(seat.bid) && seat.bid[bidIndex]) || {};
       const adcomNative = adcomNativeFrom(bid);
       if (bid && bid.native && Array.isArray(bid.native.assets)) {
         adm = JSON.stringify({ native: bid.native });
@@ -4092,11 +4096,20 @@ export async function mountInspector(root, ctx) {
         }
       }
     }
+    const requestView = window.OrtbtoolsAuctionView.buildRequestView(req, { consumer: 'ui' });
+    const projectedBid = descriptor ? descriptor.bid : bid;
+    const impressions = requestView ? requestView.imp : [];
+    const matchingImp =
+      projectedBid.impid != null
+        ? impressions.find((imp) => imp && String(imp.id) === String(projectedBid.impid))
+        : impressions.length === 1
+          ? impressions[0]
+          : null;
     let previewDims = null;
-    if (bid && bid.w && bid.h) {
-      previewDims = { w: Number(bid.w), h: Number(bid.h) };
-    } else if (req && req.imp && req.imp[0] && req.imp[0].banner) {
-      const b = req.imp[0].banner;
+    if (projectedBid.w && projectedBid.h) {
+      previewDims = { w: Number(projectedBid.w), h: Number(projectedBid.h) };
+    } else if (matchingImp && matchingImp.banner) {
+      const b = matchingImp.banner;
       if (b.w && b.h) previewDims = { w: Number(b.w), h: Number(b.h) };
       else if (Array.isArray(b.format) && b.format[0] && b.format[0].w && b.format[0].h) {
         previewDims = { w: Number(b.format[0].w), h: Number(b.format[0].h) };
@@ -4480,29 +4493,17 @@ export async function mountInspector(root, ctx) {
     toast(t('toast.history_cleared'), 'success');
   };
 
-  // Monotonic counter so a slow analyze can't render its findings on top
-  // of a faster one fired afterward. Each call increments + captures.
-  // Stale completions are dropped silently.
-  let _analyzeReqSeq = 0;
-  // AbortController for the in-flight analyze fetch. Pre-fix the seq
-  // counter (`_analyzeReqSeq`) only prevented STALE responses from
-  // overwriting the UI — the actual fetch still ran to completion,
-  // wasting server CPU and the user's bandwidth on results we'd discard.
-  // With AbortController, mashing "analyze" or fast-typing into the
-  // textareas cancels the previous fetch on the wire.
-  let _analyzeAbort = null;
-  // Re-entrancy: on unmount, cancel any in-flight analyze. Its seq guard
-  // (`_analyzeReqSeq`) is per-mount, so without this the old fetch would resolve
-  // after a remount, pass its (stale-but-unbumped) seq check, and paint the
-  // previous payload's findings into the NEW mount via $()/getElementById. The
-  // render paths below also bail on ctx.signal.aborted as a belt-and-braces guard.
-  ctx.addCleanup(() => {
-    if (_analyzeAbort) {
-      try {
-        _analyzeAbort.abort();
-      } catch (_) {
-        /* idempotent */
-      }
+  const analysisButton = $('analyzeBtn');
+  const analysisButtonLabel = analysisButton ? analysisButton.innerHTML : '';
+  const analysisRun = createAnalysisRun(ctx.signal, (state) => {
+    root.dataset.analysisState = state;
+    root.setAttribute('aria-busy', String(state === 'pending'));
+    if (analysisButton) {
+      analysisButton.disabled = state === 'pending';
+      analysisButton.innerHTML =
+        state === 'pending'
+          ? '<span class="spinner"></span> ' + t('button.status.analyzing')
+          : analysisButtonLabel;
     }
   });
 
@@ -4657,6 +4658,11 @@ export async function mountInspector(root, ctx) {
    * rail ticks point at whatever now happens to sit at those offsets.
    */
   function invalidateIfPayloadChanged() {
+    if (analysisRun.pending || analysisRun.state === 'error') {
+      _analyzedSnapshot = null;
+      clearResultsForEmpty();
+      return;
+    }
     if (!_analyzedSnapshot) return;
     const req = ($('bidReq') && $('bidReq').value) || '';
     const res = ($('bidRes') && $('bidRes').value) || '';
@@ -4685,7 +4691,7 @@ export async function mountInspector(root, ctx) {
    * its own. Routing them through here means a new loader cannot forget, and
    * the next one added inherits the invalidation for free.
    */
-  function setEditorValue(id, text) {
+  function setEditorValue(id, text, analysisFormatting = false) {
     const el = $(id);
     if (!el) return;
     // Any programmatic write starts new lexical provenance for that pane —
@@ -4701,7 +4707,7 @@ export async function mountInspector(root, ctx) {
     el.value = text == null ? '' : String(text);
     updateCharCount(id);
     renderGutter(id);
-    invalidateIfPayloadChanged();
+    if (!analysisFormatting) invalidateIfPayloadChanged();
   }
 
   /**
@@ -4717,6 +4723,8 @@ export async function mountInspector(root, ctx) {
    * losing either side.
    */
   function clearResultsForEmpty() {
+    analysisRun.invalidate();
+    _analyzedSnapshot = null;
     capturePristinePanels();
     for (const id of PRISTINE_PANEL_IDS) {
       const el = $(id);
@@ -4784,6 +4792,7 @@ export async function mountInspector(root, ctx) {
     if (stText) stText.textContent = reason;
     paint('tValidation', errHint);
     paint('tCross', errHint);
+    paint('tBehavior', errHint);
     paint(
       'slotGrid',
       '<div class="empty-hint" style="grid-column:1/-1;color:var(--danger)">' +
@@ -4804,32 +4813,7 @@ export async function mountInspector(root, ctx) {
     // callers before the module finishes mounting. Every entry point must
     // still wait for the authenticated probe source, or an early external
     // call can create an unmeasured allow-scripts iframe.
-    await loadProbeSource();
-    const myReqId = ++_analyzeReqSeq;
-    // Snapshot the untouched panels before this analysis writes over them —
-    // this is the only path that paints results, so here is the last moment
-    // the page still shows what it shipped with. Idempotent after the first
-    // call; Clear relies on it having happened.
-    capturePristinePanels();
-    clearMacros();
-    // Stage-1: drop any prior finding→source jump at the START of every analyze.
-    // A failed/aborted analyze must not leave a stale highlight pointing at the
-    // previous payload; onAnalyzed() re-arms navigation only on success.
-    if (window.OrtbtoolsSourceNav) {
-      try {
-        window.OrtbtoolsSourceNav.resetNavigation();
-      } catch (_e) {
-        /* navigator is optional */
-      }
-    }
-    if (_analyzeAbort) {
-      try {
-        _analyzeAbort.abort();
-      } catch (_) {
-        /* idempotent */
-      }
-    }
-    _analyzeAbort = typeof AbortController === 'function' ? new AbortController() : null;
+    clearResultsForEmpty();
     const reqVal = fromHist ? fromHist.req : $('bidReq').value;
     // If the pane still holds our own pretty-print, the bytes the operator
     // pasted are the ones we stashed before rewriting it. See the pretty-print
@@ -4855,18 +4839,17 @@ export async function mountInspector(root, ctx) {
       return;
     }
 
-    const analyzeBtn = $('analyzeBtn');
-    // Capture the locale-appropriate label BEFORE swapping for the spinner
-    // so the finally block can restore it. The pre-fix code restored a
-    // hardcoded English string ("analyze stream") which left the button
-    // mistranslated until the next page load.
-    const analyzeBtnOriginal = analyzeBtn.innerHTML;
-    if (!fromHist) {
-      analyzeBtn.innerHTML = '<span class="spinner"></span> ' + t('button.status.analyzing');
-      analyzeBtn.disabled = true;
-    }
-
+    const run = analysisRun.start({
+      req: reqVal,
+      res: resVal,
+      rawReq: rawReqBytes,
+      rawRes: rawResBytes,
+    });
+    if (!run) return;
+    let outcome = 'error';
     try {
+      await loadProbeSource();
+      if (!analysisRun.isCurrent(run)) return;
       // bidReq accepts two shapes: oRTB JSON (parsed to object) OR a URL-
       // style legacy feed request string (decoded
       // server-side via packages/core/decoders/request/). If JSON.parse
@@ -4906,7 +4889,7 @@ export async function mountInspector(root, ctx) {
           // holds our pretty-print, and stashing that would quietly discard the
           // operator's bytes on the second click instead of the first.
           _rawBeforePretty = rawReqBytes;
-          setEditorValue('bidReq', JSON.stringify(req, null, 2));
+          setEditorValue('bidReq', JSON.stringify(req, null, 2), true);
           _prettyPrintedReq = $('bidReq').value;
         }
         if (resVal) {
@@ -4915,7 +4898,7 @@ export async function mountInspector(root, ctx) {
           // remember the text it replaced or the second analyse reports less
           // than the first.
           _rawBeforePrettyRes = rawResBytes;
-          setEditorValue('bidRes', JSON.stringify(res, null, 2));
+          setEditorValue('bidRes', JSON.stringify(res, null, 2), true);
           _prettyPrintedRes = $('bidRes').value;
         }
         if (reqVal) updateCharCount('bidReq');
@@ -4999,13 +4982,17 @@ export async function mountInspector(root, ctx) {
       paintCardSummary('cardRes', (res && res.id) || '—');
 
       // Inspector tab — slot cards
-      const imps = req.imp || [];
+      const requestView = window.OrtbtoolsAuctionView.buildRequestView(req, { consumer: 'ui' });
+      const imps = requestView ? requestView.imp : [];
       const slotGrid = $('slotGrid');
       // Currency for a slot's bidfloor. req.cur is only the *default* and the
       // allowed set; imp.bidfloorcur overrides it per impression (oRTB §3.2.4).
       // Reading req.cur[0] for every card labelled an imp that overrode it
       // with a currency that impression is not priced in.
-      const curList = Array.isArray(req.cur) ? req.cur.filter((x) => typeof x === 'string') : [];
+      const curList =
+        requestView && Array.isArray(requestView.cur)
+          ? requestView.cur.filter((x) => typeof x === 'string')
+          : [];
       const reqCur0 = curList.length ? curList[0] : 'USD';
       const impCur = (i) => (typeof i.bidfloorcur === 'string' && i.bidfloorcur.trim()) || reqCur0;
       // Banner sizes: prefer w×h if both set, otherwise pull from format[] (up
@@ -5050,7 +5037,8 @@ export async function mountInspector(root, ctx) {
       };
       slotGrid.innerHTML = imps.length
         ? imps
-            .map((i, idx) => {
+            .map((rawImp, idx) => {
+              const i = rawImp && typeof rawImp === 'object' ? rawImp : {};
               const types = getSlotType(i);
               const typeHtml =
                 '<div class="slot-type-row">' +
@@ -5163,17 +5151,28 @@ export async function mountInspector(root, ctx) {
           bidResRaw: rawResBytes,
         };
         if (expectedVersion) body.opts = { expectedVersion };
-        const r = await fetch(analyzeUrl(), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-          signal: _analyzeAbort ? _analyzeAbort.signal : undefined,
-        });
+        let r;
+        try {
+          r = await fetch(analyzeUrl(), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            signal: run.signal,
+          });
+        } catch (_e) {
+          if (!analysisRun.isCurrent(run)) return;
+          // A rejected transport is an expected operational failure. Keep it
+          // separate from parse/render exceptions, which retain diagnostics.
+          const reason = t('status.backend_offline');
+          toast(t('toast.error_generic', { error: reason }), 'error');
+          clearResultsForError(reason);
+          return;
+        }
         const j = await r.json().catch(() => ({}));
         // Drop stale: a newer analyze started while we were waiting, OR the
         // module unmounted (ctx.signal.aborted) — don't overwrite the UI with
         // our (outdated) findings, and never paint into a subsequent remount.
-        if (myReqId !== _analyzeReqSeq || ctx.signal.aborted) return;
+        if (!analysisRun.isCurrent(run)) return;
         // Surface server-side errors (4xx/5xx) explicitly. Pre-v0.20.0 we
         // only handled NETWORK failures via the catch below — structured
         // server errors (rate-limit, empty-payload, invalid-JSON) returned
@@ -5185,7 +5184,13 @@ export async function mountInspector(root, ctx) {
         // stopped, silently, with whatever was on screen left standing. The
         // guard is now exhaustive: anything that is not an explicit success is
         // handled here, and the branch below runs only on an explicit one.
-        if (!r.ok || j.success !== true) {
+        if (
+          !r.ok ||
+          !j ||
+          j.success !== true ||
+          !j.validation ||
+          !Array.isArray(j.validation.findings)
+        ) {
           const code = j && j.code;
           const errMsg =
             (j && j.error) || (r.ok ? t('toast.unreadable_response') : 'HTTP ' + r.status);
@@ -5212,7 +5217,44 @@ export async function mountInspector(root, ctx) {
             window.ortbtoolsTrack('analyze_success');
           }
           validation = j.validation;
+          // Located side results carry the original messages. Keep the legacy
+          // aggregate's status/metadata, but render these findings when supplied.
+          const sideResults =
+            j.sides &&
+            ['request', 'response']
+              .map((side) => ({ side, result: j.sides[side] }))
+              .filter(({ result }) => result);
+          if (
+            sideResults &&
+            sideResults.length &&
+            sideResults.every(({ result }) => Array.isArray(result.findings))
+          ) {
+            validation = {
+              ...validation,
+              findings: sideResults.flatMap(({ side, result }) =>
+                result.findings.map((finding) => {
+                  const locatedSide =
+                    finding.location && finding.location.primary && finding.location.primary.side;
+                  return locatedSide === 'request' || locatedSide === 'response'
+                    ? finding
+                    : { ...finding, origin: { ...finding.origin, side } };
+                }),
+              ),
+            };
+          }
           cross = j.crosscheck;
+          if (
+            window.OrtbtoolsIntel &&
+            typeof window.OrtbtoolsIntel.applyToFindings === 'function' &&
+            isTempDialect(activeDialect())
+          ) {
+            try {
+              await window.OrtbtoolsIntel.applyToFindings({ req, res }, validation);
+            } catch (_e) {
+              /* Optional custom rules do not discard the server result. */
+            }
+            if (!analysisRun.isCurrent(run)) return;
+          }
           // Remember what the decoder had to change, so Copy can hand back the
           // URL that was actually analysed instead of the one that wouldn't
           // parse. Cleared on a clean paste so a later Copy can't hand out a
@@ -5254,24 +5296,6 @@ export async function mountInspector(root, ctx) {
           // produced errors. Idempotent on repeated analyses; reset by the
           // bidReq/bidRes input handlers below when the user starts editing.
           setTabStatus(validation);
-          // Phase 7b — apply active temporary dialect (if any) to the
-          // server's findings BEFORE rendering. The temp-dialect runtime
-          // walks (req, res) against the spec, emits findings in engine
-          // shape, pushes them onto validation.findings, and re-rolls the
-          // status if any new ERROR appeared. No-op when no temp dialect
-          // is active.
-          if (
-            window.OrtbtoolsIntel &&
-            typeof window.OrtbtoolsIntel.applyToFindings === 'function' &&
-            isTempDialect(activeDialect())
-          ) {
-            try {
-              await window.OrtbtoolsIntel.applyToFindings({ req, res }, validation);
-            } catch (_e) {
-              /* defensive — never block the analyze flow */
-            }
-          }
-
           // Stash latest analysis for the JSON-bundle export (export.js)
           // AND for finding-detail panel value extraction. `req`/`res` are
           // the parsed inputs, kept here so the panel can resolve a
@@ -5280,6 +5304,7 @@ export async function mountInspector(root, ctx) {
             validation: validation,
             crosscheck: cross,
             meta: j.meta || null,
+            sides: j.sides || null,
             req: req,
             res: res,
             at: new Date().toISOString(),
@@ -5319,20 +5344,14 @@ export async function mountInspector(root, ctx) {
           }
         }
       } catch (e) {
-        // Module unmounted while the analyze was in flight (incl. our own abort
-        // on unmount) — bail before painting "backend offline" (and the
-        // validation-tab render below) into a possible remount.
-        if (ctx.signal.aborted) return;
-        console.warn('Backend unavailable:', e);
-        $('stEntity').innerText = entity + ' · ' + t('status.local');
-        $('stEntity').dataset.status = ''; // backend unreachable — no canonical status
-        $('statusDot').className = 'status-dot error';
-        $('statusText').textContent = t('status.backend_offline');
+        if (!analysisRun.isCurrent(run) || (e && e.name === 'AbortError')) return;
+        throw e;
       }
+      if (!analysisRun.isCurrent(run)) return;
 
       // Validation tab — new findings model: { id, level, path, params, specRef, msg }
       const valEl = $('tValidation');
-      const findings = validation && (validation.findings || validation.errors); // graceful migration
+      const findings = validation && validation.findings;
       // Detected oRTB version pill (Phase 2). Renders whenever version data
       // is present — including the all-clean branch — so the user always
       // sees what spec version was assumed for the validation.
@@ -5385,6 +5404,17 @@ export async function mountInspector(root, ctx) {
         // URL-repair notice stays: it is the only part that says something
         // nothing else does.
         renderSeverityTabs(valEl, findings, repairsHtml);
+      } else if (
+        validation &&
+        validation.completeness &&
+        validation.completeness.complete === false
+      ) {
+        setTabBadge('validationBadge', { text: '!', severity: 'warning' });
+        valEl.innerHTML =
+          repairsHtml +
+          '<div class="empty-hint" role="status">' +
+          escapeHtml(t('verdict.incomplete')) +
+          '</div>';
       } else if (validation) {
         setTabBadge('validationBadge', { text: '✓', severity: 'ok' });
         // Clean state — still surface the detected oRTB version so the user
@@ -5465,6 +5495,8 @@ export async function mountInspector(root, ctx) {
         setTabBadge('crossBadge', { text: '—', severity: null });
       }
 
+      outcome = 'success';
+
       // History — push to the in-memory ring + persist to localStorage so
       // it survives reload. Drop overflow past HISTORY_MAX to keep the
       // serialised state bounded.
@@ -5495,7 +5527,12 @@ export async function mountInspector(root, ctx) {
         if (resVal)
           toast(
             t('toast.analysis_complete', {
-              status: validation ? humanStatus(validation.status) : t('status.local'),
+              status:
+                validation && validation.completeness && validation.completeness.complete === false
+                  ? t('status.incomplete')
+                  : validation
+                    ? humanStatus(validation.status)
+                    : t('status.local'),
             }),
             'success',
           );
@@ -5517,7 +5554,7 @@ export async function mountInspector(root, ctx) {
       // AbortError fires when a newer analyze starts before this one
       // returns. That's expected behavior — we cancelled it on purpose;
       // no toast, no console noise.
-      if (e && e.name === 'AbortError') {
+      if (!analysisRun.isCurrent(run) || (e && e.name === 'AbortError')) {
         return;
       }
       toast(t('toast.error_generic', { error: e.message }), 'error');
@@ -5529,10 +5566,7 @@ export async function mountInspector(root, ctx) {
       // with the reason in their place, unless this mount is already gone.
       if (!ctx.signal.aborted) clearResultsForError(e.message);
     } finally {
-      if (!fromHist) {
-        analyzeBtn.innerHTML = analyzeBtnOriginal;
-        analyzeBtn.disabled = false;
-      }
+      analysisRun.finish(run, outcome);
     }
   };
   // Expose history to inline onclick handlers
@@ -5954,7 +5988,7 @@ export async function mountInspector(root, ctx) {
     toast(t('toast.template_inserted_res'), 'success');
   }
   function pasteString(target, str) {
-    $(target).value = str;
+    setEditorValue(target, str);
     updateCharCount(target);
     toast(t('toast.template_inserted'), 'success');
   }
@@ -6445,9 +6479,9 @@ export async function mountInspector(root, ctx) {
   // correctly read "response". A panel disagreeing with itself is worse than a
   // panel admitting it does not know.
   //
-  // The heuristic survives below for findings that carry no location contract
-  // — browser-side temp-dialect findings, injected after the server attached
-  // locations to everything else. It is an explicit guess, so it keeps its
+  // Older findings without structural origin retain their compatibility
+  // heuristic. New temporary findings declare their origin explicitly.
+  // The historical heuristic keeps its
   // cross-pane fallback: with no declared side, a value found somewhere is
   // still better than nothing.
   function resolveFindingValue(path, findingId, side) {
@@ -6548,7 +6582,8 @@ export async function mountInspector(root, ctx) {
     const sev = severityCopy(level);
     let valueBlock;
     if (path) {
-      const r = resolveFindingValue(path, id, side);
+      const valuePath = typeof ds.findingValuePath === 'string' ? ds.findingValuePath : path;
+      const r = resolveFindingValue(valuePath, id, side);
       if (r.found) {
         const v = r.value;
         const formatted = typeof v === 'object' ? JSON.stringify(v, null, 2) : JSON.stringify(v);
@@ -6633,8 +6668,10 @@ export async function mountInspector(root, ctx) {
     if (!validation || typeof document === 'undefined') return;
     const errs = (validation.findings || []).filter((f) => f.level === 'error').length;
     const warns = (validation.findings || []).filter((f) => f.level === 'warning').length;
-    let badge = '';
-    if (validation.status === 'invalid') badge = '⚠ invalid';
+    let badge;
+    if (validation.completeness && validation.completeness.complete === false)
+      badge = '! ' + t('status.incomplete');
+    else if (validation.status === 'invalid') badge = '⚠ invalid';
     else if (errs) badge = '⚠ ' + errs + ' error' + (errs === 1 ? '' : 's');
     else if (warns) badge = '! ' + warns + ' warn' + (warns === 1 ? '' : 's');
     else badge = '✓ clean';
@@ -6964,8 +7001,8 @@ export async function mountInspector(root, ctx) {
     btn.textContent = t('onboarding.banner.dismiss');
     banner.append(text, btn);
 
-    const header = root.querySelector('.app-header');
-    if (header) header.insertAdjacentElement('afterend', banner);
+    const anchor = root.querySelector('[data-onboarding-anchor]');
+    if (anchor) anchor.append(banner);
   }
 
   async function loadDemoSample(type) {

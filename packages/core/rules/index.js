@@ -1,6 +1,6 @@
 'use strict';
 
-const logger = require('../logger');
+const { makeFinding, LEVELS } = require('../findings');
 
 /**
  * Plugin registry for validator rules.
@@ -25,7 +25,7 @@ const PLUGINS = [
   //    because the bid still works, just with coarser targeting.
   require('./client-hints'),
 
-  // 2. imp.secure — checks each impression's `secure` flag. Warns when
+  // 2. imp.secure — checks each impression's `secure` flag. INFO when
   //    missing/0 (HTTPS publishers risk mixed-content blocks); errors
   //    when the value isn't 0 or 1 (oRTB §3.2.4 violation).
   require('./imp-secure'),
@@ -57,9 +57,9 @@ const PLUGINS = [
   //    uids per entry, plus id/atype per UID record (oRTB §3.2.20).
   require('./eids'),
 
-  // 8. AdPod — validates AdPod fields on imp.video/imp.audio: podid/
-  //    podseq must appear together, podseq >= 0, minadlen <= maxadlen
-  //    (oRTB 2.6 §3.2.7 / §3.2.8).
+  // 8. AdPod — validates duration bounds, positive poddur/maxseq,
+  //    podseq in {-1, 0, 1}, podid and rqddurs shape/conflicts
+  //    (oRTB 2.6 §3.2.7 / §3.2.8); podid/podseq do not require pairing.
   require('./adpod'),
 
   // 9. Currency — ISO-4217 format validation on req.cur (request-side) and
@@ -67,7 +67,7 @@ const PLUGINS = [
   //    currency not in request allowed set) is gated on ctx.req presence.
   require('./currency'),
 
-  // 10. Price-floor — validates bid.price > 0 and bid.price >= imp.bidfloor
+  // 10. Price-floor — validates bid.price >= 0 and bid.price >= effective floor
   //     when the paired request is available via ctx.req.
   require('./price-floor'),
 
@@ -99,17 +99,16 @@ function runRulePlugins(payload, type, ctx) {
     if (Array.isArray(plugin.appliesTo) && !plugin.appliesTo.includes(type)) {
       continue;
     }
-    if (typeof plugin.applies === 'function' && !plugin.applies(payload, ctxWithType)) {
-      continue;
-    }
     try {
+      if (typeof plugin.applies === 'function' && !plugin.applies(payload, ctxWithType)) continue;
       const out = /** @type {(p: any, c: any) => any[]} */ (plugin.validate)(payload, ctxWithType);
       if (Array.isArray(out) && out.length) {
         findings.push(...out);
       }
-    } catch (e) {
-      // A bug in one plugin must NOT break validation. Log + skip.
-      logger.error({ pluginId: plugin.id, err: e }, '[rules] plugin threw');
+    } catch {
+      const family = `plugin.${plugin.id}`;
+      findings.push(makeFinding('internal.rule_family_failed', LEVELS.WARNING, '', { family }));
+      if (ctx && typeof ctx.onFamilyFailure === 'function') ctx.onFamilyFailure(family);
     }
   }
   return findings;

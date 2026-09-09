@@ -109,7 +109,7 @@ function decodeRequest(text) {
   }
 
   for (const dec of DECODERS) {
-    let claimed = false;
+    let claimed;
     try {
       // Decoders see the repaired string, never the raw paste: it is what
       // `parsedUrl` was built from, so `canonical.url` and `canonical._raw`

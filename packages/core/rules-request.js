@@ -1,4 +1,5 @@
 'use strict';
+const { negativeFloorFindings } = require('./floor-values');
 
 /**
  * IAB OpenRTB 2.x BidRequest validation rules. Pure spec — no vendor-dialect (or any
@@ -585,6 +586,15 @@ function validateImp(imp, i, dialect) {
   if (imp.bidfloor != null && !isNum(imp.bidfloor)) {
     findings.push(F('imp.bidfloor_invalid', LEVELS.WARNING, `${p}.bidfloor`, { num }));
   }
+  findings.push(
+    ...negativeFloorFindings(
+      imp.bidfloor,
+      `${p}.bidfloor`,
+      imp.pmp && imp.pmp.deals,
+      `${p}.pmp.deals`,
+      'bidfloor',
+    ),
+  );
   // bidfloor without bidfloorcur — currency defaults vary by exchange. Per
   // oRTB §3.2.4, always pair them. Only fires for positive numeric floors.
   if (isNum(imp.bidfloor) && imp.bidfloor > 0) {

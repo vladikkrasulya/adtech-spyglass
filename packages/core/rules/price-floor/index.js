@@ -1,4 +1,5 @@
 'use strict';
+const { classifyPrice } = require('../../price-value');
 
 /**
  * Bid price validation — price >= 0 and price >= matching imp.bidfloor.
@@ -113,6 +114,7 @@ function resolveDealFloor(bid, imp) {
         floor: deal.bidfloor,
         floorCur: normCur(deal.bidfloorcur, SPEC_DEFAULT_CUR),
         source: 'deal',
+        ...(deal.bidfloor < 0 ? { unusable: true } : {}),
       };
     }
   }
@@ -182,7 +184,7 @@ function validate(payload, ctx) {
       const path = `seatbid[${si}].bid[${bi}]`;
 
       // price must be a non-negative finite number (>= 0 is valid per IAB §4.3.1)
-      if (typeof bid.price !== 'number' || !Number.isFinite(bid.price) || bid.price < 0) {
+      if (!classifyPrice(bid.price).nonNegative) {
         findings.push(
           F('err-bid-price-negative', LEVELS.ERROR, path + '.price', {
             val: String(bid.price ?? 'missing'),
@@ -199,7 +201,7 @@ function validate(payload, ctx) {
         if (!imp) return;
 
         const floorInfo = resolveFloor(bid, imp);
-        if (!floorInfo) return;
+        if (!floorInfo || floorInfo.unusable) return;
 
         const { floor, floorCur } = floorInfo;
 

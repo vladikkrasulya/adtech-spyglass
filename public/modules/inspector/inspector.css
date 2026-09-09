@@ -72,8 +72,12 @@ body {
     'footer';
   height: 100vh;
 }
-#verifyBanner {
+.inspector-banners {
   grid-area: banner;
+  min-width: 0;
+}
+#verifyBanner {
+  flex-wrap: wrap;
 }
 .workbar {
   grid-area: header;
@@ -772,6 +776,7 @@ body {
 
 /* First-visit onboarding — subtle banner + pulse on the example menu. */
 .kt-onboarding-banner {
+  flex-wrap: wrap;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1017,13 +1022,11 @@ body {
 .preview-safe {
   position: relative;
 }
-.preview-safe iframe,
-.preview-safe img {
+.preview-safe iframe {
   filter: blur(22px);
   transition: filter 200ms ease;
 }
-.preview-safe.is-revealed iframe,
-.preview-safe.is-revealed img {
+.preview-safe.is-revealed iframe {
   filter: none;
 }
 /* Never offer to reveal a creative that is not there. The overlay covers the
@@ -2084,7 +2087,8 @@ body:not(.sb-left-hidden) .sidebar-left {
   background: rgba(220, 38, 38, 0.07);
   color: var(--danger);
 }
-.verdict[data-verdict='risky'] .verdict-badge {
+.verdict[data-verdict='risky'] .verdict-badge,
+.verdict[data-verdict='incomplete'] .verdict-badge {
   background: rgba(245, 158, 11, 0.09);
   color: var(--warning-text, #b45309);
 }
@@ -2096,7 +2100,8 @@ body:not(.sb-left-hidden) .sidebar-left {
 [data-theme='dark'] .verdict[data-verdict='invalid'] .verdict-badge {
   background: rgba(248, 113, 113, 0.1);
 }
-[data-theme='dark'] .verdict[data-verdict='risky'] .verdict-badge {
+[data-theme='dark'] .verdict[data-verdict='risky'] .verdict-badge,
+[data-theme='dark'] .verdict[data-verdict='incomplete'] .verdict-badge {
   background: rgba(252, 211, 77, 0.1);
 }
 [data-theme='dark'] .verdict[data-verdict='clean'] .verdict-badge {
@@ -2173,7 +2178,7 @@ body:not(.sb-left-hidden) .sidebar-left {
 [data-embed='1'] .app-footer,
 [data-embed='1'] .input-section,
 [data-embed='1'] .sidebar-left,
-[data-embed='1'] #verifyBanner,
+[data-embed='1'] .inspector-banners,
 [data-embed='1'] .toast-container,
 [data-embed='1'] .kt-theme-toggle,
 [data-embed='1'] .format-bar-actions {

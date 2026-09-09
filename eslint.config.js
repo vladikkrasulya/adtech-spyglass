@@ -37,10 +37,8 @@ module.exports = [
       'no-var': 'error',
       'no-prototype-builtins': 'off',
       'no-empty': ['error', { allowEmptyCatch: true }],
-      // ESLint 10 promoted these to recommended; keep pre-v10 behavior until
-      // a dedicated cleanup PR addresses the 11 existing findings.
-      'preserve-caught-error': 'off',
-      'no-useless-assignment': 'off',
+      'preserve-caught-error': 'error',
+      'no-useless-assignment': 'error',
     },
   },
 

@@ -41,9 +41,36 @@ function findingSide(f) {
   return (
     f.side ||
     f.location?.primary?.side ||
+    f.origin?.side ||
     (String(f.msg || '').startsWith('[response] ') ? 'response' : 'request')
   );
 }
+test('browser evidence: root findings retain structured side when messages have no prefix or contradict it', () => {
+  // This is the actual response metadata finding from the paired audio case
+  // that caught the adapter drift. A root-level finding has no source pointer;
+  // the current UI preserves its side through origin instead of changing msg.
+  const specimen = require('./corpus/pairs/audio/audio-inapp-26-podcast-companion.json');
+  const validation = require('../packages/core').validate(specimen.response, { locale: 'en' });
+  const finding = validation.findings.find((item) => item.id === 'version.single_marker');
+  assert.ok(finding && finding.path === '', 'the fixture must emit the root finding');
+  const responseFinding = { ...finding, location: { primary: null }, origin: { side: 'response' } };
+  assert.equal(findingSide(responseFinding), 'response');
+  assert.equal(findingSide({ ...responseFinding, msg: '[request] Cosmetic text.' }), 'response');
+  assert.equal(
+    findingSide({
+      ...responseFinding,
+      origin: { side: 'request' },
+      msg: '[response] Cosmetic text.',
+    }),
+    'request',
+  );
+  assert.equal(
+    findingSide({ ...responseFinding, location: { primary: { side: 'request' } } }),
+    'request',
+  );
+  assert.equal(findingSide({ msg: '[response] Legacy text.' }), 'response');
+});
+
 function rollup(findings) {
   return findings.some((f) => f.level === 'error')
     ? 'errors'

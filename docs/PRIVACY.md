@@ -650,6 +650,14 @@ current encrypted web flow is treated as high severity and triaged immediately.
 
 Selected entries from CHANGELOG.md:
 
+**v1.22.0** — An individual logout now reports a session-storage deletion failure
+instead of silently claiming success. Local session and encryption state and the
+browser cookie are cleared even when deletion fails. An undeleted server row can
+still be reloaded after a restart; this change makes that partial failure visible
+and does not claim guaranteed durable revocation during a storage failure. The
+existing bounded server-error notification carries the safe failure code, not
+the token or database exception. No new payload retention or transmission is added.
+
 **v1.11.0** — The server gained an outbound call: `lib/fx.js` fetches a USD exchange-rate
 table every 6 h so the Inspector can show a non-USD floor's USD equivalent. It is listed
 here because adding any third-party call to a tool that promises not to forward payloads

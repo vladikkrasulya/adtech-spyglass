@@ -40,6 +40,29 @@ function isNativeFeedMaterial(value) {
   );
 }
 
+// In-page is a material-level declaration. Vendor signatures keep precedence;
+// marker presence also lets malformed supplied fields reach their own validator.
+function isInpageFeedMaterial(value) {
+  return (
+    isObj(value) &&
+    !isNativeFeedMaterial(value) &&
+    !['imp', 'seatbid', 'openrtb'].some((key) => Object.hasOwn(value, key)) &&
+    isObj(value.ext) &&
+    (value.ext.format === 'inpage' || !!value.ext.widget_id || !!value.ext.zone_id) &&
+    (!detectSingleBidShape(value) || detectSingleBidShape(value) === 'push')
+  );
+}
+function validateInpageMaterial(value, prefix, findings) {
+  validatePushMaterial(value, 1, prefix, findings);
+  const path = (key) => (prefix ? `${prefix}.${key}` : key);
+  for (const field of ['impurl', 'advertiser']) {
+    if (!Object.hasOwn(value, field)) continue;
+    const valid = field === 'impurl' ? isHttpTarget(value[field]) : isStr(value[field]);
+    if (!valid)
+      findings.push(F('feed.inpage.field_invalid', LEVELS.WARNING, path(field), { field }));
+  }
+}
+
 function isHttpTarget(value) {
   if (typeof value !== 'string' || !value.trim()) return false;
   try {
@@ -95,6 +118,12 @@ function validateFeedResponse(arrOrObj) {
   // Push-materials feed (array of materials)
   if (Array.isArray(arrOrObj)) {
     return validatePushMaterialsFeed(arrOrObj);
+  }
+
+  if (isInpageFeedMaterial(arrOrObj)) {
+    const findings = [];
+    validateInpageMaterial(arrOrObj, '', findings);
+    return { type: 'In-Page-Materials Feed Response (single)', findings };
   }
 
   if (isNativeFeedMaterial(arrOrObj)) {
@@ -279,6 +308,8 @@ function validatePushMaterialsFeed(arr) {
     // generic priced+clickable material stays on the push-material path.
     if (isObj(m) && detectSingleBidShape(m) === 'bidprice') {
       validateBidPriceMaterial(m, (name) => `[${i}].${name}`, findings);
+    } else if (isInpageFeedMaterial(m)) {
+      validateInpageMaterial(m, `[${i}]`, findings);
     } else if (isNativeFeedMaterial(m)) {
       validateNativeMaterial(m, `[${i}]`, findings);
     } else {
@@ -287,9 +318,11 @@ function validatePushMaterialsFeed(arr) {
   });
   return {
     type:
-      arr.length && arr.every(isNativeFeedMaterial)
-        ? 'Native-Materials Feed Response'
-        : 'Push-Materials Feed Response',
+      arr.length && arr.every(isInpageFeedMaterial)
+        ? 'In-Page-Materials Feed Response'
+        : arr.length && arr.every(isNativeFeedMaterial)
+          ? 'Native-Materials Feed Response'
+          : 'Push-Materials Feed Response',
     findings,
   };
 }
@@ -305,12 +338,13 @@ function validatePushSingle(o) {
 // ── Single-bid shape discrimination ─────────────────────────────────
 
 function detectSingleBidShape(o) {
+  if (!isObj(o)) return null;
   // Each predicate keys off a format-unique field name. Order matters where
   // multiple match — but in practice the camelCase/snake_case split makes
   // these mutually exclusive.
   if ('clickUrl' in o || ('value' in o && 'nUrl' in o)) return 'valuefeed';
   if ('notification_url' in o || 'bid_price' in o) return 'bidprice';
-  if ('redirecturl' in o) return 'bidredirect';
+  if ('redirecturl' in o || 'redirect_url' in o) return 'bidredirect';
   // Push single object LAST — its signature is a key combination, not a
   // unique key, so every unique-key vendor above must keep winning (a
   // bid-price response carries `link` + `title` too). Mirrors the claim in
@@ -392,8 +426,9 @@ function validateBidRedirectFeed(o) {
   if (!isNum(o.bid)) {
     findings.push(F('feed.bidredirect.bid_required', LEVELS.ERROR, 'bid'));
   }
-  if (!isStr(o.redirecturl)) {
-    findings.push(F('feed.bidredirect.redirecturl_required', LEVELS.ERROR, 'redirecturl'));
+  const redirectKey = Object.hasOwn(o, 'redirecturl') ? 'redirecturl' : 'redirect_url';
+  if (!isStr(o[redirectKey])) {
+    findings.push(F('feed.bidredirect.redirecturl_required', LEVELS.ERROR, redirectKey));
   }
   if (o.campaignid != null && !isStr(o.campaignid) && !isNum(o.campaignid)) {
     findings.push(F('feed.bidredirect.campaignid_invalid', LEVELS.WARNING, 'campaignid'));
@@ -401,4 +436,9 @@ function validateBidRedirectFeed(o) {
   return { type: 'Bid-Redirect Feed Response', findings };
 }
 
-module.exports = { validateFeedResponse, isNativeFeedMaterial };
+module.exports = {
+  validateFeedResponse,
+  isNativeFeedMaterial,
+  isInpageFeedMaterial,
+  detectSingleBidShape,
+};

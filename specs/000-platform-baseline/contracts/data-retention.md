@@ -79,6 +79,11 @@ mappings, timestamps, and explicitly saved Behavior Corpus data remain plaintext
   dialects remain until an explicit delete/wipe path removes them.
 - Sessions expire after 30 days and are pruned after expiry; logout, password reset, and wipe also
   invalidate the applicable sessions.
+  On an individual logout storage failure, the in-memory token and browser cookie
+  are still cleared, while the handler reports `logout_persistence_failed`. The
+  browser also clears its local encryption/session state and reports the failure.
+  This observable partial failure does not guarantee durable revocation of the
+  undeleted row after a server restart; successful durable deletion is required.
 - Analyze metadata contains side/type, version, status, format, and severity counts only.
 - A partner deletion sets its samples' partner reference to null. It does not delete the samples.
 - A sample deletion nulls any optional Behavior Corpus source link through its foreign-key rule.
