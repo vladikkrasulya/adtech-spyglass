@@ -167,3 +167,18 @@ the journey and witness receipts, and the physical-device logs. Until it is copi
 durable research directory, those pointers resolve only on the machine that produced them. The
 receipts themselves are unchanged and remain valid for the runs they describe; what is missing is
 reach, not integrity. Every later run belongs on the server beside the earlier bundles.
+
+## Release
+
+The repaired commit's hosted run
+[34361707124](https://github.com/vladikkrasulya/adtech-spyglass/actions/runs/34361707124) succeeded;
+the earlier failure is retained above as the first attempt. A fresh canonical backup was taken
+immediately before deployment and both archives were integrity-checked. `scripts/deploy.sh` reports
+**DEPLOY OK: v1.23.0 (`e842ad8`)**, with readiness, smoke 19/19, container healthy and RestartCount 0.
+
+Read back after deployment: local and public `/api/health` both report build `e842ad8`; the served
+`version.js` reports `v1.23.0`; the public Inspector answers 200 in 0.17s and its HTML contains no
+injected Cloudflare beacon, matching the R03 configuration readback. The tag `v1.23.0` is published.
+
+This closes T045 and T046. T019 stays open on its own terms: native Safari and VoiceOver cells and
+six physical-device rows remain unavailable rather than inferred, and no later run has changed that.

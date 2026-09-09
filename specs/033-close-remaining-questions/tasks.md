@@ -82,8 +82,8 @@ Owner: linux_gate for pure Core/rules; root for HTTP and public inspection actio
 - [x] T042 Run combined focused tests, lint, format, typecheck and Spec Kit contract checks; resolve failures without peer reverts or hidden retries (FR-017, FR-018).
 - [x] T043 Run full required Linux CI, normative corpus across Core/HTTP/browser plus UX/a11y, package and immutable-image checks; retain exact revision/results (FR-018).
 - [x] T044 Conduct independent convergence for auth, mapping/assets, SChain/route/witnesses and cross-browser evidence; resolve reportable defects and rerun affected gates (FR-016, FR-018).
-- [ ] T045 Commit the integrated reviewed patch and pass exact hosted required checks, retaining any first-attempt failures (FR-017, FR-018).
-- [ ] T046 Verify a fresh canonical backup, deploy via `scripts/deploy.sh`, inspect health/revision, public/local smoke and affected public UI behavior; use canonical rollback on regression (FR-018, SC-007).
+- [x] T045 Committed as `311a6e3`. Its hosted run [34356457091](https://github.com/vladikkrasulya/adtech-spyglass/actions/runs/34356457091) FAILED on `brand-guard`, not on capacity — the machine-absolute receipt paths described in verification. Repaired in `e842ad8`, whose hosted run [34361707124](https://github.com/vladikkrasulya/adtech-spyglass/actions/runs/34361707124) succeeded. The first-attempt failure is retained above, not overwritten.
+- [x] T046 Fresh canonical backup taken and both archives integrity-checked, then deployed through `scripts/deploy.sh`: **v1.23.0 (`e842ad8`) live**, image `ortbtools:e842ad8`, readiness and smoke 19/19, container healthy, RestartCount 0. Local and public `/api/health` both report build `e842ad8`; the public Inspector answers 200 and its HTML carries no injected Cloudflare beacon, matching the R03 readback. No rollback was needed.
 - [ ] T047 Reconcile every inventory/matrix/witness row and current release records to actual evidence; publish a truthful final report, leaving real missing prerequisites open (FR-001, FR-017, SC-006, SC-007).
 
 ## Dependencies and parallel execution
