@@ -48,19 +48,15 @@
   background: transparent;
 }
 
-/* Text selection — Signal sky-blue accent tint, text color pinned per
-   theme for contrast. --selection-bg token declared in design-system.css
-   (light: 40% electric sky on chalk-blue; dark: 35% electric sky on
-   deep navy). `color: --text-on-accent` is theme-dependent — #FFFFFF
-   (light) reads on the sky-600 tint, #0A111F (dark) reads on the
-   brighter sky-400 tint used against the navy background. */
+/* Text selection uses the theme's normal ink over a translucent sky tint.
+   Button foregrounds are for opaque accent fills and lose contrast here. */
 ::selection {
   background: var(--selection-bg);
-  color: var(--text-on-accent);
+  color: var(--text);
 }
 ::-moz-selection {
   background: var(--selection-bg);
-  color: var(--text-on-accent);
+  color: var(--text);
 }
 
 /* Pre-render hero — SEO above-fold copy. Lives in raw HTML inside

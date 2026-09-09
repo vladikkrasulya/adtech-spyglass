@@ -57,15 +57,9 @@ const BUDGET = {
   // 13px small-label size is now var(--fs-sm). Two remain, and they are the
   // budget now — this number only ever goes down.
   'modules/blog/blog.css': 2,
-  // v2 rebuilt this page against the mockup: the severity chip rows, the
-  // rule-count row and the intro card went away, and with them all four of
-  // the literals that used to be budgeted here. Two remain, and both are
-  // sizes the mockup measures rather than sizes that drifted in — the
-  // page-header H1 at 21px (the scale's neighbours are 20 and 28, and the
-  // band is 90px tall by the mockup's own measurement, which 28px does not
-  // fit), and the active card's corner marks at 9px, which are registration
-  // ticks rather than text and must stay below the 11px eyebrow they frame.
-  'modules/dialects/dialects.css': 2,
+  // Page titles now use the shared 20px step. Only the active card's 9px
+  // corner marks remain: registration ticks below the 11px eyebrow.
+  'modules/dialects/dialects.css': 1,
   // v2 rebuilt this page as the mockup's three-column reader. Four literals
   // remain, and each is a size the mockup measures that the vendored scale
   // does not have: the 10px contents group label (it heads the items under
@@ -75,14 +69,9 @@ const BUDGET = {
   // (the scale steps 20 → 28 → 40). Written as literals and budgeted here
   // so raising one is a number someone has to change on purpose.
   'modules/docs/docs.css': 4,
-  // Insights was rebuilt to the redesign mockup and its seven literals came
-  // down to three. The ratchet is doing its job here, so the budget moves with
-  // it rather than absorbing the win. The three that remain are values the
-  // mockup measures, not sizes that drifted in: the H1 at 21px, the KPI figure
-  // at 30px, and the card title at 16px. The vendored scale's neighbours are
-  // 20/28/15-or-17 — one step off in each case, and one step is the whole
-  // difference between the mockup's density and ours.
-  'modules/insights/insights.css': 2,
+  // Page and card titles use the shared scale; only the 30px KPI display
+  // remains off-scale. Ratchet the budget as those titles are aligned.
+  'modules/insights/insights.css': 1,
   // The Samples redesign rewrote this sheet against the mockup, and the two
   // literals it used to carry (14px on the tab strip, 14px on the loading /
   // empty note) were both on elements the mockup does not have. Their

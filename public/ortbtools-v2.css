@@ -42,6 +42,8 @@
    and are deliberately left alone.
    ------------------------------------------------------------ */
 .kt-shell {
+  /* Bound data tables and overview pages on ultrawide displays. */
+  --workspace-content-max: 1800px;
   --r-chip: 3px;
   --r-sm: 6px;
   --r-md: 9px;

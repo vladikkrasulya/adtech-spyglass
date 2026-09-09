@@ -339,10 +339,28 @@
 }
 .blog-post__body h1,
 .blog-post__body h2,
-.blog-post__body h3 {
+.blog-post__body h3,
+.blog-post__body h4 {
   margin: 1.4em 0 0.5em;
   font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
   color: var(--text);
+}
+.blog-post__body h1 {
+  font-size: var(--fs-xl);
+}
+.blog-post__body h2 {
+  font-size: var(--fs-lg);
+}
+.blog-post__body h3 {
+  font-size: var(--fs-md);
+}
+.blog-post__body h4 {
+  font-size: var(--fs-base);
+}
+.blog-post__body > :first-child {
+  margin-top: 0;
 }
 .blog-post__body p {
   margin: 0 0 1em;

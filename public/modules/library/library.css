@@ -6,10 +6,9 @@
    move, and a body that scrolls under a sticky column header. Three
    things follow from that and are load-bearing here:
 
-     1. No max-width. The content column is the shell minus the rail,
-        with a single 24px gutter that the header band, the filter
-        row, the column header and every row all share — so every
-        column lands on one vertical rule.
+     1. A shared desktop width limit keeps names near their metadata on
+        ultrawide displays. A single 24px gutter aligns the header band,
+        filters, column labels and every data row.
      2. Rows are transparent over --bg and separated by hairlines,
         not white cards floating on grey. Radius 0 on rows and on the
         column-header strip; only controls keep a radius.
@@ -20,6 +19,9 @@
    ============================================================ */
 
 .lib-section {
+  width: 100%;
+  max-width: var(--workspace-content-max, 1800px);
+  margin-inline: auto;
   display: flex;
   flex-direction: column;
   height: 100%;

@@ -454,17 +454,17 @@
           : pill('muted', T('cabinet.pill.plain'));
         return (
           '<li>' +
-          '<div style="display:flex;flex-direction:column;gap:2px;min-width:0">' +
-          '<span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
+          '<div class="cab-recent__text">' +
+          '<span class="cab-recent__title">' +
           escapeHtml(s.title || T('cabinet.untitled')) +
           '</span>' +
-          '<span style="font-size:var(--fs-xs);color:var(--text-muted);font-family:var(--font-mono)">#' +
+          '<span class="cab-recent__meta">#' +
           escapeHtml(s.id) +
           ' · ' +
           fmtDate(s.created_at) +
           '</span>' +
           '</div>' +
-          '<span>' +
+          '<span class="cab-recent__state">' +
           enc +
           '</span>' +
           '</li>'

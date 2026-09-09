@@ -71,7 +71,7 @@ The repository contains three independently versioned surfaces:
 
 | Surface           | Current version | Source of truth              | Coupled repository surfaces                                        |
 | ----------------- | --------------- | ---------------------------- | ------------------------------------------------------------------ |
-| Web application   | `1.20.0`        | root `package.json`          | root lock metadata, `public/version.js`, and static HTML fallbacks |
+| Web application   | `1.20.1`        | root `package.json`          | root lock metadata, `public/version.js`, and static HTML fallbacks |
 | `@ortbtools/core` | `0.46.0`        | `packages/core/package.json` | its package-lock workspace metadata and documented Core contract   |
 | `@ortbtools/cli`  | `0.1.3`         | `packages/cli/package.json`  | its package-lock workspace metadata and documented CLI contract    |
 
@@ -150,3 +150,5 @@ version-surface change updates this contract and its enforcement tests in the sa
 localizable UI must name its text owner and cannot ship with one locale silently omitted.
 
 Release `1.20.0` (2026-09-09) is the first app bump since `1.19.4`. It carries features 021 through 030 — every documented creative carrier now renders, the Inspector no longer describes anything that has left the screen, specification qualifiers map to validator levels, and the documented vendor feed requests are decoded. Core moved `0.38.0` to `0.46.0` across those features and CLI stays `0.1.3` with the dependency range following Core. Every localized string the features add exists in en/uk/ru.
+
+App 1.20.1 (2026-09-09) corrects desktop interface typography and width constraints. Account titles and metadata use the same 13px/11px hierarchy as Samples, account and article headings have explicit sizes, and compact Inspector windows retain document scrolling. Core and CLI remain 0.46.0 and 0.1.3.

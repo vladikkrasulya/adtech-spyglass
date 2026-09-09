@@ -6,6 +6,14 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.20.1 — consistent desktop typography (2026-09-09)
+
+- Restore compact saved-sample titles and metadata in the account cabinet using the same 13px/11px hierarchy as the library. Human-readable saved titles in Inspector use the interface typeface.
+- Bound account and article headings so they no longer inherit oversized marketing typography. Align account card headings, descriptions, and counters with the application hierarchy in all three locales.
+- Bound Samples, Streams, Dialects, and Insights to a shared 1800px content width on ultrawide displays; preserve the Inspector and documentation reading layouts.
+- Keep selected text and expired-dialect warnings legible in both themes; wrap history metadata within its drawer and distinguish warnings, invalid results, and unknown states from successful analyses.
+- Restore Inspector document scrolling at the shell's compact breakpoint, including desktop windows reduced by display scaling.
+
 ### v1.20.0 — the Inspector shows what the response actually carries (2026-09-09)
 
 - Read every documented creative carrier instead of the empty state: an OpenRTB 3.0 AdCOM Native creative, an In-Page Push bid whose creative travels in `bid.ext`, a vendor Native material, and a vendor banner wrapper each render as the creative they are. A redirect-script pop shows the destination it would have opened, and a material whose creative is a bare link now says which material it belongs to. The sealed preview is unchanged: nothing is fetched, remote artwork stays blocked and explained, and every sandbox refusal is still recorded.

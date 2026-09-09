@@ -25,6 +25,9 @@
    navigate to. stream/index.js adds .stream-view on mount, removes it on
    unmount. */
 #app-root.stream-view {
+  width: 100%;
+  max-width: var(--workspace-content-max, 1800px);
+  margin-inline: auto;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   grid-template-columns: 100%;

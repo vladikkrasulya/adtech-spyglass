@@ -74,10 +74,13 @@
       }
       .cab-card h2 {
         margin: 0 0 var(--space-3);
-        font-size: var(--fs-xl);
+        font-size: var(--fs-lg);
+        line-height: 1.35;
         font-weight: 600;
       }
       .cab-card .lead {
+        font-size: var(--fs-sm);
+        line-height: 1.5;
         margin: 0 0 var(--space-3);
         color: var(--text-muted);
       }
@@ -144,6 +147,31 @@
       .cab-list li:last-child {
         border-bottom: none;
       }
+      .cab-recent__text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+      .cab-recent__title {
+        font-family: var(--font-body);
+        font-size: var(--fs-sm, 13px);
+        font-weight: 500;
+        line-height: 1.5;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .cab-recent__meta {
+        font-family: var(--font-mono);
+        font-size: var(--fs-mono, 11px);
+        line-height: 1.5;
+        color: var(--text-muted);
+        overflow-wrap: anywhere;
+      }
+      .cab-recent__state {
+        flex-shrink: 0;
+      }
       .cab-empty {
         color: var(--text-muted);
         font-style: italic;
@@ -163,10 +191,13 @@
       }
       .cab-gate {
         text-align: center;
-        padding: var(--space-9) var(--space-5);
+        padding: var(--space-8) var(--space-5);
       }
       .cab-gate h1 {
-        margin: 0 0 var(--space-3);
+        max-width: 24ch;
+        margin: 0 auto var(--space-3);
+        font-size: var(--fs-xl);
+        line-height: 1.25;
       }
       .cab-stats {
         display: grid;
@@ -182,7 +213,7 @@
         text-align: center;
       }
       .cab-stat .num {
-        font-size: var(--fs-2xl);
+        font-size: var(--fs-xl);
         font-weight: 700;
         font-family: var(--font-mono);
       }
@@ -565,7 +596,7 @@
           padding: var(--space-5) var(--space-3);
         }
         .cab-gate h1 {
-          font-size: var(--fs-md);
+          font-size: var(--fs-lg);
           line-height: 1.25;
         }
         .cab-gate .cab-actions {

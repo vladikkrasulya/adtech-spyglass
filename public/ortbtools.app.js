@@ -4211,7 +4211,13 @@ export async function mountInspector(root, ctx) {
     }
     list.innerHTML = historyStore
       .map((e, i) => {
-        const cls = e.status === 'errors' || e.status === 'Critical' ? 'critical' : 'healthy';
+        const cls = ['errors', 'Critical', 'invalid', 'Invalid'].includes(e.status)
+          ? 'critical'
+          : e.status === 'warnings'
+            ? 'warning'
+            : ['clean', 'Healthy', 'Valid'].includes(e.status)
+              ? 'healthy'
+              : 'neutral';
         const activeCls = i === _currentHistoryIdx ? ' history-item--active' : '';
         return (
           '<div class="history-item' +

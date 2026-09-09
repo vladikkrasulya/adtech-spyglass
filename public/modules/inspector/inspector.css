@@ -223,8 +223,8 @@ body {
          results column falls under that floor, so stacking is what gives
          the strip its width back.
 
-         ≤720px still releases the desktop scroll-lock so phones scroll the
-         page instead of clipping it.
+         Below 1024px the shell uses document scrolling, so the inspector
+         releases its viewport lock at the same breakpoint.
 
          Written in GRID terms, deliberately. This block used to say
          `flex-direction: column`, which is what stacked the split back when
@@ -256,11 +256,10 @@ body {
      width is set on .sidebar-left itself, further down this file — an
      override here would be overridden right back, so there isn't one. */
 }
-@media (max-width: 720px) {
-  /* Release the desktop scroll-lock — html/body and workbench above set
-     height:100vh + overflow:hidden so the 3-col workbench fits the
-     viewport on desktop. On phones the workbench stacks vertically and
-     overflows, so we must let the page scroll instead of clipping. */
+@media (max-width: 1023px) {
+  /* The shell releases its bounded height below 1024px. The document must
+     scroll with it, including tablet widths where the stacked inspector
+     extends below the viewport. */
   html,
   body {
     height: auto;
@@ -268,6 +267,8 @@ body {
     overflow: auto;
     overflow-x: hidden;
   }
+}
+@media (max-width: 720px) {
   .workbench {
     height: auto;
     min-height: 100vh;
@@ -1635,13 +1636,15 @@ body:not(.sb-left-hidden) .sidebar-left {
   white-space: nowrap;
 }
 .history-item-load .history-title {
-  padding-right: 72px;
+  padding-right: 48px;
 }
 .history-meta {
   font-family: var(--font-mono);
   font-size: var(--fs-mono);
   color: var(--text-dim);
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
 }
 .history-status {
@@ -1655,6 +1658,14 @@ body:not(.sb-left-hidden) .sidebar-left {
 .history-status.critical {
   background: rgba(220, 38, 38, 0.1);
   color: var(--danger);
+}
+.history-status.warning {
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  color: var(--warning-text);
+}
+.history-status.neutral {
+  background: var(--bg-2);
+  color: var(--text-muted);
 }
 .history-status.healthy {
   background: rgba(22, 163, 74, 0.1);
@@ -1704,7 +1715,7 @@ body:not(.sb-left-hidden) .sidebar-left {
   border-color: var(--accent);
 }
 .saved-item-title {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--text);
