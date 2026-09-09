@@ -75,3 +75,7 @@ T001–T004 precede implementation. T005–T007 define the view consumed by T009
 ## Phase 9: Convergence
 
 - [x] T043 [LOW] Correct the Ukrainian and Russian `toast.logout_failed` strings in public/i18n.js to informal singular address (`спробуй` / `попробуй`), retaining their safe failure meaning and EN/UK/RU parity; verify the existing locale guard per FR-015 and Constitution VI (partial).
+
+## Phase 10: Convergence
+
+- [x] T044 [LOW] Align only the three `onboarding.banner.text` strings in public/i18n.js with the actual localized Load sample / Завантажити зразок / Загрузить пример menu and the action of choosing a synthetic example; remove the stale example-control reference and immediate paired-load implication. Verify existing locale guards and the targeted onboarding review per FR-008/015, US2/AC1, plan Phase 4 and Constitution VI (partial).

@@ -334,7 +334,7 @@
 
       // ── first-visit inspector onboarding ─────────────────
       'onboarding.banner.text':
-        'Немає JSON? Натисни 🎲 приклад — завантажиться синтетична пара bid request/response.',
+        'Немає JSON? Відкрий «Завантажити зразок» і вибери синтетичний приклад.',
       'onboarding.banner.dismiss': 'зрозуміло',
 
       // ── partner modal ─────────────────────────────────────
@@ -669,8 +669,7 @@
       'sample.btn.unlock': 'unlock',
 
       // ── first-visit inspector onboarding ─────────────────
-      'onboarding.banner.text':
-        'No JSON yet? Click 🎲 example to load a synthetic bid request/response pair.',
+      'onboarding.banner.text': 'No JSON yet? Open “Load sample” and choose a synthetic example.',
       'onboarding.banner.dismiss': 'got it',
 
       // ── partner modal ─────────────────────────────────────
@@ -990,7 +989,7 @@
 
       // ── first-visit inspector onboarding ─────────────────
       'onboarding.banner.text':
-        'Нет JSON? Нажми 🎲 пример — загрузится синтетическая пара bid request/response.',
+        'Нет JSON? Открой «Загрузить пример» и выбери синтетический пример.',
       'onboarding.banner.dismiss': 'понятно',
 
       // forgot.* + reset.* keys live in modules/password-reset/i18n.js

@@ -49,3 +49,11 @@ The final Linux source patch is SHA256 `6bfd38432b87d6499e1dd3f3422e43b617a34210
 `CHROME_BIN=/usr/bin/google-chrome-stable npm run ci` passed in the isolated full-history vkbox clone on the exact source patch above. Formatting, ESLint and whole TypeScript checks passed. The runner completed all 181 Node and 27 serial browser files without a failed attempt or retry. Unit output reports 3,799 pass, zero fail and three suite-declared skips; browser files completed successfully. Logged gate duration was approximately 12m28s. These are this execution's observations, not fixed project test totals.
 
 The final source, independent convergence and normative corpus gates are green. At this commit, exact-commit hosted package/Docker gates, the fresh canonical backup and deployment are still pending; they must not be inferred from the local result.
+
+## Desktop onboarding follow-through
+
+Independent real-Chrome QA covered 60 first-visit combinations: 1024×768, 1280×720, 1366×768, 1440×900, 1536×864, 1600×900, 1920×1080, 2560×1440, 3440×1440 and 3840×2160, each in EN/UK/RU and light/dark, with onboarding and verification banners together. Layout passed throughout. This review found a stale reference to the former example control and its immediate pair-loading behavior. T044 updates only the three onboarding text values to name the current sample menu and ask the user to choose a sample.
+
+After that copy correction, the same 60-case matrix passes again: zero horizontal overflow, collisions, clipping or page errors; banner text stays 13px. Six actual menu-click checks verify its visible label, selector opening and unchanged empty editors before a sample is chosen. Existing locale/onboarding tests pass 20/20, and full formatting/lint/typecheck plus governance checks pass. Before/after measurements and four representative desktop screenshots per run are retained externally. This copy-only follow-up is verified separately from the earlier full Linux patch; the final release SHA must receive its own hosted gate before deployment.
+
+The final follow-through convergence is clean: T044 verified, zero findings or appended tasks, and tasks.md remains byte-identical with SHA256 `a2e061c660cde12c9a8cffab0527f08ddcc9f7bc34da2a9f3e589e31836b3c0c`. The full buildable intent inventory remains satisfied; T039/T040 still track release execution.
