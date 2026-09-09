@@ -940,7 +940,7 @@
       },
       "dpr": 1,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/100-light-inspector.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/100-light-inspector.png"
     },
     {
       "browser": "chromium",
@@ -957,7 +957,7 @@
       },
       "dpr": 1,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/100-dark-inspector.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/100-dark-inspector.png"
     },
     {
       "browser": "chromium",
@@ -974,7 +974,7 @@
       },
       "dpr": 1,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/100-light-saved-library.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/100-light-saved-library.png"
     },
     {
       "browser": "chromium",
@@ -991,7 +991,7 @@
       },
       "dpr": 1,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/100-dark-saved-library.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/100-dark-saved-library.png"
     },
     {
       "browser": "chromium",
@@ -1008,7 +1008,7 @@
       },
       "dpr": 1,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/100-light-account-dialects.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/100-light-account-dialects.png"
     },
     {
       "browser": "chromium",
@@ -1025,7 +1025,7 @@
       },
       "dpr": 1,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/100-dark-account-dialects.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/100-dark-account-dialects.png"
     },
     {
       "browser": "chromium",
@@ -1042,7 +1042,7 @@
       },
       "dpr": 1.25,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/125-light-inspector.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/125-light-inspector.png"
     },
     {
       "browser": "chromium",
@@ -1059,7 +1059,7 @@
       },
       "dpr": 1.25,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/125-dark-inspector.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/125-dark-inspector.png"
     },
     {
       "browser": "chromium",
@@ -1076,7 +1076,7 @@
       },
       "dpr": 1.25,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/125-light-saved-library.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/125-light-saved-library.png"
     },
     {
       "browser": "chromium",
@@ -1093,7 +1093,7 @@
       },
       "dpr": 1.25,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/125-dark-saved-library.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/125-dark-saved-library.png"
     },
     {
       "browser": "chromium",
@@ -1110,7 +1110,7 @@
       },
       "dpr": 1.25,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/125-light-account-dialects.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/125-light-account-dialects.png"
     },
     {
       "browser": "chromium",
@@ -1127,7 +1127,7 @@
       },
       "dpr": 1.25,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/125-dark-account-dialects.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/125-dark-account-dialects.png"
     },
     {
       "browser": "chromium",
@@ -1144,7 +1144,7 @@
       },
       "dpr": 1.5,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/150-light-inspector.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/150-light-inspector.png"
     },
     {
       "browser": "chromium",
@@ -1161,7 +1161,7 @@
       },
       "dpr": 1.5,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/150-dark-inspector.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/150-dark-inspector.png"
     },
     {
       "browser": "chromium",
@@ -1178,7 +1178,7 @@
       },
       "dpr": 1.5,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/150-light-saved-library.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/150-light-saved-library.png"
     },
     {
       "browser": "chromium",
@@ -1195,7 +1195,7 @@
       },
       "dpr": 1.5,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/150-dark-saved-library.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/150-dark-saved-library.png"
     },
     {
       "browser": "chromium",
@@ -1212,7 +1212,7 @@
       },
       "dpr": 1.5,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/150-light-account-dialects.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/150-light-account-dialects.png"
     },
     {
       "browser": "chromium",
@@ -1229,7 +1229,7 @@
       },
       "dpr": 1.5,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/150-dark-account-dialects.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/150-dark-account-dialects.png"
     },
     {
       "browser": "chromium",
@@ -1246,7 +1246,7 @@
       },
       "dpr": 2,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/200-light-inspector.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/200-light-inspector.png"
     },
     {
       "browser": "chromium",
@@ -1263,7 +1263,7 @@
       },
       "dpr": 2,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/200-dark-inspector.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/200-dark-inspector.png"
     },
     {
       "browser": "chromium",
@@ -1280,7 +1280,7 @@
       },
       "dpr": 2,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/200-light-saved-library.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/200-light-saved-library.png"
     },
     {
       "browser": "chromium",
@@ -1297,7 +1297,7 @@
       },
       "dpr": 2,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/200-dark-saved-library.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/200-dark-saved-library.png"
     },
     {
       "browser": "chromium",
@@ -1314,7 +1314,7 @@
       },
       "dpr": 2,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/200-light-account-dialects.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/200-light-account-dialects.png"
     },
     {
       "browser": "chromium",
@@ -1331,7 +1331,7 @@
       },
       "dpr": 2,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/200-dark-account-dialects.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/200-dark-account-dialects.png"
     },
     {
       "browser": "chromium",
@@ -1348,7 +1348,7 @@
       },
       "dpr": 4,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/400-light-inspector.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/400-light-inspector.png"
     },
     {
       "browser": "chromium",
@@ -1365,7 +1365,7 @@
       },
       "dpr": 4,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/400-dark-inspector.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/400-dark-inspector.png"
     },
     {
       "browser": "chromium",
@@ -1382,7 +1382,7 @@
       },
       "dpr": 4,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/400-light-saved-library.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/400-light-saved-library.png"
     },
     {
       "browser": "chromium",
@@ -1399,7 +1399,7 @@
       },
       "dpr": 4,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/400-dark-saved-library.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/400-dark-saved-library.png"
     },
     {
       "browser": "chromium",
@@ -1416,7 +1416,7 @@
       },
       "dpr": 4,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/400-light-account-dialects.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/400-light-account-dialects.png"
     },
     {
       "browser": "chromium",
@@ -1433,7 +1433,7 @@
       },
       "dpr": 4,
       "keyboardSteps": 60,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/400-dark-account-dialects.png"
+      "evidence": "remaining-questions-20260909/native-zoom/chromium-server-final/400-dark-account-dialects.png"
     },
     {
       "browser": "firefox",
@@ -1451,7 +1451,7 @@
       "dpr": 1,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 41,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final006/100-light-inspector.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final006/100-light-inspector.png"
     },
     {
       "browser": "firefox",
@@ -1469,7 +1469,7 @@
       "dpr": 1,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 41,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final006/100-dark-inspector.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final006/100-dark-inspector.png"
     },
     {
       "browser": "firefox",
@@ -1487,7 +1487,7 @@
       "dpr": 1,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 26,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final006/100-light-saved-library.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final006/100-light-saved-library.png"
     },
     {
       "browser": "firefox",
@@ -1505,7 +1505,7 @@
       "dpr": 1,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 26,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final006/100-dark-saved-library.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final006/100-dark-saved-library.png"
     },
     {
       "browser": "firefox",
@@ -1523,7 +1523,7 @@
       "dpr": 1,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 24,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final006/100-light-account-dialects.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final006/100-light-account-dialects.png"
     },
     {
       "browser": "firefox",
@@ -1541,7 +1541,7 @@
       "dpr": 1,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 24,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final006/100-dark-account-dialects.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final006/100-dark-account-dialects.png"
     },
     {
       "browser": "firefox",
@@ -1559,7 +1559,7 @@
       "dpr": 1.25,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 41,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final006/125-light-inspector.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final006/125-light-inspector.png"
     },
     {
       "browser": "firefox",
@@ -1577,7 +1577,7 @@
       "dpr": 1.25,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 41,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final006/125-dark-inspector.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final006/125-dark-inspector.png"
     },
     {
       "browser": "firefox",
@@ -1595,7 +1595,7 @@
       "dpr": 1.25,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 26,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final006/125-light-saved-library.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final006/125-light-saved-library.png"
     },
     {
       "browser": "firefox",
@@ -1613,7 +1613,7 @@
       "dpr": 1.25,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 26,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final006/125-dark-saved-library.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final006/125-dark-saved-library.png"
     },
     {
       "browser": "firefox",
@@ -1631,7 +1631,7 @@
       "dpr": 1.25,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 24,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final006/125-light-account-dialects.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final006/125-light-account-dialects.png"
     },
     {
       "browser": "firefox",
@@ -1649,7 +1649,7 @@
       "dpr": 1.25,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 24,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final006/125-dark-account-dialects.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final006/125-dark-account-dialects.png"
     },
     {
       "browser": "firefox",
@@ -1667,7 +1667,7 @@
       "dpr": 1.5,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 41,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final006/150-light-inspector.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final006/150-light-inspector.png"
     },
     {
       "browser": "firefox",
@@ -1685,7 +1685,7 @@
       "dpr": 1.5,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 41,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final006/150-dark-inspector.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final006/150-dark-inspector.png"
     },
     {
       "browser": "firefox",
@@ -1703,7 +1703,7 @@
       "dpr": 1.5,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 26,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final006/150-light-saved-library.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final006/150-light-saved-library.png"
     },
     {
       "browser": "firefox",
@@ -1721,7 +1721,7 @@
       "dpr": 1.5,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 26,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final006/150-dark-saved-library.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final006/150-dark-saved-library.png"
     },
     {
       "browser": "firefox",
@@ -1739,7 +1739,7 @@
       "dpr": 1.5,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 24,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final006/150-light-account-dialects.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final006/150-light-account-dialects.png"
     },
     {
       "browser": "firefox",
@@ -1757,7 +1757,7 @@
       "dpr": 1.5,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 24,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final006/150-dark-account-dialects.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final006/150-dark-account-dialects.png"
     },
     {
       "browser": "firefox",
@@ -1775,7 +1775,7 @@
       "dpr": 2,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 33,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final007/200-light-inspector.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final007/200-light-inspector.png"
     },
     {
       "browser": "firefox",
@@ -1793,7 +1793,7 @@
       "dpr": 2,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 33,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final007/200-dark-inspector.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final007/200-dark-inspector.png"
     },
     {
       "browser": "firefox",
@@ -1811,7 +1811,7 @@
       "dpr": 2,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 18,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final007/200-light-saved-library.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final007/200-light-saved-library.png"
     },
     {
       "browser": "firefox",
@@ -1829,7 +1829,7 @@
       "dpr": 2,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 18,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final007/200-dark-saved-library.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final007/200-dark-saved-library.png"
     },
     {
       "browser": "firefox",
@@ -1847,7 +1847,7 @@
       "dpr": 2,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 24,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final007/200-light-account-dialects.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final007/200-light-account-dialects.png"
     },
     {
       "browser": "firefox",
@@ -1865,7 +1865,7 @@
       "dpr": 2,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 24,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final007/200-dark-account-dialects.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final007/200-dark-account-dialects.png"
     },
     {
       "browser": "firefox",
@@ -1883,7 +1883,7 @@
       "dpr": 4,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 27,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final007/400-light-inspector.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final007/400-light-inspector.png"
     },
     {
       "browser": "firefox",
@@ -1901,7 +1901,7 @@
       "dpr": 4,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 27,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final007/400-dark-inspector.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final007/400-dark-inspector.png"
     },
     {
       "browser": "firefox",
@@ -1919,7 +1919,7 @@
       "dpr": 4,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 16,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final007/400-light-saved-library.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final007/400-light-saved-library.png"
     },
     {
       "browser": "firefox",
@@ -1937,7 +1937,7 @@
       "dpr": 4,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 16,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final007/400-dark-saved-library.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final007/400-dark-saved-library.png"
     },
     {
       "browser": "firefox",
@@ -1955,7 +1955,7 @@
       "dpr": 4,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 22,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final007/400-light-account-dialects.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final007/400-light-account-dialects.png"
     },
     {
       "browser": "firefox",
@@ -1973,7 +1973,7 @@
       "dpr": 4,
       "keyboardSteps": 60,
       "actualDocumentFocusSteps": 22,
-      "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/zoom-final007/400-dark-account-dialects.png"
+      "evidence": "remaining-questions-20260909/native-zoom/zoom-final007/400-dark-account-dialects.png"
     },
     {
       "browser": "safari",
@@ -2282,7 +2282,7 @@
     }
   ],
   "physical": {
-    "inventory": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/physical-mi9t/physical-inventory.json",
+    "inventory": "remaining-questions-20260909/physical-mi9t/physical-inventory.json",
     "model": "Mi 9T",
     "os": "Android 16 / SDK 36",
     "browser": "Jelly 16 / WebView 151.0.7922.71",
@@ -2292,7 +2292,7 @@
         "locale": "en",
         "journey": "saved-drawer-lock-unlock-filter-encrypted-edit-legacy",
         "status": "pass",
-        "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/physical-mi9t/final-journey.jsonl"
+        "evidence": "remaining-questions-20260909/physical-mi9t/final-journey.jsonl"
       },
       {
         "locale": "en",
@@ -2310,7 +2310,7 @@
         "locale": "uk",
         "journey": "saved-drawer-lock-unlock-filter-encrypted-edit-legacy",
         "status": "pass",
-        "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/physical-mi9t/final-journey.jsonl"
+        "evidence": "remaining-questions-20260909/physical-mi9t/final-journey.jsonl"
       },
       {
         "locale": "uk",
@@ -2322,7 +2322,7 @@
         "locale": "uk",
         "journey": "history-analyze-persist-reload-load-delete-saved-isolation",
         "status": "pass",
-        "evidence": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/physical-mi9t/final-journey.jsonl"
+        "evidence": "remaining-questions-20260909/physical-mi9t/final-journey.jsonl"
       },
       {
         "locale": "ru",
@@ -2356,13 +2356,13 @@
       "scope": "Three locale/flow groups recorded for this available device, not a predrawn physical-display denominator."
     },
     "receipt": {
-      "path": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/physical-mi9t/final-journey.jsonl",
+      "path": "remaining-questions-20260909/physical-mi9t/final-journey.jsonl",
       "sha256": "30621a8f55d69fca5a6f418858b225409b05414273f1c0e58afe45a5f84d862e"
     },
     "postFixNavigationVerified": false
   },
   "journeyReceipt": {
-    "path": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-matrix/journey-results-server-handoff.json",
+    "path": "remaining-questions-20260909/native-matrix/journey-results-server-handoff.json",
     "sha256": "e3a4ab08840510daafbde248cd29caa8cf65bad112f581981e2ca998412200e3",
     "summary": {
       "frozenJourneyCells": 60,
@@ -2374,18 +2374,18 @@
       "mappingParityCellsRetained": 24
     },
     "sourceTree": "4379e7d54010787942764d047bd9acb1f346100d",
-    "evidencePathsRelativeTo": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-matrix",
+    "evidencePathsRelativeTo": "remaining-questions-20260909/native-matrix",
     "qualification": "Forty grouped native tests on two browsers and two widths verify the updated handoff. Four previously invalid navigation passes now have actual selected-body proof; mapping24 evidence retains its unchanged-runtime source scope."
   },
   "chromiumZoomReceipt": {
-    "path": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/chromium-server-final/results.json",
+    "path": "remaining-questions-20260909/native-zoom/chromium-server-final/results.json",
     "sha256": "4f37bcda3b724f433e04181b5a65e2dcac85f7e82979d091450fa3b1521b400a",
     "sourceUnchanged": true,
     "method": "Chrome native Appearance Page zoom setting; cleared device metrics override; actual DPR/viewport and native setting readback",
     "sourceTree": "aea968e26aed6b9fdaf4a1bddb0e54740697c136"
   },
   "firefoxZoomReceipt": {
-    "path": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-zoom/firefox-results-server.json",
+    "path": "remaining-questions-20260909/native-zoom/firefox-results-server.json",
     "sha256": "f2983b2d7b1c787d309755f8456a72fcbafb4150419ad08d181c2f9ff7563405",
     "sourceUnchanged": true,
     "method": "Headful official Firefox on owned Xvfb. Isolated profile configures native toolkit.zoomManager.zoomValues=1,1.25,1.5,2,4; exact native Ctrl+0/Ctrl+plus sent by xdotool to window owned by Firefox PID. Browser badge screenshots plus DPR/viewport readback. CSS zoom untouched. Synthetic isolated account/data only.",
@@ -2402,7 +2402,7 @@
     "sourceTree": "aea968e26aed6b9fdaf4a1bddb0e54740697c136"
   },
   "priorJourneyReceipt": {
-    "path": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-matrix/journey-results-server.json",
+    "path": "remaining-questions-20260909/native-matrix/journey-results-server.json",
     "sha256": "b5ded858aa486a0275848f574f95b273fbccc5cee44d4b8077ee9b364921ae13",
     "summary": {
       "frozenJourneyCells": 60,
@@ -2412,7 +2412,7 @@
       "canonicalTestGroupsPass": 20,
       "mappingParityCellsPass": 24
     },
-    "evidencePathsRelativeTo": "/Users/vk/Documents/adtech-spyglass/.codex/remaining-questions-20260909/native-matrix",
+    "evidencePathsRelativeTo": "remaining-questions-20260909/native-matrix",
     "qualification": "Prior receipt is retained; its four Chrome/Firefox navigation rows are superseded by the physical-found dead-link defect until the complete destination behavior passes."
   },
   "sourceScope": "Runtime reference is the final release-gate snapshot. Each section retains its own actual execution receipt/source; historical layout/native zoom and physical results are not relabeled as later-source executions."

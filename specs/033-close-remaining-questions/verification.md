@@ -92,7 +92,7 @@ Firefox155.0.1 on vkbox also passes30/30 native zoom cells. Its isolated native 
 
 ## Hosted gate capacity
 
-The actual successful baseline2667412 hosted run [34340919725](https://github.com/vladikkrasulya/adtech-spyglass/actions/runs/34340919725) took14m23, including13m10 in Tests, leaving only37seconds inside the former15minute job limit before the additional033 controls. The CI job limit is raised to25minutes. All checkout, install, format, lint, typecheck, tests, package and Docker steps remain required; neither a test timeout nor a failed assertion is relaxed. The final hosted run remains an independent required gate for its exact commit.
+The actual successful baseline2667412 hosted run [34340919725](https://github.com/vladikkrasulya/adtech-spyglass/actions/runs/34340919725) took14m23, including13m10 in Tests, leaving only37seconds inside the former15minute job limit before the additional033 controls. The CI job limit is raised to25minutes. All checkout, install, format, lint, typecheck, tests, package and Docker steps remain required; neither a test timeout nor a failed assertion is relaxed. The final hosted run remains an independent required gate for its exact commit; its first actual result is recorded below, and it failed for an unrelated reason.
 
 ## Saved navigation repair and physical coverage boundary
 
@@ -123,3 +123,47 @@ The immutable e6e89c1 / 95b8e2ce snapshot passes the full required gate on vkbox
 Package smoke, a fresh packed Core install, all three public inspection exports, the14-profile JSON catalog, CLI dependency^0.48.0 and production Docker smoke pass. The Core0.48.0 tarball SHA256 is `2715e8e3c974191bf7774b9000a0b671c4b6008198e910dbf53f3f69e00345e4`. The post-run source tree exactly matches e6e89c1. `033-linux-handoff-final-gates.json` retains commands, timestamps, versions, logs and the unchanged-source proof. The retained f0fb standalone corpus aggregate keeps its original identity as described above.
 
 Independent post-gate comparison found only current033 inventory, matrix and verification receipt differences from the tested source; runtime, tests, packages and workflow are identical. T043 and T044 are verified. Hosted CI for the actual commit, fresh canonical backup and deployment remain pending. T019 retains59 native Safari/VoiceOver cells and six physical rows as open.
+
+## Hosted gate: first actual result and the receipt-path repair
+
+The first hosted run for the pushed commit `311a6e3`,
+[34356457091](https://github.com/vladikkrasulya/adtech-spyglass/actions/runs/34356457091), **failed**.
+The raised job limit was not the cause and was not reached: the run finished in 15m13 inside the new
+25-minute allowance. One assertion failed, `tests/brand-guard.test.js`, and its report is exact.
+
+`layout-results.json` and `matrix-results.json` recorded every receipt and screenshot as an absolute
+path inside the authoring laptop's own checkout — a `/Users/…` home directory, the repository folder
+named after the retired brand, and a tool-local `.codex` subdirectory. That reintroduced the retired
+name into tracked files, which the brand guard exists to refuse, and it wrote one machine's private
+checkout path into a Spec Kit artifact, which the project's evidence convention already refuses on
+its own terms. The Linux gate could not have caught it: it ran on the same source,
+but `npm run ci` was executed before these receipt files reached their final content, and the
+independent post-gate comparison recorded exactly that difference as receipts-only.
+
+The repair strips that one leading prefix and nothing else, in 614 places — 543 in `layout-results.json` and
+71 in `matrix-results.json`. Every pointer keeps its meaning: the remaining value is the
+bundle-relative path the prose already uses, `remaining-questions-20260909/…`, and
+`layout-results.json` now states that base explicitly in `evidencePathsRelativeTo`, as
+`matrix-results.json` already did for its own two nested receipts. All 540 layout cells, every
+`receiptSha256`, `harnessSha256` and recorded source hash are unchanged, and
+`matrix-results.manifestSha256` still matches `matrix-manifest.json` byte for byte, because the
+frozen manifest never carried an absolute path. No runtime, test, package or workflow byte changes.
+
+The retained external bundles are unaffected; only the tracked pointers to them are now
+machine-independent. The durable server-side research references used by earlier packages are a separate, documented
+convention and are untouched.
+
+## Evidence location after the 2026-09-09 server-only instruction
+
+The owner directed that no further work runs on the laptop. The repository content is already
+entirely on the server and on `origin`: the package, the runtime, the raised job limit and the
+version set (app `1.23.0`, Core `0.48.0`, CLI dependency `^0.48.0`) are all present in the pushed
+commit, and the tree difference from the gated snapshot is the receipts-only delta this document
+already records.
+
+What is not yet on the server is the external evidence bundle the manifests point at —
+`remaining-questions-20260909/`, holding the 540 layout screenshots, both native-zoom result sets,
+the journey and witness receipts, and the physical-device logs. Until it is copied to the server's
+durable research directory, those pointers resolve only on the machine that produced them. The
+receipts themselves are unchanged and remain valid for the runs they describe; what is missing is
+reach, not integrity. Every later run belongs on the server beside the earlier bundles.
