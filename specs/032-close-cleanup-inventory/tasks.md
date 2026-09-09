@@ -60,8 +60,8 @@
 
 - [x] T037 Reconcile each original ID and extra/disposition in inventory.md and ../020-ad-format-verification-matrix/cleanup-backlog.md with evidence (FR-001).
 - [x] T038 Update current baseline/API/privacy-as-needed, ADR index, ROADMAP, CHANGELOG and independent version surfaces for final contracts (FR-015/016).
-- [ ] T039 Run focused integration, all normative corpus, settled Linux CI, package/browser/Docker gates and independent convergence; record verification.md (FR-015/016).
-- [ ] T040 Commit authored scope, nonforce push main, wait exact hosted gates, verify fresh canonical backup, deploy and read back release/health/smoke (FR-016).
+- [x] T039 Run focused integration, all normative corpus, settled Linux CI, package/browser/Docker gates and independent convergence; record verification.md (FR-015/016).
+- [x] T040 Commit authored scope, nonforce push main, wait exact hosted gates, verify fresh canonical backup, deploy and read back release/health/smoke (FR-016).
 
 ## Dependencies and execution
 

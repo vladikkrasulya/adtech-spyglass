@@ -2,7 +2,9 @@
 
 Baseline `2bd93d6`, observed 2026-09-09: 33 original records = four fixed, 26 open, one superseded and two unverifiable. The separately listed negative-floor defect makes 34 tracked records. Each original open record has its own implementation evidence below; corpus closure is not used as a substitute.
 
-Component verification, including the final shared-view browser integration, is complete. Full repository/corpus and release gates are recorded separately in [verification.md](verification.md); this table does not yet assert production deployment.
+**Current outcome: all 26 originally open records are closed; zero remain open in this named inventory.** The extra negative-floor defect is fixed. CL-08 has an accepted capability-boundary decision and CL-09 has a bounded assertion inventory with a reference guard. Together with the four prior fixes and one superseded item, all 33 original records have dispositions. The “Original status” column preserves the baseline, not the current state.
+
+App v1.22.0, Core 0.47.0 and CLI 0.1.4 shipped in production image `ortbtools:9899191` on 2026-09-09 after the full repository/corpus gates, exact-commit hosted CI and a fresh verified backup. Deployment, health and smoke evidence are recorded in [verification.md](verification.md).
 
 | ID                         | Original status | Disposition                        | Evidence                                                                                                                                                                                                                                                                                                     |
 | -------------------------- | --------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

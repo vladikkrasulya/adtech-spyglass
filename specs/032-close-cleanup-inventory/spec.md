@@ -2,7 +2,7 @@
 
 **Feature Branch**: `codex/maintenance-cleanup-20260909`
 **Created**: 2026-09-09
-**Status**: Verification
+**Status**: Complete
 **Input**: The owner selected “Послідовно закрити всі 26 відкритих пунктів”. The brief also identifies `negative-floor-unflagged` and asks for evidence-backed dispositions of CL-08/09.
 
 ## User Scenarios & Testing
