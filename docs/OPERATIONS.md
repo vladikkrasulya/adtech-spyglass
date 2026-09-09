@@ -210,48 +210,79 @@ the deletion and session invalidation happen together.
 
 ### 4.6 Force-clear all anonymous / expired sessions
 
-Sessions expire naturally — `expires_at` is checked on every request. But after a
-security incident you may want to force-invalidate immediately.
+Sessions expire naturally: `expires_at` is checked on every request. Manual SQL
+changes persisted rows, but authentication uses a process-local session index.
+Deleting rows while the app runs does **not** immediately revoke those hot sessions.
+
+Direct database access and destructive session deletion require explicit operator
+authorization for the intended scope. For a forced revocation, stop the already
+verified service before deleting rows, then start that same container. Do not use
+this procedure during a deploy/rollback transition; recover that transition through
+`scripts/rollback.sh` first.
+
+Run the SQLite writer as the application UID1000 with `umask 027`, preserving
+the database/WAL/SHM ownership and mode contract. Membership in `ortbtools-ro`
+only grants read access and is not sufficient for this deletion.
 
 ```bash
-sqlite3 /srv/DATA/AppData/ortbtools/ortbtools.db
+cd /srv/DATA/Stacks/ortbtools
+docker compose stop ortbtools
+sudo -n -u '#1000' sh -c 'umask 027; exec sqlite3 /srv/DATA/AppData/ortbtools/ortbtools.db'
 ```
 
 ```sql
--- Delete all expired sessions (housekeeping, safe any time):
+-- Expired-session housekeeping (does not revoke an unexpired session):
 DELETE FROM sessions WHERE expires_at <= strftime('%s','now')*1000;
 
--- Delete ALL sessions (force logout of every logged-in user):
--- DESTRUCTIVE — confirm this is what you want.
+-- Forced logout of EVERY user: execute only if that scope was authorized.
+-- For a single session or account, use the narrower statements in §4.7 instead.
 DELETE FROM sessions;
+.quit
 ```
+
+After the approved deletion, restart the same verified container and check health:
+
+```bash
+docker compose start ortbtools
+curl -fsS http://127.0.0.1:8090/api/health
+```
+
+Verify that affected users must sign in again. Keep `session-recovery/` in place:
+a completed graceful stop drains requests and writes a clean checkpoint; startup
+then hydrates only the remaining database rows. If shutdown was interrupted or
+recovery state is uncertain, startup invalidates all prior sessions or fails closed.
+Do not edit, print or remove the checkpoint/key or lock sidecar for selective
+revocation. Moving recovery state aside belongs only to the separately authorized
+database-restore procedure described under “Session recovery and restores”.
 
 ### 4.7 Invalidate a specific session (stolen-cookie scenario)
 
-The `token` column in `sessions` is the opaque session token value stored in the
-browser cookie. You need the token value — either from the cookie itself (if you have
-access to the victim's browser dev tools) or from DB inspection.
+Since v1.23.0, the `sessions.token` column stores an `sr1:`-prefixed keyed lookup
+identity, **not** the raw browser cookie. Comparing a copied cookie with this column
+will not identify or delete its row. Do not disclose the recovery key or calculate
+lookup identities outside the authentication service.
 
-```bash
-sqlite3 /srv/DATA/AppData/ortbtools/ortbtools.db
-```
+With the service stopped as in §4.6 and the deletion scope explicitly authorized,
+select the account's stored identities and metadata to identify the intended row:
 
 ```sql
--- List sessions for a user to identify the suspicious one:
 SELECT token, ip, ua, datetime(created_at/1000, 'unixepoch') AS created,
        datetime(expires_at/1000, 'unixepoch') AS expires
 FROM   sessions
 WHERE  user_id = (SELECT id FROM users WHERE email = 'victim@example.com')
 ORDER  BY created_at DESC;
 
--- Delete the specific session:
--- DESTRUCTIVE
-DELETE FROM sessions WHERE token = '<token_value>';
+-- Delete only the approved stored identity returned above:
+DELETE FROM sessions WHERE token = '<stored_session_identity>';
 
--- Or delete all sessions for that user (log them out everywhere):
--- DESTRUCTIVE
+-- Alternatively, if authorized, revoke every session belonging to this account:
 DELETE FROM sessions WHERE user_id = (SELECT id FROM users WHERE email = 'victim@example.com');
 ```
+
+If the exact row cannot be identified from metadata, obtain authorization for the
+account-wide scope instead of treating a raw cookie as a stored identity. Exit
+SQLite, start the same verified container and verify revocation as in §4.6; retain
+the recovery directory so unaffected sessions can survive a clean restart.
 
 Also rotate `EMAIL_TOKEN_SECRET` in the vault and restart if the leak included
 password-reset / email-verify tokens (stateless HMAC — rotation invalidates all

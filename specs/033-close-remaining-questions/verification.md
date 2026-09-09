@@ -204,3 +204,32 @@ injected Cloudflare beacon, matching the R03 configuration readback. The tag `v1
 
 This closes T045 and T046. T019 stays open on its own terms: native Safari and VoiceOver cells and
 six physical-device rows remain unavailable rather than inferred, and no later run has changed that.
+
+## Production public smoke, and the operations runbook the release invalidated
+
+The laptop's checkpoint commit was not only the receipt-path repair. Recovered from the repository
+bundle the owner transferred, it also carried a corrected `docs/OPERATIONS.md` and documentation
+updates that had never reached `origin`. The corrected runbook is now on `main`, because the release
+made the old one wrong in a way that matters operationally: since v1.23.0 the `sessions.token` column
+stores an `sr1:`-prefixed keyed lookup identity rather than the raw browser cookie, so §4.7's
+compare-the-cookie procedure cannot identify a row, and §4.6's delete-while-running procedure does
+not revoke a hot session at all because authentication uses a process-local session index. The
+corrected text stops the verified service first, runs the writer as the application UID with the
+documented umask, restarts the same image, and states the session-recovery boundaries. Its content
+matches the `release-prepared/ortbtools-033-operations-session-correction.patch` in the bundle, whose
+five helpers all verify against their own manifest hashes.
+
+The prepared server-only public browser smoke had never run against production; the bundle recorded
+it as `prepared-unrun-user-requested-wrapup`. Its harness hash matches the one this guide records
+(`db684e4c…`). It has now run against `https://ortbtools.com` for the deployed image and passes
+**9/9**: EN, UK and RU across Inspector, Library and Account, with zero page errors, zero console
+errors, **zero beacon requests** — the Cloudflare injection stays disabled in the served HTML — and
+first-party telemetry answering 200 and 204 with internal-traffic marking. No document overflow in
+any cell. Results, per-cell HTML and screenshots are retained outside Git in the
+`2026-09-09-033-release-smoke` research directory.
+
+What the laptop checkpoint contributed and what was deliberately not taken is recorded so the
+difference is not read later as a loss: its `docs/OPERATIONS.md` and the D17 inventory row are
+ported; its two normalized manifests are superseded by the convention already on `main`; and its
+prose describing an owner-requested pause before the hosted gate and deployment is not carried
+forward, because both have since happened and repeating it would state something untrue.

@@ -9,7 +9,7 @@ Baseline2667412 / app1.22.0, observed2026-09-09. These entries are newly accepte
 | R03 | No unintended Cloudflare injection/CSP refusal                                            | Disabled and saved/reloaded; fresh Chrome HTML/console/first-party telemetry pass                                              |
 | R04 | Saved/history/account matrices across actual browsers, zoom, reader and available devices | Layout540/540, native zoom60/60 and amended Chrome/Firefox journeys pass; Safari/VoiceOver59 and six physical rows remain open |
 | D16 | Explicit value-independent role mappings with full user/API lifecycle                     | Implemented; real SQLite and EN/UK/RU lifecycle pass; integrated release pending                                               |
-| D17 | Complete explicit raster preview action with preserved styling and cancellation           | Implemented; raster/style/cancellation/selection regressions pass; final integration pending                                   |
+| D17 | Complete explicit raster preview action with preserved styling and cancellation           | Implemented; raster/style/cancellation/selection regressions pass; integration passes; released in v1.23.0                     |
 | D18 | Grounded SChain cross-field and serialized inspection                                     | Core/HTTP/UI implemented; focused controls pass; integrated release pending                                                    |
 | D19 | Nineteen direct witnesses plus declared-route relevance                                   | 19/19 direct offline witnesses pass; declared-route Core/HTTP/UI controls pass; release pending                                |
 
