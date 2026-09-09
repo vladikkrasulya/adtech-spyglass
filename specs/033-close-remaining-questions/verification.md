@@ -150,7 +150,18 @@ bundle-relative path the prose already uses, `remaining-questions-20260909/…`,
 frozen manifest never carried an absolute path. No runtime, test, package or workflow byte changes.
 
 The retained external bundles are unaffected; only the tracked pointers to them are now
-machine-independent. The durable server-side research references used by earlier packages are a separate, documented
+machine-independent.
+
+The same defect was found and repaired independently on the laptop before the bundle was
+transferred: the bundle carries `normalize-evidence-paths.cjs`, its before/after brand-guard logs and
+an `evidence-paths/final-verification.json` asserting its own normalized hashes. The two repairs
+differ only in the base they chose. The laptop's rewrote references to resolve from the bundle root
+and recorded the base as `.`; this one keeps the bundle name in each path and records the base as
+`remaining-questions-20260909`. The second convention is the one in the repository, because the
+server holds many bundles side by side in one research directory, so a pointer that names its own
+bundle is unambiguous where a bundle-root-relative one is not. Both preserved every hash and every
+resolved file; the recorded SHA256s in that external `final-verification.json` therefore describe the
+laptop's variant and will not match the tracked files. The durable server-side research references used by earlier packages are a separate, documented
 convention and are untouched.
 
 ## Evidence location after the 2026-09-09 server-only instruction
@@ -161,7 +172,18 @@ version set (app `1.23.0`, Core `0.48.0`, CLI dependency `^0.48.0`) are all pres
 commit, and the tree difference from the gated snapshot is the receipts-only delta this document
 already records.
 
-What is not yet on the server is the external evidence bundle the manifests point at —
+The external evidence bundle the manifests point at was transferred to the server on 2026-09-09 and
+verified there: 878 MB across 1,615 files, plus 101 MB and 770 files for the UI bundle. All 615
+pointers in `layout-results.json` and `matrix-results.json` resolve; all 540 layout screenshots exist
+and are non-empty; the three browser `receiptSha256` values, the four run-receipt hashes recorded in
+this document and `matrix-results.manifestSha256` all verify against the delivered bytes. The
+bundle's own `033-linux-handoff-final-source.json` was checked against the deployed tree: the version
+set and the `package-lock.json` SHA256 match exactly, which independently confirms the released
+source is the source that passed the Linux gate.
+
+The paragraph below described the state before that transfer and is retained as written:
+
+What was not yet on the server is the external evidence bundle the manifests point at —
 `remaining-questions-20260909/`, holding the 540 layout screenshots, both native-zoom result sets,
 the journey and witness receipts, and the physical-device logs. Until it is copied to the server's
 durable research directory, those pointers resolve only on the machine that produced them. The
