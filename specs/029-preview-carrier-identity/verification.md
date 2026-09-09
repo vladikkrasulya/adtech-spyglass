@@ -69,4 +69,4 @@ exactly what the dialect claims — so an in-page response shows nothing only wh
 
 ## Deployment
 
-None. Production remains on `1.19.4`; shipping this feature is a separate decision for the owner.
+Shipped in **v1.20.0** (`76570e4`), deployed 2026-09-09 through the standing path: verified pre-deploy backup, readiness, smoke 19/19, container healthy.

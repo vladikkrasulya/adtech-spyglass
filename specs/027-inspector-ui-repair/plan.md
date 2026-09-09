@@ -60,7 +60,7 @@ _GATE: evaluated against constitution v2.1.0._
   still failed. The gate then caught a genuine regression in push-card qualification. Both are
   recorded in [tasks.md](./tasks.md).
 - **VIII — Releases traceable**: PASS. No Core bump — the change is entirely under `public/`.
-  Production remains on 1.19.4; deployment is a separate decision.
+  Shipped in **v1.20.0** (`76570e4`), deployed 2026-09-09 through the standing path: verified pre-deploy backup, readiness, smoke 19/19, container healthy.
 
 ## Project Structure
 

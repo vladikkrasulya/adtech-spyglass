@@ -1,7 +1,7 @@
 # Public-Boundary Contract: Inspector UI Repair
 
 This feature changes only `public/`. Core, the HTTP API and the CLI are untouched: no finding id,
-level, message, `spec-refs.json` entry or package version changes. Production remains on 1.19.4.
+level, message, `spec-refs.json` entry or package version changes. Shipped in v1.20.0 (`76570e4`) on 2026-09-09.
 
 ## What changes for an operator
 

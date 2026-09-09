@@ -6,7 +6,7 @@ This file contains only active status, ordering, dependencies, and next gates. F
 in the linked feature package, durable rationale in [ADRs](./DECISIONS.md), and completed history in
 `CHANGELOG.md` and Git.
 
-Current release: **v1.20.0** (2026-09-09) carries features 021 through 030 — every documented creative carrier renders, the Inspector no longer describes anything that has left the screen, specification qualifiers map to validator levels, the documented vendor feed requests are decoded, and the [020 verification ledger](./020-ad-format-verification-matrix/defects.md) records no remaining known gaps across its 257 cases.
+Current release: **v1.20.0** (2026-09-09), deployed at `76570e4` through the standing path (verified pre-deploy backup, readiness, smoke 19/19, container healthy), carries features 021 through 030 — every documented creative carrier renders, the Inspector no longer describes anything that has left the screen, specification qualifiers map to validator levels, the documented vendor feed requests are decoded, and the [020 verification ledger](./020-ad-format-verification-matrix/defects.md) records no remaining known gaps across its 257 cases.
 
 Completed maintenance: [019 Close audited project debt](./019-close-project-debt/spec.md) shipped as [v1.19.4](https://github.com/vladikkrasulya/adtech-spyglass/releases/tag/v1.19.4) on 2026-09-07. Q1/Q5–Q7, email/event-log verification, Blog integrity, dependency PRs 78–80, release records and local-work reconciliation are closed. [Its inventory](./019-close-project-debt/inventory.md) records the evidence, retained maintenance baseline and separate future capabilities.
 

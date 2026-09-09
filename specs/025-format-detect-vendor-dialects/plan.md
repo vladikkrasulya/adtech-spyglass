@@ -62,7 +62,7 @@ _GATE: evaluated against constitution v2.1.0 before research; re-checked after i
   they are retired only because the product now meets the spec expectation, and the coupled DEF-107
   cases are re-pinned to their measured residual. Commands and outcomes are in [tasks.md](./tasks.md).
 - **VIII — Releases traceable**: PASS. Core takes a MINOR bump with the CLI range and lock in the same
-  branch; commit and push are standing-authorized; deployment is a separate decision.
+  branch; commit and push are standing-authorized. Shipped in v1.20.0 on 2026-09-09.
 
 An ADR is not created: this feature changes no policy. The durable rules it establishes are recorded
 in the validator contract, which the constitution names as the alternative to an ADR for this case.

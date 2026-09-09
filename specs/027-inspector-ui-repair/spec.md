@@ -161,4 +161,4 @@ destination line.
   half is a documented URL dialect with no decoder, so they stay blocked there.
 - Materials exposed by the new selector whose remote images the frame refuses are declared per
   creative as partial renders; that is the 012 contract, not a defect.
-- Deployment is a separate decision; production remains on 1.19.4.
+- Shipped in **v1.20.0** (`76570e4`), deployed 2026-09-09 through the standing path: verified pre-deploy backup, readiness, smoke 19/19, container healthy.

@@ -65,7 +65,7 @@ _GATE: evaluated against constitution v2.1.0 before research; re-checked after i
   the product change and recorded failing for the named reasons; commands and outcomes are in
   [tasks.md](./tasks.md).
 - **VIII — Releases traceable**: PASS. Core takes a MINOR bump with the CLI range and lock in the same
-  commit; commit and push are standing-authorized; deployment is a separate decision.
+  commit; commit and push are standing-authorized. Shipped in v1.20.0 on 2026-09-09.
 
 An ADR is not created: this feature changes no policy. The durable rules it does establish — which
 floor governs, and that one resolver serves both engines — are recorded in the platform validator

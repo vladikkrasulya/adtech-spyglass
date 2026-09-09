@@ -59,4 +59,4 @@ written where it can be revisited in one line.
 
 ## Deployment
 
-None. Production remains on `1.19.4`; shipping is a separate decision for the owner.
+Shipped in **v1.20.0** (`76570e4`), deployed 2026-09-09 through the standing path: verified pre-deploy backup, readiness, smoke 19/19, container healthy.
