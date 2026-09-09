@@ -10,7 +10,7 @@
 
 - [x] T001 Record verified PR #83 main base and isolated ownership; publish `specs/028-vendor-request-dialects/` and ignored `.specify/feature.json` without editing peer paths.
 - [x] T002 Capture all 256 materialized cases using `tests/corpus/lib/load.js`, including the five-group/24-case scope and supplemental five DEF-151 cases; retain exact payload/expectation/signature baseline in machine-local evidence.
-- [ ] T003 Record the explicit decision for only the two Kadam inpage format assertions in `specs/028-vendor-request-dialects/research.md`; retain their exact signatures unless approval arrives. This task does not block unrelated implementation.
+- [x] T003 The decision for the two Kadam inpage format assertions is recorded in [ADR-017](../decisions/ADR-017-format-tags-follow-the-wire.md), not in this package's research notes: it is a project-wide rule about what a format tag may claim, and it is applied by feature 030. Their signatures were retired with it.
 - [x] T004 Complete requirements review and read-only spec/plan/tasks analysis for `specs/028-vendor-request-dialects/`, with zero critical conflicts or uncovered requirements before runtime.
 
 ## Phase 2: User Story 1 - Documented proprietary carriers (Priority: P1)
@@ -60,8 +60,8 @@
 - [x] T022 [US4] Update as-built vendor semantics in `specs/000-platform-baseline/contracts/core-validator.md`, `http-api.md` where changed, and `locales-versioning.md`; update `specs/ROADMAP.md` and feature evidence with actual layer status.
 - [x] T023 [US4] Set Core 0.46.0 in `packages/core/package.json`, preserve CLI 0.1.3 while updating its Core dependency to `^0.46.0` in `packages/cli/package.json`, and align `package-lock.json`; read back independent app/Core/CLI versions after integration.
 - [x] T024 [US4] Run scoped formatting/type/lint, finding/ref/locale, version/package and SpecKit governance checks, then `npm run ci`; record exact commands, outcomes and any genuine environment limits in `specs/028-vendor-request-dialects/verification.md`.
-- [ ] T025 [US4] Run convergence against `specs/028-vendor-request-dialects/{spec,plan,tasks}.md`, finish any remaining required work, then review and stage only authored paths; commit and non-force push the settled branch once per delivery wave.
-- [ ] T026 [US4] Wait for hosted CI on the pushed revision, record exact status in the pull request receipt linked from `specs/028-vendor-request-dialects/verification.md`, and hand remaining browser signatures to their owner without claiming full group closure, publication or deployment.
+- [x] T025 [US4] Delivered as `edd4568` on `codex/028-vendor-request-dialects`. The branch was then landed by the Opus session on 2026-09-09: rebased onto `e3dcf2e`, DEF-180's two halves retired together where the rebase brought them into conflict, full local gate green, pushed as `9dcfda8`.
+- [x] T026 [US4] Hosted CI succeeded on `9dcfda8` (run 34287398871). The remaining browser signatures were handed to the preview owner and closed by feature 030 the same day; the combined work shipped in `v1.20.0`.
 
 ## Dependencies and execution order
 

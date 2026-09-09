@@ -448,6 +448,33 @@ test(
             );
             await shot('http-error');
 
+            // 031 — a 2xx whose body is not the documented envelope. The
+            // guard used to read `j.success === false`, so an undefined
+            // `success` satisfied neither branch and the analysis stopped in
+            // silence with the previous result still on screen. Nothing about
+            // that was visible to a user; nothing about it was visible here
+            // either, because no test ever sent one.
+            B.controlNextAnalyze(page, {
+              status: 200,
+              body: { note: 'a 200 that is not the documented envelope' },
+            });
+            const unreadableOutcome = await B.analyze(page);
+            observations.unreadable = await surface(page);
+            const unreadableAnalysis = await B.measureAnalysis(page);
+            check(
+              unreadableOutcome === 'failed',
+              'unreadable-2xx: a 200 without the documented envelope was treated as a success',
+            );
+            check(
+              unreadableAnalysis.toasts.length > 0,
+              'unreadable-2xx: the analysis stopped with no visible explanation',
+            );
+            check(
+              !observations.unreadable.last && !observations.unreadable.verdictVisible,
+              'unreadable-2xx: a previous verdict is still claimed after an unreadable response',
+            );
+            await shot('unreadable-2xx');
+
             const aborted = fixture(config.id, 'UX network failure');
             await B.setPayload(page, aborted);
             B.controlNextAnalyze(page, { abort: true });

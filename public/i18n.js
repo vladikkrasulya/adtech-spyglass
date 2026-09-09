@@ -34,6 +34,8 @@
       'toast.layout.reset': 'Layout скинуто — обидві панелі знову видимі',
       'toast.paste_request': 'Встав BidRequest у ліве поле',
       'toast.nothing_to_analyze': 'Нічого аналізувати — обидва поля порожні',
+      'toast.unreadable_response':
+        'Сервер відповів, але тіло відповіді не читається. Результат не оновлено.',
       // toast.nothing_to_mirror + toast.mirror_* keys live in modules/mirror/i18n.js
       'toast.error_generic': 'Помилка: {error}',
       // toast.recovery_key_copied lives in modules/recovery/i18n.js
@@ -368,6 +370,8 @@
       'toast.layout.reset': 'Layout reset — both panels are back',
       'toast.paste_request': 'Paste a BidRequest in the left pane',
       'toast.nothing_to_analyze': 'Nothing to analyze — both fields are empty',
+      'toast.unreadable_response':
+        'The server answered, but its response body could not be read. Nothing was updated.',
       // toast.nothing_to_mirror + toast.mirror_* keys live in modules/mirror/i18n.js
       'toast.error_generic': 'Error: {error}',
       // toast.recovery_key_copied lives in modules/recovery/i18n.js
@@ -705,6 +709,8 @@
       'toast.layout.reset': 'Layout сброшен — обе панели снова видимы',
       'toast.paste_request': 'Вставь BidRequest в левое поле',
       'toast.nothing_to_analyze': 'Нечего анализировать — оба поля пусты',
+      'toast.unreadable_response':
+        'Сервер ответил, но тело ответа не читается. Результат не обновлён.',
       // toast.nothing_to_mirror + toast.mirror_* keys live in modules/mirror/i18n.js
       'toast.error_generic': 'Ошибка: {error}',
       // toast.recovery_key_copied lives in modules/recovery/i18n.js

@@ -367,6 +367,14 @@ function evaluatePreview(measured, expectPreview) {
         );
     }
   }
+  if (expectPreview.price !== undefined) {
+    // The chip carries the money the analyst reads off this creative: the
+    // amount AND the currency the response named. Compared as displayed,
+    // because a symbol swap is exactly the defect this exists to catch.
+    const shown = measured.outer ? measured.outer.priceChip : undefined;
+    if (shown !== expectPreview.price)
+      failures.push(`preview.price: expected ${expectPreview.price}, got ${shown}`);
+  }
   if (expectPreview.limitation) {
     if (!measured.limitationShown)
       failures.push(

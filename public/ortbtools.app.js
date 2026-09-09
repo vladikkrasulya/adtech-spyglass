@@ -3588,6 +3588,16 @@ export async function mountInspector(root, ctx) {
     return inner && typeof inner === 'object' && !Array.isArray(inner) ? inner : res;
   }
 
+  // The request side of the same envelope. Core has no helper by this name
+  // either — crosscheck.js's buildRequestView does the unwrap inline — but it
+  // is the same one line, and without it a 3.0 auction id and a 3.0 item list
+  // are simply invisible to this file (feature 031).
+  function unwrapRequestEnvelope(req) {
+    if (!req || typeof req !== 'object' || Array.isArray(req)) return req;
+    const inner = req.openrtb && typeof req.openrtb === 'object' ? req.openrtb.request : null;
+    return inner && typeof inner === 'object' && !Array.isArray(inner) ? inner : req;
+  }
+
   /**
    * @param {unknown} bid one resolved Bid, in either protocol
    * @returns {object|null} an oRTB Native 1.x shaped object, or null
@@ -3707,18 +3717,6 @@ export async function mountInspector(root, ctx) {
     if (typeof material.description === 'string' && material.description)
       lines.push(material.description);
     return lines.length ? lines.join('\n') : null;
-  }
-
-  // The same wrapper shapes findPushMaterial scans, reduced to the ONE material a
-  // whole-response resolution is about: the EXADS `res.bid` wrapper, the first
-  // element of a bare materials array, or Adon3's `res.ads[0]` — the same
-  // first-of-many convention the oRTB path applies to seatbid[0].bid[0].
-  function firstVendorMaterial(res) {
-    if (Array.isArray(res)) return res[0] && typeof res[0] === 'object' ? res[0] : null;
-    if (!res || typeof res !== 'object') return null;
-    if (res.bid && typeof res.bid === 'object' && !Array.isArray(res.bid)) return res.bid;
-    if (Array.isArray(res.ads) && res.ads[0] && typeof res.ads[0] === 'object') return res.ads[0];
-    return null;
   }
 
   /**
@@ -3874,6 +3872,19 @@ export async function mountInspector(root, ctx) {
                 typeof m.url === 'string'
                 ? m.url
                 : '#';
+    // 031: the vendor's own call-to-action label, under the three names the
+    // In-Page Push dialect documents. The preview contract listed this role
+    // from the start and nothing carried it to the card, so a payload saying
+    // "Learn more" rendered a card that said nothing of the sort. Inert here
+    // like every other string in this document.
+    const cta =
+      typeof m.cta === 'string'
+        ? m.cta
+        : typeof m.button === 'string'
+          ? m.button
+          : typeof m.button_text === 'string'
+            ? m.button_text
+            : null;
     return (
       '<!doctype html><html><head><meta charset="utf-8"><style>' +
       "html,body{margin:0;padding:0;background:#fff;color:#1a1a1a;font:13px/1.4 system-ui,-apple-system,'Segoe UI',sans-serif}" +
@@ -3888,6 +3899,7 @@ export async function mountInspector(root, ctx) {
       '.hero{width:100%;max-height:160px;border-radius:6px;overflow:hidden;background:#f3f3f3;margin-top:10px}' +
       '.hero img{width:100%;height:100%;object-fit:cover;display:block}' +
       '.u{font:10px/1.3 ui-monospace,monospace;color:#888;margin-top:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+      '.cta{display:inline-block;margin-top:10px;padding:5px 10px;border-radius:5px;background:#1a1a1a;color:#fff;font-size:11.5px;font-weight:600}' +
       '</style></head><body>' +
       '<a class="card" href="' +
       escapeHtml(link) +
@@ -3902,6 +3914,7 @@ export async function mountInspector(root, ctx) {
       (desc ? '<div class="d">' + escapeHtml(desc) + '</div>' : '') +
       '</div></div>' +
       (img ? '<div class="hero"><img src="' + escapeHtml(img) + '" alt=""></div>' : '') +
+      (cta ? '<div class="cta">' + escapeHtml(cta) + '</div>' : '') +
       (link && link !== '#' ? '<div class="u">→ ' + escapeHtml(link) + '</div>' : '') +
       '</a></body></html>'
     );
@@ -3922,9 +3935,13 @@ export async function mountInspector(root, ctx) {
    * @returns {{seatIndex: number, bidIndex: number, marker: string}[]}
    */
   function creativeCandidatesFor(res) {
-    if (res && typeof res === 'object' && Array.isArray(res.seatbid)) {
+    // 031: a 3.0 response nests its seatbid under the envelope. Without this
+    // unwrap a multi-bid 3.0 response enumerated ZERO candidates and offered
+    // no selector at all, while the resolver below could resolve them.
+    const envelope = unwrapResponseEnvelope(res);
+    if (envelope && typeof envelope === 'object' && Array.isArray(envelope.seatbid)) {
       const out = [];
-      res.seatbid.forEach((seat, seatIndex) => {
+      envelope.seatbid.forEach((seat, seatIndex) => {
         (Array.isArray(seat && seat.bid) ? seat.bid : []).forEach((bid, bidIndex) => {
           out.push({ seatIndex, bidIndex, marker: (bid && bid.crid) || (bid && bid.id) || '' });
         });
@@ -3943,7 +3960,29 @@ export async function mountInspector(root, ctx) {
         marker: (m && m.title) || (m && m.url) || (m && m.link) || '',
       }));
     }
+    // 031: the single-material shapes — the EXADS `res.bid` wrapper and a bare
+    // feed object that IS the material (or that carries a documented
+    // destination wrapper at its top level). They were always resolvable, but
+    // enumerated as nothing, so "the first candidate" had no answer for them.
+    // One candidate each: the selector still renders no controls for a single
+    // choice, and the index space now covers every shape the resolver accepts.
+    const single = singleVendorCarrier(res);
+    if (single) {
+      return [
+        { seatIndex: 0, bidIndex: 0, marker: (single.title || single.url || single.link) ?? '' },
+      ];
+    }
     return [];
+  }
+
+  // The two shapes that carry exactly one material without an array around it.
+  // Returned as the material itself so one index (0,0) addresses it, matching
+  // what findPushMaterial/firstVendorMaterial/findDestinationUrl already reach.
+  function singleVendorCarrier(res) {
+    if (!res || typeof res !== 'object' || Array.isArray(res)) return null;
+    if (Array.isArray(res.seatbid) || Array.isArray(res.ads)) return null;
+    if (res.bid && typeof res.bid === 'object' && !Array.isArray(res.bid)) return res.bid;
+    return res;
   }
 
   /**
@@ -3968,7 +4007,9 @@ export async function mountInspector(root, ctx) {
    *   bid: object,
    *   seat: object|null,
    *   pushMaterial: object|null,
+   *   material: object|null,
    *   identity: string|null,
+   *   priceText: string,
    *   previewDims: {w:number,h:number}|null,
    *   previewMacroContext: object,
    * }}
@@ -3982,6 +4023,7 @@ export async function mountInspector(root, ctx) {
         : null;
     let bid = {};
     let seat = null;
+    let material = null;
     let pushMaterial = null;
     let adm = null;
     let identity = null;
@@ -4007,13 +4049,29 @@ export async function mountInspector(root, ctx) {
       }
     } else {
       const isAdsWrapper = !Array.isArray(res) && !!res && Array.isArray(res.ads);
-      const materials = Array.isArray(res) ? res : isAdsWrapper ? res.ads : null;
-      const material = materials ? materials[bidIndex] : null;
+      // 031: the single-material shapes join the index space. `res.bid` (the
+      // EXADS wrapper) and a bare feed object were always resolvable through
+      // the whole-response helpers, but had no index that addressed them, so
+      // this function — the one definition of "the creative at (seat, bid)" —
+      // could not answer for them and the analysis path kept its own copy.
+      const materials = Array.isArray(res)
+        ? res
+        : isAdsWrapper
+          ? res.ads
+          : bidIndex === 0 && seatIndex === 0
+            ? [singleVendorCarrier(res)]
+            : null;
+      material = materials ? materials[bidIndex] : null;
       // `isAdsWrapper` mirrors findPushMaterial's own scoping: a bare `url`
       // field is only trusted as a click-through inside Adon3's `res.ads[]`
       // wrapper, never in a generic materials array.
       if (material && typeof material === 'object' && !Array.isArray(material)) {
-        if (isPushMaterialShape(material, isAdsWrapper)) {
+        // A wrapper may carry ordinary markup of its own; the same precedence
+        // the bid branch applies, applied here.
+        adm = findAdm(material);
+        if (adm) {
+          // Nothing further: real markup wins, exactly as it does for a bid.
+        } else if (isPushMaterialShape(material, isAdsWrapper)) {
           pushMaterial = material;
           adm = renderPushToHtml(pushMaterial);
         } else {
@@ -4045,16 +4103,42 @@ export async function mountInspector(root, ctx) {
       }
     }
     if (!previewDims && pushMaterial) previewDims = { w: 360, h: 300 };
+    // 031 — REVIEW-01: every value below used to be read off the RAW `res` and
+    // `req`, so an OpenRTB 3.0 response's currency and identifiers, which live
+    // one level down under the envelope, were simply not found: a bid of
+    // EUR 1.25 displayed as $1.25 for a whole release. The field names come
+    // from the product's own 3.0 projection in packages/core/crosscheck.js
+    // (buildRequestView / buildResponseView / projectBid30), so the panel
+    // names the same fields the engine does rather than inventing a second
+    // mapping. Where 3.0 has no equivalent at all — `adid` is absent from that
+    // projection — the value stays empty on purpose; a plausible substitute
+    // would be a guess presented as a reading.
+    const reqEnvelope = unwrapRequestEnvelope(req);
     const resCur =
-      res && typeof res === 'object' && !Array.isArray(res) && typeof res.cur === 'string'
-        ? res.cur.trim()
+      envelope &&
+      typeof envelope === 'object' &&
+      !Array.isArray(envelope) &&
+      typeof envelope.cur === 'string'
+        ? envelope.cur.trim()
         : '';
-    const previewCurrency = resCur || 'USD';
+    // A feed material carries its own currency or none at all; USD is the same
+    // default §3.3 gives a response that omits `cur`.
+    const materialCur =
+      material && typeof material === 'object'
+        ? (typeof material.currency === 'string' && material.currency.trim()) ||
+          (typeof material.cur === 'string' && material.cur.trim()) ||
+          ''
+        : '';
+    const previewCurrency = resCur || materialCur || 'USD';
     const previewMacroContext = {
-      auctionId: (req && req.id) || '',
-      responseBidId: (res && typeof res === 'object' && !Array.isArray(res) && res.bidid) || '',
+      auctionId: (reqEnvelope && reqEnvelope.id) || '',
+      responseBidId:
+        (envelope && typeof envelope === 'object' && !Array.isArray(envelope) && envelope.bidid) ||
+        '',
       bidId: bid.id || '',
-      impid: bid.impid || '',
+      // 3.0 renames this one: a bid references `request.item[].id` through
+      // `bid.item`, exactly as crosscheck.js's projectBid30 reads it.
+      impid: bid.impid || bid.item || '',
       seat: seat ? seat.seat || '' : '',
       adid: bid.adid || '',
       currency: previewCurrency,
@@ -4068,8 +4152,46 @@ export async function mountInspector(root, ctx) {
       discountPct: '',
       discountCpm: '',
     };
-    const bidCur = (typeof bid.cur === 'string' && bid.cur.trim()) || resCur || 'USD';
-    return { adm, bid, seat, pushMaterial, identity, bidCur, previewDims, previewMacroContext };
+    const bidCur = (typeof bid.cur === 'string' && bid.cur.trim()) || previewCurrency;
+    return {
+      adm,
+      bid,
+      seat,
+      material,
+      pushMaterial,
+      identity,
+      bidCur,
+      priceText: priceTextFor(material, bid, adm, bidCur),
+      previewDims,
+      previewMacroContext,
+    };
+  }
+
+  // 031 — the winning-bid chip, in ONE place. It used to be written out twice,
+  // and both copies read `bid.price` off a `bid` local that is `{}` for every
+  // materials-array resolution, so a vendor Native material carrying `cpc`
+  // printed the literal "BID" instead of its own price.
+  //
+  // Order: the resolved material's own price under any alias the product
+  // already documents, then the bid's price, then the two honest non-answers —
+  // "there is a creative but it named no price" and "there is no creative".
+  // Zero is a real price and formats as one; only absence falls through.
+  // Positional, not destructured: tests/creative-resolution.test.js extracts
+  // functions from this file by brace-matching from the first `{` after the
+  // name, and a destructured parameter list is that `{`.
+  function priceTextFor(material, bid, adm, cur) {
+    const fromMaterial =
+      material && typeof material === 'object'
+        ? [material.cpc, material.price, material.value, material.bid_price].find(
+            (v) => Number.isFinite(Number(v)) && v !== '' && v !== null,
+          )
+        : undefined;
+    if (fromMaterial !== undefined) return formatMoney(Number(fromMaterial), cur);
+    const bidPrice = bid && typeof bid === 'object' ? bid.price : undefined;
+    if (Number.isFinite(Number(bidPrice)) && bidPrice !== '' && bidPrice !== null)
+      return formatMoney(Number(bidPrice), cur);
+    if (adm) return 'BID';
+    return formatMoney(0, cur);
   }
 
   // ── Analysis ──────────────────────────────────────────────────
@@ -4832,116 +4954,25 @@ export async function mountInspector(root, ctx) {
       // DEF-151: a 3.0 response nests its whole payload under `openrtb.response`,
       // so a 2.x-shaped lookup finds no seatbid at all and every bid-derived
       // panel below reads an empty object.
-      const resEnvelope = unwrapResponseEnvelope(res);
-      const seatbid = Array.isArray(resEnvelope.seatbid) ? resEnvelope.seatbid[0] : null;
-      const bidList = seatbid && Array.isArray(seatbid.bid) ? seatbid.bid : [];
-      const bid = bidList[0] && typeof bidList[0] === 'object' ? bidList[0] : {};
-      let adm;
-      let pushMaterial = null;
-      let previewIdentity = null;
-      const adcomNative = adcomNativeFrom(bid);
-      if (bid && bid.native && Array.isArray(bid.native.assets)) {
-        adm = JSON.stringify({ native: bid.native });
-      } else if (adcomNative) {
-        adm = JSON.stringify({ native: adcomNative });
-      } else {
-        adm = findAdm(res);
-        // Push materials (spec 014) carry no adm/iurl, so findAdm dead-ends on
-        // them by construction — this seam fires exactly where the panel used
-        // to give up with the empty state. Synthesize the notification card
-        // and let it travel the markup pipeline like any banner creative.
-        if (!adm) {
-          pushMaterial = findPushMaterial(res) || inpagePushCardFrom(bid);
-          if (pushMaterial) {
-            adm = renderPushToHtml(pushMaterial);
-          } else {
-            // DEF-441/DEF-106: a documented vendor material that carries a
-            // creative but is deliberately not a push card still has one — a
-            // Native card, or a banner's picture and click.
-            const vendorMaterial = firstVendorMaterial(res);
-            adm = vendorMaterial ? vendorMaterialAdm(vendorMaterial) : null;
-            if (!adm) {
-              // DEF-202: neither an oRTB creative nor a push-material shape
-              // resolved — the response may still document a redirect/landing
-              // destination under a vendor wire wrapper (documented response
-              // wrappers, the clickunder creative). Render it as an inert URL
-              // through the SAME `url`-kind pipeline classify() already uses
-              // for a bare-URL adm, rather than leaving the preview empty.
-              const destUrl = findDestinationUrl(res);
-              if (destUrl) {
-                adm = destUrl;
-                // DEF-107: the destination says where, never which.
-                previewIdentity = vendorMaterial ? vendorIdentityFrom(vendorMaterial) : null;
-              }
-            }
-          }
-        }
-      }
-      // Winning-bid price. Per oRTB §4.3.2 bid.cur overrides the response's
-      // cur, which in turn defaults to USD — the hardcoded '$' here labelled
-      // every bid as dollars regardless of what the response said it was.
-      const bidCur =
-        (typeof bid.cur === 'string' && bid.cur.trim()) ||
-        (res && typeof res.cur === 'string' && res.cur.trim()) ||
-        'USD';
-      // Push materials price per click, not per bid, and carry no currency
-      // field — USD matches the response-side default above. Number() also
-      // admits the numeric-string cpc that feed.push.bid_string_type merely
-      // warns about: a chip beside the rendered card should show the value
-      // the SSP will parseFloat, not a placeholder.
-      const pushPrice = pushMaterial
-        ? Number(
-            pushMaterial.cpc ?? pushMaterial.price ?? pushMaterial.bid_price ?? pushMaterial.value,
-          )
-        : NaN;
-      $('mPrice').innerText = Number.isFinite(pushPrice)
-        ? formatMoney(pushPrice, bidCur)
-        : adm
-          ? bid.price
-            ? formatMoney(bid.price, bidCur)
-            : 'BID'
-          : formatMoney(0, bidCur);
-      // Banner dimensions: prefer bid.{w,h} (winning creative size), fall back
-      // to req.imp[0].banner.{w,h}, then to format[0] when banner has multi-size.
-      // Used by setAdPreview to render at native size and scale-to-fit the
-      // narrow right-sidebar preview container.
-      let previewDims = null;
-      if (bid && bid.w && bid.h) {
-        previewDims = { w: Number(bid.w), h: Number(bid.h) };
-      } else if (req.imp && req.imp[0] && req.imp[0].banner) {
-        const b = req.imp[0].banner;
-        if (b.w && b.h) previewDims = { w: Number(b.w), h: Number(b.h) };
-        else if (Array.isArray(b.format) && b.format[0] && b.format[0].w && b.format[0].h) {
-          previewDims = { w: Number(b.format[0].w), h: Number(b.format[0].h) };
-        }
-      }
-      // Synthetic push card: a typical notification aspect. The markup
-      // branch's scale-to-fit handles the narrow sidebar as it does for
-      // fixed-size banners.
-      if (!previewDims && pushMaterial) previewDims = { w: 360, h: 300 };
-      // Build a shared macro context for the preview — same sources as
-      // extractBidTrackers uses. The preview resolves adm through the
-      // same evaluator as the Macro tab so results are always in sync.
-      const previewCurrency =
-        res && typeof res.cur === 'string' && res.cur.trim() ? res.cur.trim() : 'USD';
-      const previewMacroContext = {
-        auctionId: (req && req.id) || '',
-        responseBidId: (res && res.bidid) || '',
-        bidId: bid.id || '',
-        impid: bid.impid || '',
-        seat: seatbid ? seatbid.seat || '' : '',
-        adid: bid.adid || '',
-        currency: previewCurrency,
-        bidPrice: typeof bid.price === 'number' ? String(bid.price) : bid.price || '',
-        price: '', // Only an explicit simulation override may replace this value
-        lossCode: '',
-        mbr: '',
-        minToWin: '',
-        multiplier: '',
-        impTs: '',
-        discountPct: '',
-        discountCpm: '',
-      };
+      // 031 — ONE definition of the selected creative. This path used to carry a
+      // second copy of the resolution logic, and the two disagreed in three
+      // ways that all reached the screen: it searched the WHOLE materials array
+      // for a push card (so a mixed feed rendered material[1] while the selector
+      // said material[0] was selected), it read `findAdm` over the WHOLE response
+      // (so an empty seatbid[0] showed seatbid[1]'s creative labelled with a bid
+      // that does not exist), and it read currency and identifiers off the raw
+      // payload (so a 3.0 response's EUR displayed as USD). The selector and the
+      // first render now answer to the same enumeration and the same resolver.
+      const creativeCandidates = creativeCandidatesFor(res);
+      // No candidate at all is still a state to render: an empty or bid-less
+      // response resolves to nothing and says so, at a defined index.
+      const selected = creativeCandidates[0] || { seatIndex: 0, bidIndex: 0 };
+      const resolved = resolveCreativeAt(req, res, selected.seatIndex, selected.bidIndex);
+      const adm = resolved.adm;
+      const previewIdentity = resolved.identity;
+      const previewDims = resolved.previewDims;
+      const previewMacroContext = resolved.previewMacroContext;
+      $('mPrice').innerText = resolved.priceText;
 
       // Keep preview data local to this Inspector mount. The shared overrides
       // are merged through the Macro Evaluator before every render.
@@ -4953,12 +4984,12 @@ export async function mountInspector(root, ctx) {
       _currentPreviewDims = previewDims;
       _currentPreviewIdentity = previewIdentity;
       reRenderPreview();
-      // DEF-201: offer a control for every OTHER returned bid/material too —
-      // the preview above is always seatbid[0].bid[0] (or materials[0]), and
-      // without this a second, third… creative in the same response was
-      // simply unreachable. No control at all when there is only one
-      // candidate: a selector for a single choice is noise.
-      renderCreativeBidSelector(creativeCandidatesFor(res), 0, 0);
+      // DEF-201: offer a control for every OTHER returned bid/material too.
+      // No control at all when there is only one candidate: a selector for a
+      // single choice is noise. The marked control is the one actually
+      // rendered above, not a hard-coded (0,0) that a response with an empty
+      // first seat does not even contain.
+      renderCreativeBidSelector(creativeCandidates, selected.seatIndex, selected.bidIndex);
 
       // Phase 8: paint summary-bar IDs so the collapsed-card state shows
       // identity. req.id / res.id are the canonical oRTB BidRequest /
@@ -5148,9 +5179,16 @@ export async function mountInspector(root, ctx) {
         // server errors (rate-limit, empty-payload, invalid-JSON) returned
         // {success:false} and silently fell through the if-branch below,
         // leaving the user staring at a stale UI with no toast.
-        if (!r.ok || j.success === false) {
+        // `!== true`, not `=== false`: a 2xx whose body is not the documented
+        // envelope parses to `{}` through the .catch above, so `j.success` is
+        // undefined and BOTH branches used to decline it — the analysis simply
+        // stopped, silently, with whatever was on screen left standing. The
+        // guard is now exhaustive: anything that is not an explicit success is
+        // handled here, and the branch below runs only on an explicit one.
+        if (!r.ok || j.success !== true) {
           const code = j && j.code;
-          const errMsg = (j && j.error) || 'HTTP ' + r.status;
+          const errMsg =
+            (j && j.error) || (r.ok ? t('toast.unreadable_response') : 'HTTP ' + r.status);
           if (code === 'empty_payload') {
             // invalidateIfPayloadChanged() already cleared any prior
             // successful result on the very 'input' event that produced
@@ -7789,24 +7827,10 @@ export async function mountInspector(root, ctx) {
             _currentPreviewDims = resolved.previewDims;
             _currentPreviewIdentity = resolved.identity;
             reRenderPreview();
-            const pushPrice = resolved.pushMaterial
-              ? Number(
-                  resolved.pushMaterial.cpc ??
-                    resolved.pushMaterial.price ??
-                    resolved.pushMaterial.value ??
-                    resolved.pushMaterial.bid_price,
-                )
-              : NaN;
             const priceEl = $('mPrice');
-            if (priceEl) {
-              priceEl.innerText = Number.isFinite(pushPrice)
-                ? formatMoney(pushPrice, resolved.bidCur)
-                : resolved.adm
-                  ? resolved.bid && resolved.bid.price
-                    ? formatMoney(resolved.bid.price, resolved.bidCur)
-                    : 'BID'
-                  : formatMoney(0, resolved.bidCur);
-            }
+            // 031: the same chip text the first render uses — one definition,
+            // so selecting a material can never disagree with showing it.
+            if (priceEl) priceEl.innerText = resolved.priceText;
             // Rebuild the strip so aria-pressed follows the new selection —
             // same candidates, same set of buttons, new active index.
             renderCreativeBidSelector(creativeCandidatesFor(last.res), seatIndex, bidIndex);

@@ -117,6 +117,11 @@ const PREVIEW_KEYS = new Set([
   'limitation',
   'capabilityGap',
   'marker',
+  // The winning-bid chip, exactly as it reads on screen — currency symbol and
+  // all. Measured since the harness was written and asserted since 031: an
+  // OpenRTB 3.0 response declaring EUR displayed its price in dollars for a
+  // full release, and nothing in the corpus could see it.
+  'price',
   'bids',
 ]);
 const BID_PREVIEW_KEYS = new Set(
@@ -296,6 +301,8 @@ function checkPreview(pv, where, errors, bid = false) {
   }
   if (pv.marker !== undefined && (typeof pv.marker !== 'string' || !pv.marker))
     errors.push(`${where}.marker: nonempty string`);
+  if (pv.price !== undefined && (typeof pv.price !== 'string' || !pv.price))
+    errors.push(`${where}.price: nonempty string as displayed, e.g. "€1.25"`);
   if (
     pv.assets !== undefined &&
     (!isObj(pv.assets) || Object.values(pv.assets).some((v) => !Number.isInteger(v) || v < 0))

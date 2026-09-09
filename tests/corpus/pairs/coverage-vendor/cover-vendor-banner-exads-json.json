@@ -61,6 +61,7 @@
       "kind": "markup",
       "rendered": "empty",
       "mediaPlays": "n/a",
+      "price": "$1.25",
       "limitation": "Only remote artwork is supplied; the sealed preview blocks it, leaving no visible body or identity.",
       "capabilityGap": null
     }

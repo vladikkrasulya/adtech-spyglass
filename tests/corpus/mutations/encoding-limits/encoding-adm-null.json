@@ -71,6 +71,7 @@
       "kind": "empty",
       "rendered": "empty",
       "mediaPlays": "n/a",
+      "price": "$1.25",
       "limitation": "adm is null; there is no ad markup for the preview to render",
       "capabilityGap": null
     },

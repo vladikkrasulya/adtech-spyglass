@@ -6,6 +6,13 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.21.0 — the creative on screen is the one that is selected (2026-09-09)
+
+- Show the price the response actually named. An OpenRTB 3.0 bid of EUR 1.25 displayed as `$1.25`, because currency and identifiers were read from the outside of a 3.0 envelope instead of from the payload inside it. A resolved material's own price now reaches the chip as well, instead of a placeholder, and a bid that carries a price with nothing renderable shows that price rather than a fabricated zero.
+- Show the creative the selector says is selected. A response carrying materials of different kinds rendered whichever one was push-shaped, at any position, while marking the first as selected; a response whose first seat carried no bids showed another seat's creative labelled with a bid that does not exist. Creative resolution now has one definition, and the first render, the selector and the price all answer to it.
+- Explain an analysis that cannot be read. A `200` whose body is not the documented envelope used to stop silently, leaving the previous verdict standing.
+- Render the In-Page Push call-to-action label, which the preview contract listed and the card never showed.
+
 ### v1.20.1 — consistent desktop typography (2026-09-09)
 
 - Restore compact saved-sample titles and metadata in the account cabinet using the same 13px/11px hierarchy as the library. Human-readable saved titles in Inspector use the interface typeface.
@@ -20,7 +27,7 @@ All notable changes to ortbtools are documented here. Format follows
 - Repair three ways the Inspector could describe something that was no longer on screen: a failed analysis no longer leaves the previous verdict, an explicit paste starts a new byte-level reading of the input, and every returned bid or material is reachable through its own selector. The creative frame carries an accessible name.
 - Report specification qualifiers as what they are: a missing recommended field is a warning and a missing optional field is information, while a supplied malformed one remains an error with its own identifier. Callers that treated a missing `device` or an empty `seatbid` as an error will see a lower level for it.
 - Tell the truth about money: a coerced or negative bid price no longer earns a floor verdict, a matched deal floor governs through the one resolver both engines share, and the OpenRTB 3.0 path reads its own currency fields.
-- Decode the documented EXADS, Kadam, PPCmate and Adon3 feed requests, validate their responses in their own terms, and complete format recognition for the vendor carriers and for structured AdCOM Native.
+- Decode the documented EXADS, Kadam and PPCmate feed requests, validate their responses in their own terms, and complete format recognition for the vendor carriers and for structured AdCOM Native. Adon3-shaped references are inspected too, but explicitly as provisional: they carry unsupported-dialect warnings and this release does not certify that protocol.
 - Complete the audio checks and the response crosschecks: audio MIME validation and safe XML detection, selected media and buyer-seat checks, structured Native asset presence and completeness, whitespace markup, unassigned no-bid codes and malformed COPPA.
 - Survive malformed input instead of dropping it: non-array `seatbid`/`bid`, a scalar response payload, and an oversized body that now answers `400` rather than consuming memory.
 - Close the ad-format verification ledger. All 257 corpus cases are asserted normatively at Core, real HTTP and real Chrome, and the audit records no remaining known gaps.

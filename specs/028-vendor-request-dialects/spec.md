@@ -4,7 +4,7 @@
 
 **Created**: 2026-09-08
 
-**Status**: Verification
+**Status**: Complete
 
 **Input**: Accepted Core and backend portion of the vendor decoder brief: SpecKit 028, Core 0.46.0, start after PR #83 reaches main, with public preview owned separately.
 

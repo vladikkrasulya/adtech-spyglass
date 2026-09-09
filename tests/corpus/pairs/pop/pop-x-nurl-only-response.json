@@ -155,6 +155,7 @@
       "kind": "empty",
       "rendered": "empty",
       "mediaPlays": "n/a",
+      "price": "$0.11",
       "limitation": "nurl-only bid has no adm for the preview to render",
       "capabilityGap": null
     },

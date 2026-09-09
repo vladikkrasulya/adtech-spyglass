@@ -26,6 +26,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
+const { loadCorpus } = require('./corpus/lib/load');
+
 const ROOT = path.join(__dirname, '..');
 const APP_SRC = fs.readFileSync(path.join(ROOT, 'public/ortbtools.app.js'), 'utf8');
 
@@ -73,17 +75,29 @@ function loadHelpers() {
     'vendorNativeMaterialFrom',
     'vendorBannerMarkupFrom',
     'vendorIdentityFrom',
-    'firstVendorMaterial',
     'vendorMaterialAdm',
+    'unwrapRequestEnvelope',
+    'singleVendorCarrier',
+    'applySubCentDigits',
+    'activeLocaleTag',
+    'formatMoney',
+    'priceTextFor',
     'creativeCandidatesFor',
     'resolveCreativeAt',
   ];
   const bodies = names.map((n) => extractFunction(APP_SRC, n)).join('\n\n');
-  const factory = new Function('escapeHtml', `${bodies}\nreturn { ${names.join(', ')} };`);
+  const factory = new Function(
+    'escapeHtml',
+    'window',
+    `${bodies}\nreturn { ${names.join(', ')} };`,
+  );
   // Identity stub: these tests check WHICH branch fires and what text ends
   // up where, not HTML-entity correctness (that belongs to escapeHtml's own
   // test, if one exists — not duplicated here).
-  return factory((s) => String(s == null ? '' : s));
+  // `window` only so activeLocaleTag can read the UI locale; the browser
+  // corpus suite is where the real one is exercised. `en` matches the locale
+  // that suite drives, so a price string asserted here reads the same there.
+  return factory((s) => String(s == null ? '' : s), { tLocale: () => 'en' });
 }
 
 function fixture(relPath) {
@@ -575,49 +589,6 @@ test('resolveCreativeAt: an In-Page Push bid resolves to its rendered card, and 
   assert.equal(admResolved.adm, withAdm.response.seatbid[0].bid[0].adm);
 });
 
-test('inpagePushCardFrom: across the whole corpus it claims exactly the five documented In-Page Push carriers and nothing else', () => {
-  const { inpagePushCardFrom } = loadHelpers();
-  const corpusRoot = path.join(ROOT, 'tests/corpus');
-  const claimed = [];
-  (function walk(dir) {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (!['assets', 'lib', 'known-gaps'].includes(entry.name)) walk(full);
-      } else if (entry.name.endsWith('.json')) {
-        let parsed;
-        try {
-          parsed = JSON.parse(fs.readFileSync(full, 'utf8'));
-        } catch {
-          continue;
-        }
-        const res = parsed.response;
-        if (!res || typeof res !== 'object' || !Array.isArray(res.seatbid)) continue;
-        for (const seat of res.seatbid) {
-          if (!seat || !Array.isArray(seat.bid)) continue;
-          for (const bid of seat.bid) {
-            if (!bid || typeof bid !== 'object') continue;
-            if (typeof bid.adm === 'string' && bid.adm) continue;
-            if (bid.native) continue;
-            if (inpagePushCardFrom(bid)) claimed.push(parsed.id);
-          }
-        }
-      }
-    }
-  })(corpusRoot);
-  assert.deepEqual(
-    [...new Set(claimed)].sort(),
-    [
-      'cover-vendor-inpage-openrtb26',
-      'inpage-x-widget-iab-contract',
-      'inpage-x-widget-inapp',
-      'inpage-x-widget-openrtb-aliases',
-      'inpage-x-widget-openrtb-canonical',
-    ],
-    'the carrier predicate must reach the documented In-Page Push cases and no other bid in the corpus',
-  );
-});
-
 // ── DEF-151/DEF-441/DEF-106/DEF-107 — vendor and AdCOM carriers, feature 030 ──
 
 test('unwrapResponseEnvelope: an OpenRTB 3.0 envelope yields its inner response; anything else is returned untouched', () => {
@@ -697,9 +668,9 @@ test('vendorNativeMaterialFrom: every documented role is required — a material
 });
 
 test('vendorBannerMarkupFrom: the documented EXADS bid wrapper becomes banner markup carrying its own picture and destination', () => {
-  const { vendorBannerMarkupFrom, firstVendorMaterial } = loadHelpers();
+  const { vendorBannerMarkupFrom, singleVendorCarrier } = loadHelpers();
   const c = fixture('pairs/coverage-vendor/cover-vendor-banner-exads-json.json');
-  const material = firstVendorMaterial(c.response);
+  const material = singleVendorCarrier(c.response);
   assert.equal(material, c.response.bid, 'the EXADS wrapper resolves to res.bid');
   const markup = vendorBannerMarkupFrom(material);
   assert.match(
@@ -753,47 +724,134 @@ test('resolveCreativeAt: a 3.0 AdCOM bid resolves through the envelope to its na
   assert.equal(resolved.identity, null, 'a rendered creative needs no identity fallback');
 });
 
-test('the four carrier predicates reach exactly the documented cases across the whole corpus and nothing else', () => {
+// ── Exhaustive corpus traversal ─────────────────────────────────────────────
+//
+// The reach guards below used to walk `tests/corpus` with their own
+// `fs.readdirSync` recursion and read `parsed.response` straight off each file.
+// A mutation stores a `patch` against a base pair, not a response, so every one
+// of them was silently skipped: the guards said "across the whole corpus" while
+// reaching 135 of the 243 responses the loader materializes. They also examined
+// only the FIRST material of a materials feed, so nothing ever checked
+// materials[1..n]. Both are fixed by going through the same loader and the same
+// enumeration the product itself uses (feature 031).
+
+/** Every bid of a response, through the OpenRTB 3.0 envelope when there is one. */
+function bidsOf(H, response) {
+  const envelope = H.unwrapResponseEnvelope(response);
+  if (!envelope || typeof envelope !== 'object' || !Array.isArray(envelope.seatbid)) return [];
+  return envelope.seatbid.flatMap((seat) => (Array.isArray(seat && seat.bid) ? seat.bid : []));
+}
+
+/**
+ * Every material of a response, in the same index space the selector uses AND
+ * with the same click-alias scope the resolver applies to it. The scope is
+ * carried, not re-derived: a bare `url` is a click-through only inside Adon3's
+ * `res.ads[]` wrapper, and a guard that forgot that would classify an Adon3
+ * push material as a vendor Native one — which is a wrong answer about the
+ * guard, not about the product.
+ * @returns {Array<{material: unknown, allowBareUrlClick: boolean}>}
+ */
+function materialsOf(H, response) {
+  if (response === undefined || response === null) return [];
+  if (bidsOf(H, response).length) return [];
+  const envelope = H.unwrapResponseEnvelope(response);
+  if (envelope && typeof envelope === 'object' && Array.isArray(envelope.seatbid)) return [];
+  if (Array.isArray(response))
+    return response.map((material) => ({ material, allowBareUrlClick: false }));
+  if (typeof response === 'object' && Array.isArray(response.ads))
+    return response.ads.map((material) => ({ material, allowBareUrlClick: true }));
+  const single = H.singleVendorCarrier(response);
+  return single ? [{ material: single, allowBareUrlClick: false }] : [];
+}
+
+/** The cases the loader materializes, pairs and mutations alike. */
+function corpusCases() {
+  return loadCorpus().all;
+}
+
+test('the corpus traversal these reach guards use is exhaustive: every case the loader materializes, and every material of every response', () => {
   const H = loadHelpers();
-  const corpusRoot = path.join(ROOT, 'tests/corpus');
-  const reached = { adcom: [], vendorNative: [], vendorBanner: [], identity: [] };
-  (function walk(dir) {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (!['assets', 'lib', 'known-gaps'].includes(entry.name)) walk(full);
-        continue;
-      }
-      if (!entry.name.endsWith('.json')) continue;
-      let parsed;
-      try {
-        parsed = JSON.parse(fs.readFileSync(full, 'utf8'));
-      } catch {
-        continue;
-      }
-      const res = parsed.response;
-      if (res === undefined) continue;
-      const envelope = H.unwrapResponseEnvelope(res);
-      if (envelope && typeof envelope === 'object' && Array.isArray(envelope.seatbid)) {
-        for (const seat of envelope.seatbid) {
-          if (!seat || !Array.isArray(seat.bid)) continue;
-          for (const bid of seat.bid) {
-            if (!bid || typeof bid !== 'object') continue;
-            if (typeof bid.adm === 'string' && bid.adm) continue;
-            if (bid.native && Array.isArray(bid.native.assets)) continue;
-            if (H.adcomNativeFrom(bid)) reached.adcom.push(parsed.id);
-          }
-        }
-        continue;
-      }
-      const material = H.firstVendorMaterial(res);
-      if (!material || H.findAdm(res) || H.findPushMaterial(res)) continue;
-      if (H.vendorNativeMaterialFrom(material)) reached.vendorNative.push(parsed.id);
-      else if (H.vendorBannerMarkupFrom(material)) reached.vendorBanner.push(parsed.id);
-      else if (H.findDestinationUrl(res) && H.vendorIdentityFrom(material))
-        reached.identity.push(parsed.id);
+  const cases = corpusCases();
+  assert.ok(cases.length > 250, `expected the full corpus, got ${cases.length} cases`);
+  const mutations = cases.filter((c) => c.kind === 'mutation');
+  assert.ok(
+    mutations.length > 100,
+    `mutations must be reachable; got ${mutations.length} — a raw file walk sees none of them`,
+  );
+  const withResponse = cases.filter((c) => c.response !== undefined);
+  const reached = withResponse.filter(
+    (c) => bidsOf(H, c.response).length > 0 || materialsOf(H, c.response).length > 0,
+  );
+  const mutationResponses = mutations.filter((c) => c.response !== undefined);
+  assert.ok(
+    mutationResponses.length > 100,
+    `mutations must materialize responses; got ${mutationResponses.length}`,
+  );
+  // Not every response carries a candidate (a no-bid, a deliberately malformed
+  // payload); what must hold is that nothing is skipped for being a mutation.
+  assert.ok(
+    reached.length >= withResponse.length - 40,
+    `traversal reached ${reached.length} of ${withResponse.length} responses`,
+  );
+  const multiMaterial = withResponse.filter((c) => materialsOf(H, c.response).length > 1);
+  const adsWrapped = withResponse.filter((c) =>
+    materialsOf(H, c.response).some((m) => m.allowBareUrlClick),
+  );
+  assert.ok(
+    adsWrapped.length > 0,
+    'the corpus must contain an ads[]-wrapped response, or the click-alias scope this traversal carries is never exercised',
+  );
+  assert.ok(
+    multiMaterial.length > 0,
+    'the corpus must contain a multi-material response, or the every-material half of this guard proves nothing',
+  );
+});
+
+test('inpagePushCardFrom: across every case the loader materializes it claims exactly the five documented In-Page Push carriers and nothing else', () => {
+  const H = loadHelpers();
+  const claimed = [];
+  for (const c of corpusCases()) {
+    for (const bid of bidsOf(H, c.response)) {
+      if (!bid || typeof bid !== 'object') continue;
+      if (typeof bid.adm === 'string' && bid.adm) continue;
+      if (bid.native) continue;
+      if (H.inpagePushCardFrom(bid)) claimed.push(c.id);
     }
-  })(corpusRoot);
+  }
+  assert.deepEqual(
+    [...new Set(claimed)].sort(),
+    [
+      'cover-vendor-inpage-openrtb26',
+      'inpage-x-widget-iab-contract',
+      'inpage-x-widget-inapp',
+      'inpage-x-widget-openrtb-aliases',
+      'inpage-x-widget-openrtb-canonical',
+    ],
+    'the carrier predicate must reach the documented In-Page Push cases and no other bid in the corpus',
+  );
+});
+
+test('the four carrier predicates reach exactly the documented cases across every case and every material the loader materializes', () => {
+  const H = loadHelpers();
+  const reached = { adcom: [], vendorNative: [], vendorBanner: [], identity: [] };
+  for (const c of corpusCases()) {
+    for (const bid of bidsOf(H, c.response)) {
+      if (!bid || typeof bid !== 'object') continue;
+      if (typeof bid.adm === 'string' && bid.adm) continue;
+      if (bid.native && Array.isArray(bid.native.assets)) continue;
+      if (H.adcomNativeFrom(bid)) reached.adcom.push(c.id);
+    }
+    // EVERY material, not only the first: materials[1..n] were never examined.
+    for (const { material, allowBareUrlClick } of materialsOf(H, c.response)) {
+      if (!material || typeof material !== 'object' || Array.isArray(material)) continue;
+      if (H.findAdm(material)) continue;
+      if (H.isPushMaterialShape(material, allowBareUrlClick)) continue;
+      if (H.vendorNativeMaterialFrom(material)) reached.vendorNative.push(c.id);
+      else if (H.vendorBannerMarkupFrom(material)) reached.vendorBanner.push(c.id);
+      else if (H.findDestinationUrl(material) && H.vendorIdentityFrom(material))
+        reached.identity.push(c.id);
+    }
+  }
   assert.deepEqual([...new Set(reached.adcom)].sort(), [
     'cover-context-native-30-ctv',
     'cover-context-native-30-dooh',
@@ -802,6 +860,7 @@ test('the four carrier predicates reach exactly the documented cases across the 
     'native-x-ortb30-adcom-stub',
   ]);
   assert.deepEqual([...new Set(reached.vendorNative)].sort(), [
+    'cover-preview-materials-mixed-kinds',
     'cover-vendor-native-kadam-json',
     'cover-vendor-native-kadam-url',
   ]);

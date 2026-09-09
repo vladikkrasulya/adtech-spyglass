@@ -473,16 +473,30 @@ test('static: DEF-200 — a structured HTTP failure (429 or any other non-empty_
   // empty_payload is deliberately excluded: invalidateIfPayloadChanged()
   // already clears results on the 'input' event that produces it, before
   // this response ever lands.
+  //
+  // 031 widened the guard from `=== false` to `!== true`. That is not a
+  // loosening: a 2xx whose body is not the documented envelope parses to `{}`,
+  // so `success` was undefined and NEITHER branch took it — the analysis
+  // stopped in silence with the previous verdict still on screen. The guard is
+  // pinned in its exhaustive form here, and the success branch below it must
+  // stay an explicit `j.success === true` so the two cannot both decline a
+  // response again.
   assert.match(
     APP,
-    /if \(!r\.ok \|\| j\.success === false\) \{[\s\S]{0,80}?const code = j && j\.code;/,
-    'expected the structured-failure branch to still read the response code',
+    /if \(!r\.ok \|\| j\.success !== true\) \{[\s\S]{0,80}?const code = j && j\.code;/,
+    'the failure branch must be exhaustive: anything that is not an explicit success lands here',
   );
   assert.match(
     APP,
-    /if \(!r\.ok \|\| j\.success === false\) \{[\s\S]{0,600}?code === 'empty_payload'\)[\s\S]{0,400}?toast\(t\('toast\.nothing_to_analyze'\), 'info'\);[\s\S]{0,150}?\} else \{[\s\S]{0,500}?if \(!ctx\.signal\.aborted\) clearResultsForError\(errMsg\);/,
+    /if \(!r\.ok \|\| j\.success !== true\) \{[\s\S]{0,700}?code === 'empty_payload'\)[\s\S]{0,400}?toast\(t\('toast\.nothing_to_analyze'\), 'info'\);[\s\S]{0,150}?\} else \{[\s\S]{0,500}?if \(!ctx\.signal\.aborted\) clearResultsForError\(errMsg\);/,
     'every non-empty_payload structured failure (429 included) must call clearResultsForError, guarded the same way as the network-throw catch',
   );
+  assert.match(
+    APP,
+    /r\.ok \? t\('toast\.unreadable_response'\) : 'HTTP ' \+ r\.status/,
+    'a 2xx that cannot be read must be explained as such, not reported as an HTTP status',
+  );
+  assert.doesNotMatch(APP, /j\.success === false/, 'the non-exhaustive guard must not return');
 });
 
 test('static: response-only analysis does not accuse a request that was never sent', () => {
@@ -650,10 +664,26 @@ test('static: DEF-201 — the bid/material selector is wired into analyze, reset
   // beside an inert destination — and it is pinned here for the same reason:
   // carried into the next creative it would caption one material with another
   // material's name.
+  // 031 — the invariant this pins is stronger than "a selector is offered":
+  // the FIRST render and the selector's marked control must be the same
+  // candidate, resolved by the same function later selections use. A
+  // hard-coded (0,0) here is what let a mixed materials feed render one
+  // material while marking another as selected, and what pointed at a seat
+  // index a response with an empty first seat does not even contain.
   assert.match(
     APP,
-    /reRenderPreview\(\);[\s\S]{0,600}?renderCreativeBidSelector\(creativeCandidatesFor\(res\), 0, 0\);/,
-    'the default render must offer a selector for every returned bid/material',
+    /const creativeCandidates = creativeCandidatesFor\(res\);[\s\S]{0,400}?const selected = creativeCandidates\[0\] \|\| \{ seatIndex: 0, bidIndex: 0 \};\s*const resolved = resolveCreativeAt\(req, res, selected\.seatIndex, selected\.bidIndex\);/,
+    'the default render must resolve the FIRST enumerated candidate, not a hard-coded index',
+  );
+  assert.match(
+    APP,
+    /reRenderPreview\(\);[\s\S]{0,600}?renderCreativeBidSelector\(\s*creativeCandidates,\s*selected\.seatIndex,\s*selected\.bidIndex,?\s*\);/,
+    'the selector must mark the candidate that was actually rendered',
+  );
+  assert.doesNotMatch(
+    APP,
+    /renderCreativeBidSelector\(creativeCandidatesFor\(res\), 0, 0\)/,
+    'no path may re-introduce a hard-coded initial selection',
   );
   assert.match(
     APP,

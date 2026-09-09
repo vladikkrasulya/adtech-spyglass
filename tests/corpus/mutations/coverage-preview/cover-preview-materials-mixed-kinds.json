@@ -1,0 +1,91 @@
+{
+  "kind": "mutation",
+  "id": "cover-preview-materials-mixed-kinds",
+  "title": "materials of different kinds: the first render must show the material the selector says is selected, and every material must show its own price.",
+  "base": "cover-vendor-native-kadam-json",
+  "category": "multiplicity",
+  "format": "native",
+  "protocol": "jsonfeed",
+  "context": "n/a",
+  "dialect": "ext-rtb",
+  "scenario": "response-only",
+  "tags": ["coverage-closure", "multiplicity"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "Kadam Native JSON response-only with original material keys",
+      "url": "https://wiki.kadam.net/en/index.php?title=OpenRTB/Feed_Integration_SSP",
+      "version": "accessed 2026-09-08",
+      "license": "MIT for independently authored fixture; public source field definitions referenced, no upstream prose or creative copied."
+    },
+    "modifications": [
+      "All identifiers, prices, creative text and URLs independently authored. Reserved .test domains and TEST-NET addresses replace live values.",
+      "Coverage derivative of cover-vendor-native-kadam-json: a second material of a DIFFERENT kind (a push notification, with its own click alias and notification text) is appended, so the response carries two materials that resolve through two different preview branches. Every corpus multi-material response before this one was homogeneous."
+    ],
+    "sanitized": "Only synthetic IDs, fixture access keys and reserved .test domains; no visitor traffic or live requests."
+  },
+  "specRef": "specs/012-creative-preview-repair/contracts/creative-preview.md",
+  "patch": {
+    "replaceResponse": [
+      {
+        "id": "cover-preview-materials-mixed-kinds-native",
+        "url": "https://advertiser.example.test/coverage/mixed-first-native",
+        "cid": "synthetic-native-campaign",
+        "title": "A notebook for field sketches",
+        "image": "https://assets.example.test/coverage/mixed-first-492x328.png",
+        "cpc": 0.42
+      },
+      {
+        "id": "cover-preview-materials-mixed-kinds-push",
+        "title": "A second notice, not the first",
+        "description": "The second material must never be shown while the first is selected.",
+        "image": "https://assets.example.test/coverage/mixed-second-492x328.png",
+        "icon": "https://assets.example.test/coverage/mixed-second-icon-192x192.png",
+        "click_url": "https://advertiser.example.test/coverage/mixed-second-push",
+        "cpc": 0.01
+      }
+    ]
+  },
+  "expect": {
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "empty": true
+    },
+    "preview": {
+      "kind": "native",
+      "rendered": "partial",
+      "mediaPlays": "n/a",
+      "limitation": "The initial sealed preview blocks remote artwork.",
+      "capabilityGap": null,
+      "bids": [
+        {
+          "seatIndex": 0,
+          "bidIndex": 0,
+          "kind": "native",
+          "rendered": "partial",
+          "marker": "A notebook for field sketches",
+          "price": "$0.42"
+        },
+        {
+          "seatIndex": 0,
+          "bidIndex": 1,
+          "kind": "push",
+          "rendered": "partial",
+          "marker": "A second notice, not the first",
+          "price": "$0.01"
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "specNotes": [
+    "materials of different kinds: the first render must show the material the selector says is selected, and every material must show its own price.",
+    "The marker for each material is derived by the harness from that material's own title, and index 0 is measured on the FIRST render, before any selection control is clicked — which is exactly the state where a whole-array search for one preferred material kind disagrees with a selector initialised at index 0.",
+    "Creative body classification follows specs/012 sections 1-2 independently of auction format validity. Original base provenance is retained; fixture bytes are synthetic."
+  ],
+  "knownGap": null
+}

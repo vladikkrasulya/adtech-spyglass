@@ -57,8 +57,14 @@ conclude changes.
 
 - The two cases pass, and DEF-107 — the last open record naming them — closes.
 - In-page versus push for this vendor's feed stays out of reach until the vendor's own wire carries
-  the distinction. If a later request supplies `format=inpage`, or a later material supplies the
-  `ext` placement signal, the existing rules tag it with no further change.
+  the distinction. If a later **material** supplies the `ext.widget_id` / `ext.zone_id` /
+  `ext.format` placement signal, the existing `format-detect.js` rule tags it with no further
+  change — verified. A later **request** supplying `format=inpage` would **not**: the Kadam decoder
+  validates that parameter against the vendor's documented values, which do not include one, so such
+  a request is answered with `request.url.parameter_invalid` and no format tag. Supporting it would
+  need a documented vendor source first and then decoder work — it is not a change this decision
+  makes free. (Corrected 2026-09-09 after an independent review found the original sentence
+  overstated; the decision itself is unchanged.)
 - The rule generalises: a corpus expectation must be derivable from the bytes of the transaction it
   is attached to. Where it is not, the expectation is corrected here rather than left as a standing
   defect against the product.
