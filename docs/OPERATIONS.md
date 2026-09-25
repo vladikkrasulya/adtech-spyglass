@@ -1,8 +1,10 @@
 # ortbtools — Operations Runbook
 
-Maintainer: Vladik. Machine: `vkbox`, Debian 13. Stack root:
-`/srv/DATA/Stacks/ortbtools/`. Discover the current Tailscale endpoint with
-`tailscale ip -4` on the host; use the loopback health URL below for local checks.
+Maintainer: Vladik. Machine: `DESKTOP-GC7FSHQ` (historically `vkbox`) — Windows +
+WSL2 (Ubuntu 24.04), LAN 192.168.1.13. Stack root:
+`/srv/DATA/Stacks/ortbtools/`. Tailscale endpoint of the host: `100.76.158.3` (the
+Tailscale client runs on the Windows side; there is no `tailscale` binary in this
+WSL2 shell); use the loopback health URL below for local checks.
 
 ---
 
@@ -943,9 +945,13 @@ cd /srv/DATA/Stacks/ortbtools
 
 ### 7.1 Beszel (container metrics)
 
-Hub + agent compose at `/srv/DATA/Stacks/beszel/`. Hub UI: `http://127.0.0.1:8190`
-(or via the current address reported by `tailscale ip -4`, port `8190`). Container `ortbtools` should appear
-in the system list. CPU, RAM, and network are tracked by the agent via Docker socket.
+⚠ As of 2026-09-24, `/srv/DATA/Stacks/beszel/` does not exist on `DESKTOP-GC7FSHQ`
+and nothing listens on port 8190 — container metrics are now collected by the
+`grafana-stack` (`/srv/DATA/Stacks/grafana-stack`): Grafana UI at
+`http://127.0.0.1:3030` (also `http://192.168.1.13:3030`) and Prometheus at
+`http://127.0.0.1:9090`. Per-container state of `ortbtools` comes from
+`docker-exporter-go` (Docker API via `docker-socket-proxy`), host CPU/RAM/disk from
+`node-exporter` — not from Beszel.
 
 ### 7.2 Docker healthcheck
 
@@ -1215,7 +1221,11 @@ therefore never collide on the same tag name and silently overwrite a different
 commit's rollback target; a genuinely repeated deploy of the identical commit
 re-tags the identical name (harmless).
 
-The host's biweekly `/home/vk/.local/bin/cleanup-server.sh` delegates these tags to the tracked
+The original biweekly host job did not survive the 2026-09-19/20 host move; since 2026-09-25 it
+runs weekly as `ortbtools-cleanup-rollback.timer` (Sun 04:10, as `vk`), source of truth in
+`/srv/DATA/Ops/ortbtools-cleanup/`.
+
+The host's weekly `/home/vk/.local/bin/cleanup-server.sh` delegates these tags to the tracked
 `scripts/cleanup-rollback-tags.sh`, which ranks them by the referenced image's machine-readable
 creation timestamp and retains the ten newest. A tag whose image timestamp cannot be inspected or
 parsed is retained and logged for manual review; if the helper itself is unavailable, every tag is
@@ -1335,7 +1345,8 @@ See §9.1.2 if this ever prints `no` outside of an in-progress deploy/rollback.
 
 ### 10.1 Cloudflare Tunnel (public ingress)
 
-The tunnel terminates at `kyivtech-portal` (host port 80). All of `*.kyivtech.com.ua`
+The tunnel terminates at `kyivtech-portal` (host port 3000, per the
+`kyivtech.com.ua` rule in `/etc/cloudflared/config.yml`). All of `*.kyivtech.com.ua`
 routes through it. `ortbtools.com` is not a separate tunnel route — it's
 a subdomain that the portal handles at the application layer via
 `PORTAL_PROXY_TARGETS: ortbtools=http://127.0.0.1:8090`.
