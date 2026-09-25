@@ -1,11 +1,14 @@
 ---
 name: speckit-assess-shape
-description: 'Shape a concept: solution options, scope, appetite, and trade-offs (no implementation design)'
+description: 'Shape a concept: solution options, scope, appetite, and trade-offs (no
+  implementation design)'
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
-  author: github-spec-kit
-  source: assess:commands/speckit.assess.shape.md
+  author: spec-kit-core
+  source: extension:assess
 ---
+
+# Assess Shape Skill
 
 # Shape a Concept
 
