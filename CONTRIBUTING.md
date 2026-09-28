@@ -70,6 +70,11 @@ parallel policy source. CLI installation and regeneration use the exact release
 in the [foundation quickstart](./specs/001-spec-kit-foundation/quickstart.md),
 never an automatic upgrade during ordinary work.
 
+Claude Code note (2026-09-28): the owner removed the `.claude/skills/speckit-*` copies as unused
+tooling; the Codex, Cursor and Gemini integrations are unchanged. A Claude session therefore does
+not get the constitution through a command: read `.specify/memory/constitution.md` and
+`specs/ROADMAP.md` first, then follow the same sequence below by hand.
+
 For an uncertain product idea, read the constitution and memory index above,
 then start with the `assess` workflow. Its bundled adapters are a bounded
 pre-delivery funnel and do not automatically load full project context. A
