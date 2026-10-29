@@ -410,15 +410,35 @@ function handleSample(req, res) {
     const firstBid =
       (sample.seatbid && sample.seatbid[0] && sample.seatbid[0].bid && sample.seatbid[0].bid[0]) ||
       {};
+    // The request id MUST equal the response id: crosscheck requires the two
+    // to be identical, so any prefix or truncation here turns every specimen
+    // (including the "clean" controls) into a critical crosscheck.id_mismatch.
     const request = {
-      id: 'demo-' + String(sample.id || 'sample').slice(0, 40),
+      id: typeof sample.id === 'string' && sample.id ? sample.id : 'sample',
       imp: [
         {
           id: firstBid.impid || '1',
-          banner: {
-            w: firstBid.w || 300,
-            h: firstBid.h || 250,
-          },
+          // A bid declaring mtype 2 (video, the VAST specimens) must be
+          // answered from a video slot, else crosscheck reports a critical
+          // mtype_offered_mismatch against the synthesized banner slot. The
+          // demo player accepts every VAST protocol (1-8, 11-14: VAST 1.0-4.2
+          // inline and wrapper) and the VPAID JS mime, so the specimens'
+          // own flaws (not the synthesized request) drive the findings.
+          ...(firstBid.mtype === 2
+            ? {
+                video: {
+                  mimes: ['video/mp4', 'application/javascript'],
+                  protocols: [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14],
+                  w: firstBid.w || 640,
+                  h: firstBid.h || 360,
+                },
+              }
+            : {
+                banner: {
+                  w: firstBid.w || 300,
+                  h: firstBid.h || 250,
+                },
+              }),
           bidfloor: 0.1,
           bidfloorcur: 'USD',
         },
