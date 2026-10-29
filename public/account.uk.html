@@ -189,6 +189,39 @@
       .cab-danger h2 {
         color: var(--danger);
       }
+      .cab-delete {
+        margin-top: var(--space-5);
+        padding-top: var(--space-4);
+        border-top: 1px dashed var(--border);
+      }
+      .cab-delete h3 {
+        margin: 0 0 var(--space-2);
+        font-size: var(--fs-md);
+        font-weight: 600;
+        color: var(--danger);
+      }
+      .cab-delete-form {
+        display: grid;
+        gap: var(--space-3);
+        max-width: 28rem;
+        margin-top: var(--space-3);
+      }
+      .cab-delete-form[hidden],
+      .cab-delete-error[hidden] {
+        display: none;
+      }
+      .cab-delete-check {
+        display: flex;
+        gap: var(--space-2);
+        align-items: flex-start;
+        font-size: var(--fs-sm);
+        line-height: 1.5;
+      }
+      .cab-delete-error {
+        margin: 0;
+        font-size: var(--fs-sm);
+        color: var(--danger);
+      }
       .cab-gate {
         text-align: center;
         padding: var(--space-8) var(--space-5);
@@ -1039,13 +1072,65 @@
             <section class="cab-card cab-danger">
               <h2>Дії з акаунтом</h2>
               <p class="lead">
-                Sign out очищує session cookie і блокує бібліотеку. Щоб повністю видалити акаунт,
-                пиши на <a href="mailto:hi@ortbtools.com">hi@ortbtools.com</a> — автоматичне
-                видалення свідомо не виставлено наразі (рідкісне, незворотнє, легко випадково
-                клікнути).
+                Вихід очищує session cookie і блокує бібліотеку. Видалення акаунта — окрема й
+                незворотна дія.
               </p>
               <div class="cab-actions">
                 <button class="btn btn-secondary btn-sm" data-action="signout">Вийти</button>
+              </div>
+              <div class="cab-delete">
+                <h3>Видалити акаунт</h3>
+                <p class="lead">
+                  Назавжди видаляє акаунт і все, що в ньому збережено: зразки, партнерів, діалекти
+                  та мапінги, корпус поведінки, історію активності й сесії входу. Серверні журнали
+                  запитів, що згадують акаунт, знеособлюються (id акаунта та IP-адреса
+                  прибираються), а твої рядки в аналітичному сховищі видаляються за принципом
+                  best-effort; решта спливає сама (90–180 днів). Це не можна скасувати, і після
+                  цього нічого не відновити. Спершу експортуй, що потрібно.
+                </p>
+                <button
+                  class="btn btn-secondary btn-sm"
+                  type="button"
+                  data-action="delete-account-open"
+                  aria-expanded="false"
+                  aria-controls="deleteAccountForm"
+                >
+                  Видалити акаунт…
+                </button>
+                <form id="deleteAccountForm" class="cab-delete-form" hidden novalidate>
+                  <label for="deleteAccountPassword">Поточний пароль</label>
+                  <input
+                    id="deleteAccountPassword"
+                    type="password"
+                    autocomplete="current-password"
+                    required
+                  />
+                  <label class="cab-delete-check">
+                    <input id="deleteAccountConfirm" type="checkbox" />
+                    <span
+                      >Я розумію, що мій акаунт і всі збережені дані буде видалено назавжди, і це не
+                      можна скасувати.</span
+                    >
+                  </label>
+                  <p id="deleteAccountError" class="cab-delete-error" role="alert" hidden></p>
+                  <div class="cab-actions">
+                    <button
+                      id="deleteAccountSubmit"
+                      class="btn btn-danger btn-sm"
+                      type="submit"
+                      disabled
+                    >
+                      Видалити мій акаунт назавжди
+                    </button>
+                    <button
+                      class="btn btn-ghost btn-sm"
+                      type="button"
+                      data-action="delete-account-cancel"
+                    >
+                      Скасувати
+                    </button>
+                  </div>
+                </form>
               </div>
             </section>
           </section>
@@ -1059,6 +1144,6 @@
     <script src="/i18n.js?v=29"></script>
     <script src="/core/key-role-vocabulary.js?v=1" defer></script>
     <script src="/modules/inspector/dialect-label.i18n.js?v=1" defer></script>
-    <script src="/account.js?v=7"></script>
+    <script src="/account.js?v=8"></script>
   </body>
 </html>

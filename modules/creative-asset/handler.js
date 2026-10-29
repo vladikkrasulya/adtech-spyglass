@@ -15,7 +15,7 @@
  *
  * Request:  { url: "https://cdn.example/banner.png" }
  * Response: { ok: true, dataUri, bytes, contentType }
- *   4xx/5xx carry a `code` the UI maps to a specific sentence — an asset
+ *   4xx carry a `code` the UI maps to a specific sentence — an asset
  *   that redirects, is too large, or is not an image are three different
  *   things to tell someone, and "preview failed" is none of them.
  */
@@ -24,8 +24,12 @@ const { readJson, sendJson, sendError } = require('../../lib/http');
 const { fetchAsset, MAX_ASSET_BYTES } = require('../../lib/asset-fetch');
 const log = require('../../lib/logger').child('creative-asset');
 
-// Client-visible failure → HTTP status. Anything unlisted is a 502: we
-// reached for something on the caller's behalf and it did not work out.
+// Client-visible failure → HTTP status. Anything unlisted is a 424 Failed
+// Dependency: we reached for something on the caller's behalf and it did not
+// work out. 502/504 are deliberately NOT used for these — Cloudflare (and the
+// tunnel connector) replace an origin 502/504 with a plain-text
+// `error code: 5xx` page, so the client never sees the JSON `code` the UI
+// maps to a sentence. The failure is the third party's, not the gateway's.
 const STATUS_BY_CODE = {
   url_invalid: 400,
   scheme_blocked: 400,
@@ -35,7 +39,7 @@ const STATUS_BY_CODE = {
   redirect_blocked: 409,
   type_blocked: 415,
   too_large: 413,
-  timeout: 504,
+  timeout: 424,
 };
 
 const URL_MAX = 2048;
@@ -76,7 +80,7 @@ function createCreativeAssetModule({ auth, assetLimiter } = {}) {
       });
     } catch (e) {
       const code = e && e.code ? e.code : 'upstream_failed';
-      const status = STATUS_BY_CODE[code] || 502;
+      const status = STATUS_BY_CODE[code] || 424;
       // The URL is payload-derived, so only its host is logged, never the path
       // (which routinely carries click ids and user identifiers).
       let host = '';

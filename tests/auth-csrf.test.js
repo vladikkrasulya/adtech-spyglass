@@ -200,7 +200,7 @@ test('login: text/plain cross-site form post is refused before auth runs (login 
 test('every state-changing auth POST is guarded; GET routes are not', async () => {
   const { mod } = makeModule();
   const posts = mod.routes.filter((r) => r.method === 'POST');
-  assert.equal(posts.length, 9);
+  assert.equal(posts.length, 10);
   for (const route of posts) {
     const r = await post(mod, route.path, { 'sec-fetch-site': 'cross-site' }, {});
     assert.equal(r.status, 403, route.path);

@@ -131,6 +131,15 @@ must not imply those independent processors lack logging or retention.
 - Password-reset wipe is the explicit path when both password access and recovery are unavailable.
   It replaces password/crypto state and removes samples, partners, analyze metadata, Behavior Corpus
   rows, user dialects/mappings, and sessions while retaining the account identity.
+- Account deletion (`POST /api/auth/delete-account`, password-confirmed) removes the `users` row and,
+  through `ON DELETE CASCADE`, partners, samples, analyze metadata, Behavior Corpus rows, user
+  dialects/mappings and sessions, in one SQLite transaction together with anonymising the user's
+  `event_log` rows (`user_id` and `ip` set to NULL; the rows and their aggregate counts are kept).
+  After the commit it revokes in-memory sessions (the recovery journal stores only keyed session
+  identities and expiries, no account link, so there is no per-user recovery file to remove) and
+  makes a best-effort ClickHouse lightweight `DELETE … WHERE user_id` on `ortbtools_events` and
+  `ortbtools_product_events`; a ClickHouse failure is logged and the rows age out through their TTL.
+  `validation_logs` has no user column. Backups are not edited.
 - Destruction of live crypto state makes prior encrypted bodies inaccessible through the application,
   but rows already captured in backups follow backup retention rather than disappearing immediately.
 

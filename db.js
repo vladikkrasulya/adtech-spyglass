@@ -609,6 +609,32 @@ const Users = {
   },
 
   /**
+   * Self-service account deletion (GDPR-style erasure), one transaction.
+   *
+   * Deleting the `users` row cascades (ON DELETE CASCADE, foreign_keys=ON) to
+   * partners, samples, analyze_log, sessions, behavior_corpus and
+   * user_dialects (→ dialect_mappings). `event_log.user_id` has no FK, so the
+   * user's rows there are anonymised in the same transaction (user_id and ip
+   * set to NULL) rather than deleted: the rows are operational history and the
+   * aggregate counts stay meaningful once they no longer point at a person.
+   *
+   * Callers still have to drop in-memory sessions (auth.invalidateUserSessions)
+   * and purge ClickHouse; neither belongs inside a SQLite transaction.
+   *
+   * @param {number} id
+   * @returns {{ deleted: boolean, eventLogAnonymised: number }}
+   */
+  deleteAccount(id) {
+    return db.transaction(() => {
+      const eventLogAnonymised = db
+        .prepare('UPDATE event_log SET user_id = NULL, ip = NULL WHERE user_id = ?')
+        .run(id).changes;
+      const deleted = db.prepare('DELETE FROM users WHERE id = ?').run(id).changes === 1;
+      return { deleted, eventLogAnonymised };
+    })();
+  },
+
+  /**
    * Null out crypto state — used by reset-password mode='wipe' so the user
    * re-bootstraps encryption on next login (existing flow handles NULL
    * crypto state by triggering bootstrap).

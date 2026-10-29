@@ -534,6 +534,15 @@ function createAuth({ Users, Sessions, recovery, logger }) {
     return verifyEmailLimiter(clientIp(req));
   }
 
+  // /delete-account verifies the current password with bcrypt, so a hijacked
+  // session must not turn it into a password-guessing oracle. Capped per IP
+  // and per account (a botnet rotating IPs still hits the account bucket).
+  const deleteAccountIpLimiter = makeLimiter({ windowMs: 15 * 60 * 1000, max: 5 });
+  const deleteAccountUserLimiter = makeLimiter({ windowMs: 15 * 60 * 1000, max: 5 });
+  function checkDeleteAccountLimit(req, userId) {
+    return deleteAccountIpLimiter(clientIp(req)) && deleteAccountUserLimiter(String(userId));
+  }
+
   function beginShutdown() {
     closing = true;
   }
@@ -566,6 +575,7 @@ function createAuth({ Users, Sessions, recovery, logger }) {
     checkResetPasswordLimit,
     checkResetStateLimit,
     checkVerifyEmailLimit,
+    checkDeleteAccountLimit,
     clientIp, // exposed so other handlers (e.g. /api/analyze rate-limit) reuse the same trusted-proxy rule
     shutdown,
     beginShutdown,

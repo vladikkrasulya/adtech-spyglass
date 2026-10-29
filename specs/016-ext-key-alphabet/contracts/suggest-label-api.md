@@ -175,9 +175,12 @@ operator can still override, whereas applying a _different_ dialect's mapping wo
 
 ## Errors — unchanged
 
-`401 unauthorized` · `429 rate_limited` · `503 labeller_unavailable` · `504 labeller_timeout` ·
-`502 labeller_failed` / `bad_model_output`. Codes, bodies and the client's branching on `code` are
-untouched. Unavailability remains a supported state (ADR-012 §7): the role layer answers more
+`401 unauthorized` · `429 rate_limited` · `503 labeller_unavailable` ·
+`424 labeller_timeout` / `labeller_failed` / `bad_model_output`. Codes, bodies and the client's
+branching on `code` are untouched; only the status of the three model-failure codes moved from
+502/504 to 424 Failed Dependency, because Cloudflare replaces an origin 502/504 with a plain-text
+`error code: 5xx` page and the UI lost the `code`. A 424 does not trigger `sendError`'s 5xx page, so
+the handler calls `alertOperator` explicitly to keep the operator notification. Unavailability remains a supported state (ADR-012 §7): the role layer answers more
 signals, so the model is reached less often, but when it is reached and unreachable the behaviour is
 exactly as today.
 

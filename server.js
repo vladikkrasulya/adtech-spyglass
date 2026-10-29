@@ -843,6 +843,16 @@ const { createAuthRoutesModule } = require('./modules/auth/handler');
 const { createPartnersModule } = require('./modules/partners/handler');
 const { createSamplesModule } = require('./modules/samples/handler');
 const { createStreamModule, enrichAndStore } = require('./modules/stream/handler');
+// Account deletion: best-effort ClickHouse erasure of the user's rows
+// (lib/analytics-purge.js). Never fails the request; logs a warning instead.
+const clickhouseClient = require('./lib/clickhouse');
+const purgeUserAnalytics = (userId) =>
+  require('./lib/analytics-purge').purgeUserAnalytics(userId, {
+    chExec: clickhouseClient.chExec,
+    isEnabled: clickhouseClient.isEnabled,
+    logger: _logger.child('account-delete'),
+    flush: [eventLog.flushNow, require('./lib/product-telemetry').flushNow],
+  });
 router.register(
   createAuthRoutesModule({
     auth,
@@ -861,6 +871,7 @@ router.register(
     setLocaleCookie,
     VERIFY_TOKEN_TTL,
     RESET_TOKEN_TTL,
+    purgeUserAnalytics,
     // v0.38.2's post-login Ollama warmup is gone (2026-07-22): the rules
     // engine has no model to warm. The auth module keeps its no-op stub.
   }),
