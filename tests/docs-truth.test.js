@@ -201,7 +201,7 @@ test('deployment truth separates the operator backup gate and records the live v
   );
   assert.match(
     operations,
-    /sudo -n \/srv\/DATA\/Stacks\/ortbtools\/scripts\/backup-db\.sh/,
+    /sudo -n \/srv\/DATA\/Stacks\/[\w-]+\/scripts\/backup-db\.sh/,
     'root-owned backup archives require the documented sudo-capable command',
   );
   assert.match(

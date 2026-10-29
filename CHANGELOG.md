@@ -19,6 +19,7 @@ All notable changes to ortbtools are documented here. Format follows
 
 - Reference response specimens served by `GET /api/v1/sample` no longer raise a critical `crosscheck.id_mismatch`: the synthesized request keeps the response id instead of a `demo-` prefix. VAST specimens (`mtype` 2) now get a video slot accepting every VAST protocol and the VPAID JS mime, so `clean-banner`, `pop-clean-response` and `vast-clean-inline` show zero critical cross-check findings.
 - `POST /api/auth/verify-email/request` no longer answers `email_sent: true` when the mailer is in its dev-mode short-circuit (no `RESEND_API_KEY`) and nothing was delivered; it reports `email_sent: false` like `/register` does. The delivered path is unchanged.
+- Operations documentation now describes the host that actually runs ortbtools: the stack root `/srv/DATA/Stacks/adtech-spyglass`, the local nightly backup under `/srv/BULK/backups/ortbtools` (no restic, rclone or off-site copy), the Cloudflare tunnel stack, self-hosted GlitchTip, Resend on `ortbtools.com`, and the ClickHouse and Ollama stacks. New in `docs/OPERATIONS.md`: §0 (host reality table), §6.0 (backup, check and restore on this host) and §4.11 (a least-privilege ClickHouse account for the application). README and CONTRIBUTING quickstarts name the required `ORTBTOOLS_TAG`, the external `kt-shared` network and the `/data` directory, and the throwaway-container test command for hosts without a C toolchain.
 
 ### Security
 

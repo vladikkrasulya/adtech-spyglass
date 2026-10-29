@@ -60,7 +60,7 @@ ortbtools keeps two derived records for anonymous analyses: an anonymous analyti
 (detected format, oRTB version, and finding counts — ClickHouse `validation_logs`) and
 an operational request log (`event_log`) that records request metadata including your
 IP address, sampled. Neither contains the payload bodies. Reverse proxies and CDNs
-between your browser and the server (Cloudflare, the kyivtech-portal proxy) may have
+between your browser and the server (Cloudflare) may have
 their own access logs as well. The ortbtools application itself does not log payload
 bodies.
 
@@ -566,7 +566,7 @@ container environment even when ClickHouse credentials exist (useful when CH is
 shared with other services on the same host).
 
 ```bash
-# In /srv/DATA/Stacks/ortbtools/.env (then recreate container):
+# In /srv/DATA/Stacks/adtech-spyglass/.env (then recreate container):
 ORTBTOOLS_ANALYTICS_DISABLED=1
 ```
 
@@ -578,7 +578,7 @@ ORTBTOOLS_PRODUCT_TELEMETRY_DISABLED=1
 ```
 
 ```bash
-cd /srv/DATA/Stacks/ortbtools && docker compose up -d
+cd /srv/DATA/Stacks/adtech-spyglass && docker compose up -d
 ```
 
 **Not disabled by either option:** per-user `analyze_log` rows in SQLite (Cabinet →

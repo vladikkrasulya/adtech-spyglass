@@ -1,10 +1,11 @@
 # ortbtools — Operations Runbook
 
-Maintainer: Vladik. Machine: `DESKTOP-GC7FSHQ` (historically `vkbox`) — Windows +
-WSL2 (Ubuntu 24.04), LAN 192.168.1.13. Stack root:
-`/srv/DATA/Stacks/ortbtools/`. Tailscale endpoint of the host: `100.76.158.3` (the
-Tailscale client runs on the Windows side; there is no `tailscale` binary in this
-WSL2 shell); use the loopback health URL below for local checks.
+Maintainer: Vladik. Machine: `vkbox` — a bare-metal Ubuntu server (user `vk`) reached
+over the LAN and Tailscale. Stack root: `/srv/DATA/Stacks/adtech-spyglass/` (the
+directory keeps the repository name; the compose project and the container are
+`ortbtools`). Use the loopback health URL below for local checks. The previous host was
+a Windows machine running WSL2, and parts of this runbook still describe it:
+**§0 is authoritative wherever it disagrees with a later section.**
 
 ---
 
@@ -18,11 +19,43 @@ WSL2 shell); use the loopback health URL below for local checks.
 - **Logs**: `docker logs ortbtools --tail 200 -f` (container stdout/stderr via pino)
 - **SQLite DB**: `/srv/DATA/AppData/ortbtools/ortbtools.db` (WAL mode — also
   `ortbtools.db-shm` + `ortbtools.db-wal` in the same dir, all three are live state)
-- **Latest backup set** (daily at 03:30 via `/etc/cron.d/ortbtools-backup`):
-  `/srv/DATA/Backups/ortbtools/ortbtools-$(date +%Y-%m-%d).db.gz` and
-  `/srv/DATA/Backups/ortbtools/content-posts-$(date +%Y-%m-%d).tar.gz`
-- **Restart**: `cd /srv/DATA/Stacks/ortbtools && docker compose restart`
-- **Secrets vault**: `/srv/DATA/.secrets/api-tokens.env` (mode 0600, owner vk)
+- **Latest backup set** (daily at 03:30 via `/etc/cron.d/ortbtools-backup`, local disk only):
+  `/srv/BULK/backups/ortbtools/$(date +%Y-%m-%d)/` — `ortbtools.db.gz`,
+  `content-posts.tar.gz`, `state.tar.gz`, `SHA256SUMS` (details: §6.0)
+- **Restart**: `cd /srv/DATA/Stacks/adtech-spyglass && docker compose restart`
+  (a restart reuses the old image; source changes need a rebuild — §9)
+- **Secrets**: `/srv/DATA/Stacks/adtech-spyglass/.env` (mode 0600, git-ignored) is the only
+  file ortbtools reads; never print it (§5)
+
+---
+
+## 0. This host, as it is now
+
+Verified 2026-10-29. Older sections of this runbook were written for the previous
+(Windows + WSL2) host and name paths and services that do not exist here. Where a later
+section disagrees with this table, this table wins; the later text is kept because it is
+still the right procedure for a self-hoster with that layout.
+
+| Topic            | This host                                                                                                                                                                                                                                                                                                                         | What older sections say                                            |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Machine          | Bare-metal Ubuntu server `vkbox`. `/srv/DATA` is NVMe (stacks, app data, ops notes); `/srv/BULK` is a second disk (backups, models, media)                                                                                                                                                                                        | Windows + WSL2, `DESKTOP-GC7FSHQ`                                  |
+| Repository       | `/srv/DATA/Stacks/adtech-spyglass` (compose project `ortbtools`, container `ortbtools`)                                                                                                                                                                                                                                           | `/srv/DATA/Stacks/adtech-spyglass`                                 |
+| App data         | `/srv/DATA/AppData/ortbtools` mounted at `/data`                                                                                                                                                                                                                                                                                  | same                                                               |
+| Ports            | Container `3000` is published on `8090`. The tracked compose file binds loopback only; an untracked `docker-compose.local.yml` (listed in `.git/info/exclude`, selected by `COMPOSE_FILE` in `.env`) also publishes it on the LAN and Tailscale interfaces. Prometheus probes and other callers depend on 8090 — do not change it | loopback only                                                      |
+| Public ingress   | Cloudflare tunnel, stack `/srv/DATA/Stacks/cloudflared` (container `cloudflared`, host network, token in its `.env`). Routes live in that stack's `config.yml`: `ortbtools.com` and `www.ortbtools.com` → `http://localhost:8090`. Any other hostname still attached to the tunnel in Cloudflare is deliberately unrouted (404)   | `cloudflared` as a host process behind `kyivtech-portal`           |
+| Error tracking   | Self-hosted GlitchTip, stack `/srv/DATA/Stacks/glitchtip` (Sentry-compatible). ortbtools sends to `http://glitchtip:8000` over the `kt-shared` network (`SENTRY_DSN` in `.env`); the UI is reachable on the LAN and Tailscale only. If GlitchTip is down ortbtools keeps working and events are lost                              | optional, unconfigured                                             |
+| Alerts           | `TG_BOT_TOKEN` and `TG_ADMIN_CHAT_ID` are empty by the owner's decision, so `notifyAdmin()` writes `[notify:DEV]` lines to the log. Operator-visible failures go to GlitchTip                                                                                                                                                     | Telegram                                                           |
+| Email            | Resend, sender domain `ortbtools.com` (verified; DKIM/return-path records live in the Cloudflare zone). The API key is send-only and restricted to that domain                                                                                                                                                                    | `kyivtech.com.ua`                                                  |
+| Analytics / blog | ClickHouse stack `/srv/DATA/Stacks/clickhouse` (container `clickhouse`, alias `clickhouse` on `kt-shared`, published on `127.0.0.1:8123` only), database `analytics`                                                                                                                                                              | "external"                                                         |
+| Local model      | Ollama stack `/srv/DATA/Stacks/ollama` (alias `ollama`, CPU only, model `gemma4-prod`, loopback port 11434)                                                                                                                                                                                                                       | GPU runner                                                         |
+| Backups          | `~/bin/ortbtools-backup.sh` from `/etc/cron.d/ortbtools-backup`, daily 03:30, into `/srv/BULK/backups/ortbtools/YYYY-MM-DD/`. **Local disk only — by the owner's decision nothing leaves the server** (§6.0)                                                                                                                      | root cron, `scripts/backup-db.sh`, restic, rclone to a cloud drive |
+| Monitoring       | No Grafana, Prometheus, Beszel or portal on this host. Use the Docker healthcheck, `/api/health` and GlitchTip (§7)                                                                                                                                                                                                               | `grafana-stack`, `kyivtech-portal`                                 |
+| Secrets          | The stack's `.env` (mode 0600). There is no shared vault that ortbtools reads                                                                                                                                                                                                                                                     | `/srv/DATA/.secrets/api-tokens.env`                                |
+
+Rules that apply to every operation below: restart, recreate or rebuild of the live
+container, Cloudflare changes, cron/systemd changes and anything that deletes data need the
+owner's explicit OK for that specific action; do not print `.env`; nothing is uploaded
+off-server.
 
 ---
 
@@ -34,37 +67,27 @@ persistent dependency for analytics and news/blog data; those features no-op
 without credentials.
 
 ```
-[internet] → CF edge → cloudflared (host process, /etc/cloudflared/config.yml)
-   │
-   ├─ hostname ortbtools.com  ─────────────→ http://localhost:8090   (direct)
-   └─ hostname kyivtech.com.ua ─→ kyivtech-portal (host net, :3000)
-                                     │ PORTAL_PROXY_TARGETS: ortbtools=http://127.0.0.1:8090
-                                     └→ ortbtools
-                                            └→ ClickHouse on kt-shared (optional)
+[internet] → Cloudflare edge → cloudflared (container, host network;
+   │                            /srv/DATA/Stacks/cloudflared/config.yml)
+   └─ ortbtools.com, www.ortbtools.com ──→ http://localhost:8090
 
-               ...:8090 → docker-proxy → container :3000
-                          ^^^^^^^^^^^^ re-originates the connection:
-                          the container's TCP peer is the bridge GATEWAY
-                          (172.24.0.1), NEVER loopback
+127.0.0.1:8090 → docker-proxy → ortbtools container :3000
+                 ^^^^^^^^^^^^ re-originates the connection: the container's TCP
+                 peer is a bridge GATEWAY (the `kt-shared` gateway, and the
+                 project network's), NEVER loopback
+
+ortbtools ── kt-shared ──→ clickhouse:8123   analytics, product telemetry, blog
+                       ├─→ ollama:11434      dialect labeller (CPU)
+                       └─→ glitchtip:8000    error events (SENTRY_DSN)
 ```
 
-**`ortbtools.com` does not go through the portal.** cloudflared has its own ingress
-rule sending that hostname straight to `localhost:8090`. The portal is in the path
-only for `kyivtech.com.ua/ortbtools-proxy/*`. An older revision of this section said
-otherwise, and the same stale assumption in a code comment is what made every
-per-IP limiter bucket the whole internet together until v1.6.1 — see §4.10.
-
-The portal still exposes ortbtools in two ways of its own:
-
-1. **`/ortbtools-proxy/*`** — public reverse-proxy mount (no auth gate, since 2026-05-09).
-2. **`/api/admin/ortbtools`** — admin-only data surface used by the portal admin dashboard
-   (reads ortbtools's SQLite read-only via bind-mount at `/app/ortbtools-data/`).
-
-`kyivtech-portal` runs with `network_mode: host` so `http://127.0.0.1:8090` resolves
-directly. ortbtools is on Docker's default bridge and publishes only to
-`127.0.0.1:8090` — never to `0.0.0.0`. Because that publish is what re-originates
-the connection, **no** caller reaches the container from loopback, whichever path it
-took; `ORTBTOOLS_TRUSTED_PROXIES` is what makes the forwarded address usable (§4.10).
+There is no `kyivtech-portal` in the path on this host, and the docker-proxy
+behaviour above is why `ORTBTOOLS_TRUSTED_PROXIES` must list **both** bridge
+gateways (the `kt-shared` one and the project network's — Docker picks the
+publishing network by name order, so either can be the peer): without it every
+visitor resolves to one address and shares one rate-limit bucket (§4.10). Read the
+real values with `docker network inspect kt-shared ortbtools_default` rather than
+trusting a number written here.
 
 **SQLite** stores the application data in one WAL-mode database
 whose schema is auto-applied at startup by `db.js`. When `CLICKHOUSE_*`
@@ -139,7 +162,7 @@ changes — everything is baked into the image (there are no bind-mounts left ex
 the `/data` data directory).
 
 ```bash
-cd /srv/DATA/Stacks/ortbtools && docker compose restart
+cd /srv/DATA/Stacks/adtech-spyglass && docker compose restart
 ```
 
 ### 4.2 Any source / dependency / CSS change → redeploy (§9)
@@ -150,7 +173,7 @@ Since v1.1.5 every change to `server.js`, `db.js`, `auth.js`, `modules/`,
 script (gate + build + smoke + auto-rollback):
 
 ```bash
-cd /srv/DATA/Stacks/ortbtools
+cd /srv/DATA/Stacks/adtech-spyglass
 git checkout main && git pull --ff-only
 ./scripts/deploy.sh
 ```
@@ -227,7 +250,7 @@ the database/WAL/SHM ownership and mode contract. Membership in `ortbtools-ro`
 only grants read access and is not sufficient for this deletion.
 
 ```bash
-cd /srv/DATA/Stacks/ortbtools
+cd /srv/DATA/Stacks/adtech-spyglass
 docker compose stop ortbtools
 sudo -n -u '#1000' sh -c 'umask 027; exec sqlite3 /srv/DATA/AppData/ortbtools/ortbtools.db'
 ```
@@ -306,7 +329,7 @@ The flag is read once at boot (`server.js`), passed into the container via the
 restart). It is NOT an image rebuild.
 
 ```bash
-cd /srv/DATA/Stacks/ortbtools
+cd /srv/DATA/Stacks/adtech-spyglass
 # PAUSE — set the flag atomically (preserves .env 0600/owner) and recreate
 . scripts/deploy-lib.sh && set_env NEWS_CRAWLER_DISABLED 1 .env
 ORTBTOOLS_TAG="$(grep -E '^ORTBTOOLS_TAG=' .env | cut -d= -f2)" docker compose up -d --no-build
@@ -334,7 +357,7 @@ Anonymous analyze metadata (`validation_logs`) and the operational request log
 `ORTBTOOLS_ANALYTICS_DISABLED` is not `1`.
 
 ```bash
-cd /srv/DATA/Stacks/ortbtools
+cd /srv/DATA/Stacks/adtech-spyglass
 # Option A: leave CLICKHOUSE_USER empty in .env (default for local dev).
 
 # Option B: explicit opt-out on production-like stacks:
@@ -634,31 +657,120 @@ docker exec -i clickhouse clickhouse-client -q \
 ORTBTOOLS_TAG="$(grep -E '^ORTBTOOLS_TAG=' .env | cut -d= -f2)" docker compose up -d --no-build
 ```
 
+### 4.11 ClickHouse: a least-privilege account for the application
+
+**Why.** The application connects as the ClickHouse account `ortbtools`. The ClickHouse
+stack's entrypoint creates that account from `CLICKHOUSE_USER`/`CLICKHOUSE_PASSWORD` with
+`CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1`, so it holds `ACCESS MANAGEMENT` and `GRANT OPTION`
+(observed 2026-10-29). A leaked password or any query injection — the 2026-10-29 audit found one in the
+public blog list — is a takeover of the whole database, including creating other users. The
+application never needs that.
+
+**What the application does in ClickHouse** (from the code, not from the schema):
+
+| Table                                       | Needs                                                                                    | Code                                                                      |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `analytics.validation_logs`                 | `INSERT`                                                                                 | `lib/validation-log.js`                                                   |
+| `analytics.ortbtools_events`                | `INSERT`, `SELECT` (admin logs), lightweight `DELETE … WHERE user_id` (account deletion) | `lib/event-log.js`, `lib/analytics-purge.js`                              |
+| `analytics.ortbtools_product_events`        | `INSERT`, `SELECT` (telemetry summary), lightweight `DELETE … WHERE user_id`             | `lib/product-telemetry.js`, `modules/telemetry`, `lib/analytics-purge.js` |
+| `analytics.ortbtools_usage_daily` (+ `_mv`) | `SELECT`; the materialized view writes it when `ortbtools_product_events` is inserted    | `modules/telemetry`                                                       |
+| `analytics.blog_drafts`                     | `INSERT`, `SELECT`, `ALTER UPDATE` (status, slug, approval)                              | `lib/news-crawler.js`, `lib/blog-service.js`, `modules/admin/blog.js`     |
+| `analytics.blog_posts`                      | `INSERT`, `SELECT`                                                                       | `lib/blog-service.js`, `modules/blog`                                     |
+
+There is no runtime DDL, no `system.*` read and no cross-database access. The schema is created
+by `/srv/DATA/Stacks/clickhouse/initdb/01-ortbtools-schema.sql` (administrator, first start only).
+
+**Plan** (apply in a window the owner approves; nothing here is done by the application):
+
+1. Create a new account `ortbtools_app` next to the old one. Do not alter `ortbtools` yet.
+
+```sql
+-- run as the ClickHouse administrator; choose the password at the prompt, do not paste it into history
+CREATE SETTINGS PROFILE IF NOT EXISTS ortbtools_app_profile SETTINGS
+    allow_ddl = 0 CONST,
+    allow_introspection_functions = 0 CONST,
+    max_execution_time = 10,
+    max_memory_usage = 1000000000,
+    max_result_rows = 100000,
+    max_result_bytes = 100000000,
+    max_rows_to_read = 500000000;
+
+CREATE USER IF NOT EXISTS ortbtools_app
+  IDENTIFIED WITH sha256_password BY '<chosen at the prompt>'
+  HOST IP '172.16.0.0/12'          -- docker bridge networks only; tighten to the kt-shared subnet
+  DEFAULT DATABASE analytics
+  SETTINGS PROFILE 'ortbtools_app_profile';
+
+GRANT SELECT, INSERT ON analytics.validation_logs          TO ortbtools_app;
+GRANT SELECT, INSERT ON analytics.ortbtools_events         TO ortbtools_app;
+GRANT SELECT, INSERT ON analytics.ortbtools_product_events TO ortbtools_app;
+GRANT SELECT         ON analytics.ortbtools_usage_daily    TO ortbtools_app;
+GRANT SELECT, INSERT ON analytics.blog_drafts              TO ortbtools_app;
+GRANT SELECT, INSERT ON analytics.blog_posts               TO ortbtools_app;
+GRANT ALTER UPDATE   ON analytics.blog_drafts              TO ortbtools_app;
+GRANT ALTER DELETE   ON analytics.ortbtools_events         TO ortbtools_app;
+GRANT ALTER DELETE   ON analytics.ortbtools_product_events TO ortbtools_app;
+```
+
+2. Check from the application's side before switching (as `ortbtools_app`; `clickhouse-client`
+   inside the container, password from the prompt):
+   - `SELECT count() FROM analytics.ortbtools_events` works;
+   - `SELECT * FROM system.users` fails with "Not enough privileges";
+   - `CREATE TABLE analytics.t (x UInt8) ENGINE = Memory` fails;
+   - `INSERT INTO analytics.ortbtools_product_events (event) VALUES ('probe')` works **and**
+     `analytics.ortbtools_usage_daily` still receives the rollup (if it does not, add
+     `GRANT INSERT ON analytics.ortbtools_usage_daily` — the materialized view's definer rules
+     differ between ClickHouse releases, so this is verified, not assumed);
+   - `DELETE FROM analytics.ortbtools_events WHERE user_id = 999999999` succeeds.
+3. Switch the application: set `CLICKHOUSE_USER=ortbtools_app` and the new password in the
+   stack `.env` (mode 0600; back it up first with a dated name; never print it), then recreate
+   the container (owner OK required). Verify `/api/health`, an analyze that writes
+   `validation_logs`, and the news crawler's draft insert in the log.
+4. Keep using the entrypoint-created account `ortbtools` **only** as the administrator: it stays
+   for schema changes and for this procedure, but its credentials leave the application's `.env`
+   (store them wherever the other administrator credentials of the ClickHouse stack live, mode
+   0600). After a day of clean operation, if you want the application account to be the only
+   writer, `REVOKE` nothing from it — simply stop referencing it from ortbtools.
+5. Review the ClickHouse stack's own settings with the owner: `CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1`
+   is what gives every entrypoint-created account administrator rights. The stack can keep it
+   (it is the administrator), but nothing the application uses should rely on it.
+
+**Rollback.** Point `.env` back at `ortbtools` and recreate the container; the administrator
+account is not modified by any step above.
+
+**What this does not fix.** It limits the blast radius; the injection itself is fixed in code
+(whitelisted filters). The application also still sends its account over plain HTTP inside
+`kt-shared`; that network is private to the host.
+
 ---
 
 ## 5. Secrets Management
 
-### 5.1 Vault location
+### 5.1 Where secrets live
 
-`/srv/DATA/.secrets/api-tokens.env` — mode 0600, owner `vk`. Confirmed by:
+On this host the stack's own `.env` is the only file ortbtools reads:
+`/srv/DATA/Stacks/adtech-spyglass/.env`, mode 0600, owner `vk`, git-ignored
+(`.env.bak*` copies are ignored too). Check without printing it:
 
 ```bash
-stat /srv/DATA/.secrets/api-tokens.env
-# → Access: (0600/-rw-------)  Uid: (1000/vk)
+stat -c '%a %U %n' /srv/DATA/Stacks/adtech-spyglass/.env
+# → 600 vk /srv/DATA/Stacks/adtech-spyglass/.env
 ```
 
-This file is sourced by `.bashrc` for interactive shells. The backup job
-(`kt-backup-appdata.sh`) includes `/srv/DATA/.secrets` in the restic snapshot so the
-vault rides the daily AppData backup and off-site sync.
+There is no shared secrets vault that ortbtools depends on, and the backup job does **not**
+copy `.env` (§6.0): keep the secrets recoverable by re-issuing them at the providers.
+Never paste a secret value into a chat, a ticket, a commit or a command line that lands in
+shell history; show a length at most. Older revisions of this runbook described a
+`/srv/DATA/.secrets/api-tokens.env` vault restored by restic — that setup is not part of
+this deployment.
 
 ### 5.2 What ortbtools reads
 
 From `docker-compose.yml`, the container loads `env_file: - .env` (the per-project
-`.env` at `/srv/DATA/Stacks/ortbtools/.env`, git-ignored). The non-secret
+`.env` at `/srv/DATA/Stacks/adtech-spyglass/.env`, git-ignored). The non-secret
 `CONTENT_DIR` value is set directly in the Compose service definition.
 
-The `.env.example` documents the full key set. Variables that should live in the vault
-and be referenced from `.env`:
+The `.env.example` documents the full key set. The variables that carry a secret:
 
 | Var                  | Purpose                                                |
 | -------------------- | ------------------------------------------------------ |
@@ -666,7 +778,7 @@ and be referenced from `.env`:
 | `EMAIL_TOKEN_SECRET` | HMAC secret for stateless email tokens                 |
 | `TG_BOT_TOKEN`       | Telegram admin alerts                                  |
 | `TG_ADMIN_CHAT_ID`   | Telegram destination chat                              |
-| `SENTRY_DSN`         | Optional server-side Sentry-compatible error reporting |
+| `SENTRY_DSN`         | Error reporting to the self-hosted GlitchTip (§10.5)   |
 | `ADMIN_STATS_TOKEN`  | Bearer token for optional `/api/admin/stats` consumers |
 
 `NODE_ENV=production`, `EMAIL_FROM`, and `PUBLIC_BASE_URL` are non-secret and can live
@@ -674,10 +786,12 @@ directly in `.env`.
 
 ### 5.3 Adding a new secret
 
-1. Append the key=value to `/srv/DATA/.secrets/api-tokens.env`.
-2. Reference it in `/srv/DATA/Stacks/ortbtools/.env`.
-3. `cd /srv/DATA/Stacks/ortbtools && docker compose up -d` — this re-reads the
-   env file without a rebuild.
+1. Back up the current file under a dated name (`cp -p .env .env.bak-$(date +%Y%m%d-%H%M)`;
+   the copy stays 0600 and git-ignored).
+2. Add the key=value to `/srv/DATA/Stacks/adtech-spyglass/.env` with an editor or
+   `set_env` (`. scripts/deploy-lib.sh`), which preserves mode and owner.
+3. `cd /srv/DATA/Stacks/adtech-spyglass && docker compose up -d --no-build ortbtools` —
+   this re-reads the env file without a rebuild (owner OK is required for a recreate).
 
 ### 5.4 Rotating a secret
 
@@ -685,9 +799,9 @@ Order matters — kill the old credential at the provider before updating the co
 
 1. Revoke the old key at the provider (Resend dashboard, Telegram BotFather, etc).
 2. Generate the new key.
-3. Update `/srv/DATA/.secrets/api-tokens.env`.
-4. Update `/srv/DATA/Stacks/ortbtools/.env` with the new value.
-5. `docker compose up -d` to apply.
+3. Back up `/srv/DATA/Stacks/adtech-spyglass/.env` under a dated name.
+4. Update `/srv/DATA/Stacks/adtech-spyglass/.env` with the new value.
+5. `docker compose up -d --no-build ortbtools` to apply.
 6. If the rotated secret is `EMAIL_TOKEN_SECRET`: all outstanding password-reset and
    email-verify links are immediately invalidated. Users mid-reset will need to
    re-request. Acceptable trade-off for a security rotation.
@@ -696,14 +810,54 @@ Order matters — kill the old credential at the provider before updating the co
 
 ## 6. Backups
 
-### 6.1 Daily SQLite and persistent-content backup (cron)
+### 6.0 This host: local nightly backup
 
-Script: `/srv/DATA/Stacks/ortbtools/scripts/backup-db.sh`
+**Only the local disk holds backups. Nothing is copied off the server** (owner's decision,
+2026-10-29), so a loss of the machine or of both disks loses the data. §6.1 and §6.2 below
+describe the repository's root-cron script and a restic/rclone setup from the previous host;
+neither runs here.
+
+- **Script**: `~/bin/ortbtools-backup.sh` (a host-local wrapper, not in the repository). It uses
+  the same method as `scripts/backup-db.sh`: `sqlite3 .backup` (WAL-aware, never a file copy), an
+  `integrity_check` on the copy, a temporary directory moved into place atomically, `umask 077`.
+- **Schedule**: `/etc/cron.d/ortbtools-backup`, daily 03:30, as user `vk`. Log:
+  `/srv/BULK/backups/ortbtools/backup.log`.
+- **Output**: `/srv/BULK/backups/ortbtools/YYYY-MM-DD/` (directory 0700, files 0600, owner `vk`)
+  with `ortbtools.db.gz`, `content-posts.tar.gz`, `state.tar.gz` (`fx-rates.json` and the
+  `*-state.env` files) and `SHA256SUMS`. A second run on the same day replaces that day's directory.
+- **Retention**: the 14 newest daily directories plus the newest of each of the last 8 ISO weeks.
+- **Not backed up**: the stack `.env`, the ClickHouse data (its own stack), session-recovery state.
+- **Check**:
+
+```bash
+tail -n 5 /srv/BULK/backups/ortbtools/backup.log      # a "backup ok" line with users / cached_specimens counts
+ls -l /srv/BULK/backups/ortbtools | tail -n 5
+cd /srv/BULK/backups/ortbtools/$(date +%Y-%m-%d) && sha256sum -c SHA256SUMS
+```
+
+- **Manual run** (also the pre-deploy gate on this host):
+  `~/bin/ortbtools-backup.sh >> /srv/BULK/backups/ortbtools/backup.log 2>&1`
+- **Restore** — stops the container and replaces live data, so it needs the owner's explicit OK:
+
+```bash
+cd /srv/DATA/Stacks/adtech-spyglass && docker compose stop ortbtools
+D=/srv/DATA/AppData/ortbtools; B=/srv/BULK/backups/ortbtools/YYYY-MM-DD
+mv $D/ortbtools.db $D/ortbtools.db.broken; rm -f $D/ortbtools.db-wal $D/ortbtools.db-shm
+gunzip -c $B/ortbtools.db.gz > $D/ortbtools.db && chmod 640 $D/ortbtools.db
+tar xzf $B/content-posts.tar.gz -C $D      # if the blog content is needed; state.tar.gz likewise
+docker compose start ortbtools && curl -s http://127.0.0.1:8090/api/health
+```
+
+Verify with `sqlite3 $D/ortbtools.db 'PRAGMA integrity_check;'` (expected `ok`) before starting.
+
+### 6.1 Repository script: daily SQLite and content backup (root cron — not used on this host)
+
+Script: `/srv/DATA/Stacks/adtech-spyglass/scripts/backup-db.sh`
 
 Cron entry (`/etc/cron.d/ortbtools-backup`):
 
 ```
-30 3 * * * root /srv/DATA/Stacks/ortbtools/scripts/backup-db.sh >> /var/log/ortbtools-backup.log 2>&1
+30 3 * * * root /srv/DATA/Stacks/adtech-spyglass/scripts/backup-db.sh >> /var/log/ortbtools-backup.log 2>&1
 ```
 
 The script uses `sqlite3 "$SRC" ".backup '$DEST'"` — this is the correct WAL-aware
@@ -789,7 +943,11 @@ exist only so disposable tests can point at a test-owned dir/group; they cannot
 disable the check.) Both run before any build/seed/transition and print only file
 names + numeric owner/group/mode — never secrets or DB contents.
 
-### 6.2 AppData restic snapshot (systemd timer)
+### 6.2 AppData restic snapshot (systemd timer — not present on this host)
+
+> The restic repository, the `kt-backup-appdata` timer, the password file and the rclone
+> off-site copy described here do not exist on the current host. This section documents the
+> previous setup.
 
 Script: `/srv/DATA/Ops/backup/scripts/kt-backup-appdata.sh`
 
@@ -820,12 +978,18 @@ A clean Git checkout plus a rebuild recreates it.
 
 ### 6.3 Manual backup (on-demand)
 
+> **This host:** the pre-deploy backup gate is `~/bin/ortbtools-backup.sh` (§6.0), run as user
+> `vk` without `sudo`; it writes `/srv/BULK/backups/ortbtools/YYYY-MM-DD/` and verifies the
+> copy. The commands below are for the repository's root-owned `scripts/backup-db.sh`
+> layout. In both cases the backup is a separate operator gate: `deploy.sh` does not create or
+> validate it.
+
 ```bash
 (
 set -euo pipefail
 
 backup_started_at="$(date +%s)"
-sudo -n /srv/DATA/Stacks/ortbtools/scripts/backup-db.sh --pre-deploy
+sudo -n /srv/DATA/Stacks/adtech-spyglass/scripts/backup-db.sh --pre-deploy
 
 # --pre-deploy stamps the names with the time (ortbtools-YYYY-MM-DDTHHMM.db.gz), so the
 # nightly YYYY-MM-DD archive is never overwritten; pick up exactly what this invocation wrote.
@@ -878,7 +1042,7 @@ using it.
 
 ```bash
 # 1. Stop the container so no new writes race with the restore
-cd /srv/DATA/Stacks/ortbtools && docker compose stop
+cd /srv/DATA/Stacks/adtech-spyglass && docker compose stop
 
 # 2. Identify the backup to restore from
 ls -lh /srv/DATA/Backups/ortbtools/
@@ -905,7 +1069,9 @@ docker compose start
 curl -s http://127.0.0.1:8090/api/health | python3 -m json.tool
 ```
 
-**Scenario: full disk loss, fresh container from git + restic.**
+**Scenario: full disk loss, fresh container from git + restic (previous host — on the current
+host there is no restic repository or off-site copy; rebuild from git, recreate `.env` from
+the providers, and restore `ortbtools.db` from a §6.0 archive if the backup disk survived).**
 
 ```bash
 # 1. Clone the repo
@@ -935,7 +1101,7 @@ restic --repo /srv/DATA/Backups/restic-repo \
 
 # 5. Build, verify, and deploy through the canonical state machine. The script
 # writes ORTBTOOLS_TAG and build provenance into .env after successful checks.
-cd /srv/DATA/Stacks/ortbtools
+cd /srv/DATA/Stacks/adtech-spyglass
 ./scripts/deploy.sh
 ```
 
@@ -943,15 +1109,17 @@ cd /srv/DATA/Stacks/ortbtools
 
 ## 7. Monitoring
 
-### 7.1 Beszel (container metrics)
+### 7.1 Container metrics
 
-⚠ As of 2026-09-24, `/srv/DATA/Stacks/beszel/` does not exist on `DESKTOP-GC7FSHQ`
-and nothing listens on port 8190 — container metrics are now collected by the
-`grafana-stack` (`/srv/DATA/Stacks/grafana-stack`): Grafana UI at
-`http://127.0.0.1:3030` (also `http://192.168.1.13:3030`) and Prometheus at
-`http://127.0.0.1:9090`. Per-container state of `ortbtools` comes from
-`docker-exporter-go` (Docker API via `docker-socket-proxy`), host CPU/RAM/disk from
-`node-exporter` — not from Beszel.
+No metrics stack runs on this host: Beszel, `grafana-stack` (Grafana, Prometheus,
+`docker-exporter-go`, `node-exporter`) and `kyivtech-portal` were part of the previous host
+and are not installed here. The sections of this runbook that mention them (the Grafana
+read-only SQLite group in §6.1 and §9.1.1, the portal proxy) apply only to a deployment that
+has them; on this host the DB stays readable by the application user only.
+
+What exists instead: the Docker healthcheck (§7.2), `docker stats --no-stream ortbtools`,
+`/api/health`, and GlitchTip (§10.5) for errors. There is no automatic paging: Telegram is
+off by the owner's decision, so a failing container is noticed by looking.
 
 ### 7.2 Docker healthcheck
 
@@ -1011,7 +1179,7 @@ docker ps --filter name=ortbtools
 docker logs ortbtools --tail 100
 
 # Attempt restart
-cd /srv/DATA/Stacks/ortbtools && docker compose restart
+cd /srv/DATA/Stacks/adtech-spyglass && docker compose restart
 
 # If still unhealthy after ~30s, look at exit reason
 docker inspect ortbtools --format '{{.State.ExitCode}} {{.State.Error}}'
@@ -1032,7 +1200,7 @@ Signs: `/api/health` returns `"db": false`, container logs show `SQLITE_CORRUPT`
 
 ```bash
 # 1. Stop the container immediately to prevent further writes
-cd /srv/DATA/Stacks/ortbtools && docker compose stop
+cd /srv/DATA/Stacks/adtech-spyglass && docker compose stop
 
 # 2. Copy the corrupt DB aside for post-mortem
 cp /srv/DATA/AppData/ortbtools/ortbtools.db /tmp/ortbtools-corrupt-$(date +%s).db
@@ -1046,27 +1214,27 @@ sqlite3 /srv/DATA/AppData/ortbtools/ortbtools.db "PRAGMA integrity_check;"
 
 ### 8.3 Disk full at `/srv/DATA`
 
-Storage layout: `/srv/DATA` → `/srv/DATA` (symlink to `/srv/DATA` on the host SSD).
+Storage layout: `/srv/DATA` is the NVMe (stacks, app data); `/srv/BULK` is the second disk (backups).
 
 Safe to delete first:
 
-- `/var/log/ortbtools-backup.log` — rotates manually, can grow large if cron floods
-- Old gz backups beyond 30 days (the cron handles this, but you can purge manually):
-  `find /srv/DATA/Backups/ortbtools -name '*.db.gz' -mtime +30 -delete`
+- `/srv/BULK/backups/ortbtools/backup.log` — rotates manually, can grow large if cron floods
+- Old backup directories beyond the retention in §6.0 (the script rotates them itself;
+  deleting data needs the owner's OK)
 - Container log files: `docker system prune` (removes stopped containers + dangling
   images — do NOT use `-v` unless you intend to delete volumes)
 
 **Never delete:**
 
 - `/srv/DATA/AppData/ortbtools/` — live DB
-- `/srv/DATA/Backups/ortbtools/` — only backup copies
-- `/srv/DATA/.secrets/` — credentials, vault
+- `/srv/BULK/backups/ortbtools/` — the only backup copies (and they are not replicated)
+- the stack `.env` files — credentials
 
 Check disk usage breakdown:
 
 ```bash
 du -sh /srv/DATA/AppData/* | sort -rh | head -10
-du -sh /srv/DATA/Backups/* | sort -rh | head -10
+du -sh /srv/BULK/backups/* | sort -rh | head -10
 docker system df
 ```
 
@@ -1083,7 +1251,7 @@ docker system df
    Edit `/srv/DATA/.secrets/api-tokens.env`, then update `.env`.
 4. **Restart the container** to pick up the new env:
    ```bash
-   cd /srv/DATA/Stacks/ortbtools && docker compose up -d
+   cd /srv/DATA/Stacks/adtech-spyglass && docker compose up -d
    ```
 5. **Audit logs** for the exposure window:
    ```bash
@@ -1109,7 +1277,7 @@ only under Constitution Principle VIII's conditions; tool access or available cr
 expand that scope.
 
 ```bash
-cd /srv/DATA/Stacks/ortbtools
+cd /srv/DATA/Stacks/adtech-spyglass
 git checkout main && git pull --ff-only        # clean main == origin/main
 ./scripts/deploy.sh
 ```
@@ -1249,7 +1417,7 @@ the **coordinated wrapper**, NOT a bare `deploy.sh`, as the host user `vk`
 (prereq: CP3A done — Grafana joined to group 2472):
 
 ```bash
-cd /srv/DATA/Stacks/ortbtools
+cd /srv/DATA/Stacks/adtech-spyglass
 git checkout main && git pull --ff-only
 ./scripts/cutover-ortbtools-ro.sh            # dry-run: gates + plan, no changes
 ./scripts/cutover-ortbtools-ro.sh --apply    # perform the cutover
@@ -1290,7 +1458,7 @@ State at `/srv/DATA/AppData/ortbtools/cutover-state.env` (full snapshot,
 ### 9.2 Rollback
 
 ```bash
-cd /srv/DATA/Stacks/ortbtools
+cd /srv/DATA/Stacks/adtech-spyglass
 ./scripts/rollback.sh                 # → the rollback-pre-<BUILD_SHA> image from the last deploy
 # or pin an explicit image:  ./scripts/rollback.sh <tag>
 ```
@@ -1345,24 +1513,30 @@ See §9.1.2 if this ever prints `no` outside of an in-progress deploy/rollback.
 
 ### 10.1 Cloudflare Tunnel (public ingress)
 
-The tunnel terminates at `kyivtech-portal` (host port 3000, per the
-`kyivtech.com.ua` rule in `/etc/cloudflared/config.yml`). All of `*.kyivtech.com.ua`
-routes through it. `ortbtools.com` is not a separate tunnel route — it's
-a subdomain that the portal handles at the application layer via
-`PORTAL_PROXY_TARGETS: ortbtools=http://127.0.0.1:8090`.
+The tunnel connector is a container in its own stack: `/srv/DATA/Stacks/cloudflared`
+(container `cloudflared`, host network, token in that stack's `.env`, mode 0600). The tunnel is
+locally managed, so the routes are in that stack's `config.yml`: `ortbtools.com` and
+`www.ortbtools.com` go straight to `http://localhost:8090`. The tunnel also still carries
+hostnames from the previous deployment in Cloudflare; they are intentionally absent from
+`config.yml` (the connector answers 404 for them) and must not be added without the owner's word.
 
-If the public URL is unreachable but `http://127.0.0.1:8090/api/health` returns OK:
-the problem is in the Cloudflare Tunnel or the portal proxy, not in ortbtools. Check
-the `kyivtech-portal` container:
+Changing a route, the tunnel or any Cloudflare setting needs the owner's explicit OK.
+
+If the public URL is unreachable but `http://127.0.0.1:8090/api/health` returns OK, the
+problem is the tunnel or Cloudflare, not ortbtools:
 
 ```bash
-docker logs kyivtech-portal --tail 50
-# And the portal stack:
-cd /srv/DATA/Stacks/kyivtech-portal && docker compose ps
+docker ps --filter name=cloudflared
+docker logs cloudflared --tail 50
+cd /srv/DATA/Stacks/cloudflared && docker compose ps
 ```
 
-The Cloudflare Tunnel config lives at `/home/vk/.cloudflared/` (tunnel ID
-`a6e590aa-91ca-4644-adaf-438d0d43f29b`). Tunnel token is in the vault.
+To take the site off the internet without touching ortbtools:
+`cd /srv/DATA/Stacks/cloudflared && docker compose down` (and `up -d` to restore).
+
+Cloudflare answers a plain-text `error code: 502/504` page whenever the origin returns 502 or
+504, which hides the JSON body; the application therefore reports failed third-party calls as
+`424` (see the HTTP contract).
 
 ### 10.2 Resend (transactional email)
 
@@ -1381,11 +1555,17 @@ curl -s http://127.0.0.1:8090/api/health
 docker logs ortbtools --since 10m 2>&1 | grep -i "email\|resend"
 ```
 
-Resend dashboard: `https://resend.com/` — use the account tied to `EMAIL_FROM`:
-`ortbtools@kyivtech.com.ua`. Domain verification is via Cloudflare TXT record on
-`kyivtech.com.ua`.
+Resend dashboard: `https://resend.com/` — use the account tied to `EMAIL_FROM`
+(`ortbtools <noreply@ortbtools.com>`). The sending domain is `ortbtools.com`; its DKIM TXT
+record and the return-path CNAMEs live in the Cloudflare zone for that domain (DNS only,
+proxy off). The production API key is send-only and restricted to that domain. When
+`RESEND_API_KEY` is empty the mailer short-circuits to a log line and the API says so
+(`email_sent: false`).
 
 ### 10.3 Telegram bot (admin alerts)
+
+> Off on this host by the owner's decision: `TG_BOT_TOKEN` and `TG_ADMIN_CHAT_ID` are empty,
+> so alerts become `[notify:DEV]` log lines. The text below applies if the owner re-enables it.
 
 ortbtools pings the bot for: uncaught exceptions, unhandled rejections, 5xx crashes.
 If `TG_BOT_TOKEN` or `TG_ADMIN_CHAT_ID` is missing from `.env`, alerts go to stderr
@@ -1406,6 +1586,17 @@ Internal automation can call `GET /api/admin/stats` over `kt-shared` with the
 credentials are managed outside this repository.
 
 ### 10.5 Sentry-compatible error tracking
+
+**On this host the target is a self-hosted GlitchTip** (`/srv/DATA/Stacks/glitchtip`: web,
+worker, Postgres and Valkey containers; the web container has the alias `glitchtip` on
+`kt-shared`, and its UI is published on the LAN and Tailscale interfaces only). `SENTRY_DSN`
+is `http://<key>@glitchtip:8000/<project>`, and `/api/health` reports `"sentry":{"ready":true}`.
+New-issue alerts go out by email. If GlitchTip is down ortbtools keeps serving and the events
+are dropped. To turn reporting off, empty `SENTRY_DSN` in `.env` and recreate the container.
+Browser errors reach the same project through the same-origin `/glitchtip-ingest/*` tunnel,
+which is unauthenticated by design and rate limited (60 per minute per address).
+
+The paragraph that follows records the earlier state of maintenance 019 and is kept for history.
 
 Maintenance 019 retains the existing Telegram channel and optional, unconfigured Sentry
 integration. On 2026-09-07 the container had both Telegram configuration fields and
@@ -1464,7 +1655,7 @@ The interrupted vendor rebase was completed with both updated vendors and the ne
 development dependencies. Its original git state, unmerged files, patches and labeller draft were
 preserved under `/home/vk/.local/share/ortbtools-repair/2026-09-05/` before recovery.
 
-The sibling worktree parent `/srv/DATA/Stacks/ortbtools.worktrees` is owned by `vk:vk`, mode `0755`.
+The sibling worktree parent `/srv/DATA/Stacks/adtech-spyglass.worktrees` is owned by `vk:vk`, mode `0755`.
 An actual detached worktree creation and clean removal succeeded there. Keep `/srv/DATA/Stacks`
 root-owned; provision only this project-specific worktree parent when restoring the checkout.
 
