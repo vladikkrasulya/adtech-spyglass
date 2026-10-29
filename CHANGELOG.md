@@ -6,6 +6,10 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Reference response specimens served by `GET /api/v1/sample` no longer raise a critical `crosscheck.id_mismatch`: the synthesized request keeps the response id instead of a `demo-` prefix. VAST specimens (`mtype` 2) now get a video slot accepting every VAST protocol and the VPAID JS mime, so `clean-banner`, `pop-clean-response` and `vast-clean-inline` show zero critical cross-check findings.
+
 ### v1.23.0 — close the remaining product questions (2026-09-09)
 
 - Make logout and password-reset revocation survive failed SQLite deletion and process restarts. Private bounded recovery state fences uncertain starts; orderly shutdown drains authentication before checkpointing. Upgrading old sessions or restoring without trusted recovery state requires login again.
