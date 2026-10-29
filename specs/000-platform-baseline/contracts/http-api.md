@@ -145,6 +145,16 @@ dev-mode short-circuit and delivered nothing.
 Workspace handlers perform the auth gate themselves and always scope persistence calls by user id.
 A partner deletion unassigns its samples; it does not transfer another user's data.
 
+Upstream-caused failures (a third-party asset host that is unreachable, answers non-2xx or times
+out; the local labelling model failing or timing out) are answered `424 Failed Dependency` with the
+usual `{success:false, code, error}` body, not 502/504: Cloudflare replaces an origin 502/504 with a
+plain-text `error code: 5xx` page, which hides the `code` the UI branches on. Affected codes:
+`upstream_failed`, `upstream_status`, `timeout` (`/api/creative/asset`) and `labeller_timeout`,
+`labeller_failed`, `bad_model_output` (`/api/dialects/suggest-label`). Caller-caused failures keep
+their 4xx statuses; `503 labeller_unavailable` is unchanged. Because 424 is not a 5xx, it does not
+page the operator through `sendError`; the labeller route pages explicitly (`alertOperator`), asset
+fetch failures are logged only (a dead third-party CDN is not an operator problem).
+
 The creative-asset route is a separate caller-chosen-host SSRF boundary. Before a socket opens, it
 accepts only HTTP(S) on default ports, canonicalizes literal and DNS-returned addresses (including
 IPv4-mapped IPv6 and WHATWG hexadecimal forms) before private-address classification, and rejects a

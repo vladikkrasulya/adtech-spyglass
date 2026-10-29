@@ -36,6 +36,10 @@
  * Response 401: not signed in (mappings are user-scoped; a suggestion the
  *   user cannot save is a dead end, so the gate matches the save route).
  * Response 429: rate limited — the model call is GPU-bound.
+ * Response 424: { code: 'labeller_timeout' | 'labeller_failed' | 'bad_model_output', error }
+ *   — the local model was reached but failed. 424 rather than 502/504 because
+ *   Cloudflare replaces an origin 502/504 with a plain-text `error code: 5xx`
+ *   page and the UI would lose the machine-readable `code`.
  * Response 503: { code: 'labeller_unavailable', error } — Ollama unreachable
  *   or the model absent. The client must degrade to the manual builder, not
  *   pretend the feature is thinking. `code` is what the UI branches on;
@@ -43,7 +47,7 @@
  *   order — they are easy to transpose).
  */
 
-const { readJson, sendJson, sendError } = require('../../lib/http');
+const { readJson, sendJson, sendError, alertOperator } = require('../../lib/http');
 const { classifySignal } = require('../../packages/core/dialects/signal-lexicon');
 const { lookupKeyRole } = require('../../packages/core/dialects/key-role-alphabet');
 const { combine } = require('../../packages/core/dialects/resolve-precedence');
@@ -241,7 +245,9 @@ function createAiLabelModule({ auth, aiLabelLimiter, db } = {}) {
         // set that matters is the one the SAVE route accepts — since
         // ADR-015 that is the twenty STORABLE_LABELS, not the legacy
         // eleven of SEMANTIC_LABELS.
-        return sendError(res, 502, 'bad_model_output', 'Model returned a label the store rejects');
+        sendError(res, 424, 'bad_model_output', 'Model returned a label the store rejects');
+        alertOperator(res, 424, 'bad_model_output', undefined, 'upstream');
+        return;
       }
       return sendJson(res, 200, {
         ok: true,
@@ -255,12 +261,16 @@ function createAiLabelModule({ auth, aiLabelLimiter, db } = {}) {
       // Payload contents are never logged — only the shape of the failure.
       log.warn({ code: e.code, path: signalPath }, 'labeller call failed');
       const timedOut = e.name === 'AbortError';
-      return sendError(
+      const failCode = timedOut ? 'labeller_timeout' : 'labeller_failed';
+      sendError(
         res,
-        timedOut ? 504 : 502,
-        timedOut ? 'labeller_timeout' : 'labeller_failed',
+        424,
+        failCode,
         timedOut ? 'The local model took too long to answer.' : 'The local model could not answer.',
       );
+      // Still operator-actionable (ADR-012): 424 is not a 5xx, so sendError no
+      // longer pages by itself.
+      alertOperator(res, 424, failCode, undefined, 'upstream');
     }
   }
 
