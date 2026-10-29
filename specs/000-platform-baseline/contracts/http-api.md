@@ -115,8 +115,9 @@ The auth family contains:
 - `GET /api/auth/me`;
 - `POST /api/auth/register`, `/login`, `/logout`, and `/preferences`;
 - `POST /api/auth/setup-encryption`;
-- `POST /api/auth/verify-email/request` and `GET /api/auth/verify-email/confirm`; and
-- `POST /api/auth/forgot-password`, `/reset-password/state`, and `/reset-password`.
+- `POST /api/auth/verify-email/request` and `GET /api/auth/verify-email/confirm`;
+- `POST /api/auth/forgot-password`, `/reset-password/state`, and `/reset-password`; and
+- `POST /api/auth/delete-account`.
 
 Registration/login accept a password over the protected connection for server-side bcrypt handling.
 Wrapped-key fields are opaque to the server. Reset and wipe behavior is part of
@@ -128,6 +129,14 @@ Every `POST` in the auth family refuses cross-site browser requests with `403 cr
 `415 unsupported_media_type`. Clients that send neither header (curl, servers) are unaffected.
 `POST /api/auth/verify-email/request` answers `email_sent: false` when the mailer ran in its
 dev-mode short-circuit and delivered nothing.
+
+`POST /api/auth/delete-account` is the self-service erasure route. It needs a session, the CSRF guard
+above and a JSON body `{ "password": "<current password>" }`. Answers: `200 {success:true,
+deleted:true}` (and an expiring `ot_session` cookie); `400 invalid_request` (no password);
+`401 unauthorized` (no session) or `401 invalid_credentials` (wrong password, nothing deleted);
+`429 rate_limited` (5 attempts / 15 min per IP and per account). Deletion semantics are in
+[the data-retention contract](./data-retention.md#deletion-and-recovery); ClickHouse cleanup is
+best-effort and never changes the response.
 
 ### Authenticated Workspace
 

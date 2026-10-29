@@ -392,6 +392,46 @@ Source: `public/ortbtools-crypto.js`, `openWithRecoveryKey()`;
 
 ---
 
+## Deleting your account
+
+Account page → **Account actions → Delete account** (`POST /api/auth/delete-account`)
+deletes your account yourself. You confirm with your current password and an explicit
+"cannot be undone" checkbox; five wrong attempts per 15 minutes lock the control out.
+
+**Deleted immediately, in one database transaction:** the account row (email, password
+hash, wrapped keys, recovery wrap) and everything linked to it — saved samples, partner
+profiles, custom dialects and their mappings, saved Behavior Corpus entries, the
+activity log behind Cabinet insights, and all sign-in sessions. Every browser signed in
+to the account is signed out and its cookie stops working.
+
+**Anonymised, not deleted:** rows in the local operational request log table
+(`event_log` in SQLite) that carried your account id and IP address keep their
+timestamp, route and status, but the account id and IP address are set to empty. They stay
+only as aggregate counts and no longer point to you.
+
+**Deleted best-effort, outside the transaction:** your rows in ClickHouse
+`analytics.ortbtools_events` (operational request log; includes IP) and
+`analytics.ortbtools_product_events` (product counters with your account id) are removed
+with a lightweight `DELETE … WHERE user_id = …`. If ClickHouse is down, disabled or
+refuses the statement, the deletion of your account still succeeds, a warning is logged,
+and those rows disappear on their own through their TTL (90 days and 180 days).
+`analytics.validation_logs` has no account column (format, version and finding counts only)
+and is not account data.
+
+**Not removed:** anonymous browser-side data on your own device (local analysis history,
+theme/language); copies in backups until the backup rotation drops them (daily archives
+are kept for a limited time and are not edited); logs held by Cloudflare or other
+processors in front of the server; messages already delivered to your inbox. The private
+session-recovery state holds only keyed, non-reversible session identities with expiry
+dates and no email or account id, so there is nothing account-specific to erase there; the
+revoked identities age out by themselves.
+
+Local note: the session-recovery directory (`/data/session-recovery`) is deliberately
+**not** purged on deletion — its revocation journal is what keeps a copied cookie dead
+across a restart.
+
+---
+
 ## What the validator pipeline does to payloads
 
 When any user (anonymous or logged in) submits a payload to `/api/analyze`, the
@@ -676,6 +716,12 @@ current encrypted web flow is treated as high severity and triaged immediately.
 ## Changelog of privacy-relevant changes
 
 Selected entries from CHANGELOG.md:
+
+**Unreleased** — Added self-service account deletion (`POST /api/auth/delete-account`). It
+deletes the account and its linked rows, anonymises the account's `event_log` rows (id and IP
+removed) and makes a best-effort ClickHouse purge of `ortbtools_events` and
+`ortbtools_product_events`. See [Deleting your account](#deleting-your-account). Before this,
+account deletion required an email to the operator.
 
 **v1.22.0** — An individual logout now reports a session-storage deletion failure
 instead of silently claiming success. Local session and encryption state and the

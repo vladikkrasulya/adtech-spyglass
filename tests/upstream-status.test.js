@@ -47,12 +47,12 @@ function loadCreativeAsset(fetchAsset) {
   const handlerPath = require.resolve('../modules/creative-asset/handler');
   const realFetchMod = require.cache[fetchPath];
   delete require.cache[handlerPath];
-  require.cache[fetchPath] = {
+  require.cache[fetchPath] = /** @type {any} */ ({
     id: fetchPath,
     filename: fetchPath,
     loaded: true,
     exports: { fetchAsset, MAX_ASSET_BYTES: 1 },
-  };
+  });
   const { createCreativeAssetModule } = require(handlerPath);
   const mod = createCreativeAssetModule({ auth: { getCurrentUser: () => ({ id: 'u1' }) } });
   // restore so other test files in this process see the real module
@@ -64,7 +64,7 @@ function loadCreativeAsset(fetchAsset) {
 
 function failing(code, message) {
   return async () => {
-    const e = new Error(message || code);
+    const e = /** @type {Error & {code?: string}} */ (new Error(message || code));
     e.code = code;
     throw e;
   };

@@ -6,6 +6,15 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### Added
+
+- Self-service account deletion. `POST /api/auth/delete-account` (session + cross-site guard + current password in a JSON body; 5 attempts / 15 min per IP and per account) deletes the user and, through the foreign-key cascade, partners, samples, analysis metadata, Behavior Corpus rows, dialects/mappings and sessions, and anonymises the user's `event_log` rows (`user_id` and `ip` set to NULL) in one SQLite transaction. After the commit it revokes the in-memory sessions, expires the cookie and makes a best-effort ClickHouse lightweight `DELETE` on `ortbtools_events` and `ortbtools_product_events` (a ClickHouse failure is logged and never fails the request). The account page has a "Delete account" control (en/uk/ru) with a password prompt and an explicit confirmation checkbox. `docs/PRIVACY.md`, the HTTP API and data-retention contracts describe what is deleted, anonymised and left to TTL.
+- `lib/http.alertOperator()`: pages the operator for failures that are reported to the client with a non-5xx status.
+
+### Changed
+
+- Upstream-caused failures now answer `424 Failed Dependency` instead of `502`/`504`, with the same JSON body and codes: `upstream_failed`, `upstream_status`, `timeout` on `POST /api/creative/asset`, and `labeller_timeout`, `labeller_failed`, `bad_model_output` on `POST /api/dialects/suggest-label`. Cloudflare replaces an origin 502/504 with a plain-text `error code: 5xx` page, so the UI lost the code and showed `invalid_response`. The frontend already branches on the JSON `code`, not the status. 424 does not trigger `sendError`'s 5xx Telegram alert: dead third-party asset hosts no longer page the operator, while labeller failures still do via `alertOperator`. `503 labeller_unavailable` is unchanged.
+
 ### Fixed
 
 - Reference response specimens served by `GET /api/v1/sample` no longer raise a critical `crosscheck.id_mismatch`: the synthesized request keeps the response id instead of a `demo-` prefix. VAST specimens (`mtype` 2) now get a video slot accepting every VAST protocol and the VPAID JS mime, so `clean-banner`, `pop-clean-response` and `vast-clean-inline` show zero critical cross-check findings.
