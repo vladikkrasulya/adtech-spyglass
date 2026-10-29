@@ -30,10 +30,12 @@ const log = require('../../lib/logger').child('mirror');
  */
 
 const { readJson, sendJson, sendError } = require('../../lib/http');
+const { declaredBodyCost } = require('../../lib/byte-budget');
 
 /**
  * @param {{
  *   analyzeLimiter: (key: string) => boolean,
+ *   analyzeBudget?: (key: string, bytes: number) => boolean,
  *   auth: { clientIp: (req: import('http').IncomingMessage) => string },
  *   ANALYZE_MAX_PER_WINDOW: number,
  *   resolveLocale: (parsed: URL) => string,
@@ -42,8 +44,15 @@ const { readJson, sendJson, sendError } = require('../../lib/http');
  * }} deps
  */
 function createMirrorModule(deps) {
-  const { analyzeLimiter, auth, ANALYZE_MAX_PER_WINDOW, resolveLocale, resolveDialect, mirror } =
-    deps;
+  const {
+    analyzeLimiter,
+    analyzeBudget,
+    auth,
+    ANALYZE_MAX_PER_WINDOW,
+    resolveLocale,
+    resolveDialect,
+    mirror,
+  } = deps;
 
   function handleMirror(req, res, parsed) {
     if (!analyzeLimiter(auth.clientIp(req))) {
@@ -52,6 +61,14 @@ function createMirrorModule(deps) {
         429,
         'rate_limited',
         `Too many mirror calls. Try again shortly (limit: ${ANALYZE_MAX_PER_WINDOW}/min/IP).`,
+      );
+    }
+    if (analyzeBudget && !analyzeBudget(auth.clientIp(req), declaredBodyCost(req))) {
+      return sendError(
+        res,
+        429,
+        'rate_limited',
+        'Too much data analyzed in the last minute. Try again shortly.',
       );
     }
     const locale = resolveLocale(parsed);
