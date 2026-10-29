@@ -189,6 +189,39 @@
       .cab-danger h2 {
         color: var(--danger);
       }
+      .cab-delete {
+        margin-top: var(--space-5);
+        padding-top: var(--space-4);
+        border-top: 1px dashed var(--border);
+      }
+      .cab-delete h3 {
+        margin: 0 0 var(--space-2);
+        font-size: var(--fs-md);
+        font-weight: 600;
+        color: var(--danger);
+      }
+      .cab-delete-form {
+        display: grid;
+        gap: var(--space-3);
+        max-width: 28rem;
+        margin-top: var(--space-3);
+      }
+      .cab-delete-form[hidden],
+      .cab-delete-error[hidden] {
+        display: none;
+      }
+      .cab-delete-check {
+        display: flex;
+        gap: var(--space-2);
+        align-items: flex-start;
+        font-size: var(--fs-sm);
+        line-height: 1.5;
+      }
+      .cab-delete-error {
+        margin: 0;
+        font-size: var(--fs-sm);
+        color: var(--danger);
+      }
       .cab-gate {
         text-align: center;
         padding: var(--space-8) var(--space-5);
@@ -1060,12 +1093,65 @@
             <section class="cab-card cab-danger">
               <h2>Account actions</h2>
               <p class="lead">
-                Sign out clears the session cookie and locks your library. To delete your account,
-                email <a href="mailto:hi@ortbtools.com">hi@ortbtools.com</a> — automated deletion is
-                not exposed (rare, irreversible, requires human review).
+                Sign out clears the session cookie and locks your library. Deleting your account is
+                separate and permanent.
               </p>
               <div class="cab-actions">
                 <button class="btn btn-secondary btn-sm" data-action="signout">Sign out</button>
+              </div>
+              <div class="cab-delete">
+                <h3>Delete account</h3>
+                <p class="lead">
+                  Permanently deletes your account and everything saved in it: samples, partners,
+                  dialects and mappings, behavior corpus, activity history and sign-in sessions.
+                  Server request logs that mention your account are anonymised (account id and IP
+                  address removed) and your rows in the analytics store are deleted on a best-effort
+                  basis; anything left expires on its own (90–180 days). This cannot be undone and
+                  nothing can be recovered afterwards. Export what you need first.
+                </p>
+                <button
+                  class="btn btn-secondary btn-sm"
+                  type="button"
+                  data-action="delete-account-open"
+                  aria-expanded="false"
+                  aria-controls="deleteAccountForm"
+                >
+                  Delete account…
+                </button>
+                <form id="deleteAccountForm" class="cab-delete-form" hidden novalidate>
+                  <label for="deleteAccountPassword">Current password</label>
+                  <input
+                    id="deleteAccountPassword"
+                    type="password"
+                    autocomplete="current-password"
+                    required
+                  />
+                  <label class="cab-delete-check">
+                    <input id="deleteAccountConfirm" type="checkbox" />
+                    <span
+                      >I understand that my account and all saved data will be permanently deleted
+                      and this cannot be undone.</span
+                    >
+                  </label>
+                  <p id="deleteAccountError" class="cab-delete-error" role="alert" hidden></p>
+                  <div class="cab-actions">
+                    <button
+                      id="deleteAccountSubmit"
+                      class="btn btn-danger btn-sm"
+                      type="submit"
+                      disabled
+                    >
+                      Permanently delete my account
+                    </button>
+                    <button
+                      class="btn btn-ghost btn-sm"
+                      type="button"
+                      data-action="delete-account-cancel"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
               </div>
             </section>
           </section>
@@ -1079,6 +1165,6 @@
     <script src="/i18n.js?v=29"></script>
     <script src="/core/key-role-vocabulary.js?v=1" defer></script>
     <script src="/modules/inspector/dialect-label.i18n.js?v=1" defer></script>
-    <script src="/account.js?v=7"></script>
+    <script src="/account.js?v=8"></script>
   </body>
 </html>

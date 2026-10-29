@@ -92,7 +92,7 @@ test('changed classic assets use one current cache key on every locale shell', (
 
   for (const locale of ['en', 'uk', 'ru']) {
     const account = read(`public/account.${locale}.html`);
-    assert.equal(account.match(/\/account\.js\?v=7/gu)?.length, 1, `account.${locale}: v7`);
+    assert.equal(account.match(/\/account\.js\?v=8/gu)?.length, 1, `account.${locale}: v8`);
 
     const index = read(`public/index.${locale}.html`);
     assert.equal(

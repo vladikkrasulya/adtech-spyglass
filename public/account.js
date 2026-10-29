@@ -128,6 +128,22 @@
           uk: 'забагато спроб',
           ru: 'слишком часто',
         },
+        'cabinet.delete.deleting': { en: 'Deleting…', uk: 'Видаляємо…', ru: 'Удаляем…' },
+        'cabinet.delete.wrong_password': {
+          en: 'Wrong password. Nothing was deleted.',
+          uk: 'Неправильний пароль. Нічого не видалено.',
+          ru: 'Неверный пароль. Ничего не удалено.',
+        },
+        'cabinet.delete.rate_limited': {
+          en: 'Too many attempts. Try again in 15 minutes.',
+          uk: 'Забагато спроб. Спробуй за 15 хвилин.',
+          ru: 'Слишком много попыток. Попробуй через 15 минут.',
+        },
+        'cabinet.delete.failed': {
+          en: 'Could not delete the account. Nothing was changed; try again.',
+          uk: 'Не вдалося видалити акаунт. Нічого не змінено; спробуй ще раз.',
+          ru: 'Не удалось удалить аккаунт. Ничего не изменено; попробуй ещё раз.',
+        },
         'cabinet.verify.rate_limited_hint': {
           en: 'Too many requests — the limit is 5 per hour. Try again later.',
           uk: 'Забагато запитів — ліміт 5 на годину. Спробуй пізніше.',
@@ -989,6 +1005,100 @@
     location.href = dest || '/';
   }
 
+  // ── Delete account ─────────────────────────────────────────────
+  // POST /api/auth/delete-account { password }. The form is static markup in
+  // account.{en,uk,ru}.html; the submit stays disabled until a password is
+  // typed AND the irreversible-deletion checkbox is ticked.
+  function deleteAccountEls() {
+    return {
+      form: $('deleteAccountForm'),
+      password: $('deleteAccountPassword'),
+      confirm: $('deleteAccountConfirm'),
+      submit: $('deleteAccountSubmit'),
+      error: $('deleteAccountError'),
+    };
+  }
+
+  function deleteAccountSyncSubmit() {
+    const el = deleteAccountEls();
+    if (!el.submit || el.form.dataset.busy === '1') return;
+    el.submit.disabled = !(el.password.value && el.confirm.checked);
+  }
+
+  function deleteAccountShowError(message) {
+    const el = deleteAccountEls();
+    el.error.textContent = message || '';
+    el.error.hidden = !message;
+  }
+
+  function deleteAccountToggle(open) {
+    const el = deleteAccountEls();
+    if (!el.form) return;
+    el.form.hidden = !open;
+    const opener = document.querySelector('[data-action="delete-account-open"]');
+    if (opener) opener.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) {
+      el.password.focus();
+    } else {
+      el.form.reset();
+      deleteAccountShowError('');
+      deleteAccountSyncSubmit();
+    }
+  }
+
+  async function deleteAccountSubmit() {
+    const el = deleteAccountEls();
+    if (!el.form || el.form.dataset.busy === '1') return;
+    if (!el.password.value || !el.confirm.checked) return;
+    el.form.dataset.busy = '1';
+    el.submit.disabled = true;
+    const label = el.submit.textContent;
+    el.submit.textContent = T('cabinet.delete.deleting');
+    deleteAccountShowError('');
+    let key = 'cabinet.delete.failed';
+    try {
+      const r = await fetch('/api/auth/delete-account', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: el.password.value }),
+      });
+      if (r.ok) {
+        // The server already ended every session; drop the unlocked key and
+        // leave. No signOut(): there is no account left to log out of.
+        try {
+          sessionStorage.removeItem('kt-dek-v1');
+        } catch (_e) {
+          /* sessionStorage may be blocked */
+        }
+        location.href = '/';
+        return;
+      }
+      if (r.status === 401) key = 'cabinet.delete.wrong_password';
+      else if (r.status === 429) key = 'cabinet.delete.rate_limited';
+    } catch (_e) {
+      /* network blip — the default failure message covers it */
+    }
+    el.form.dataset.busy = '';
+    el.submit.textContent = label;
+    deleteAccountShowError(T(key));
+    deleteAccountSyncSubmit();
+  }
+
+  document.addEventListener('input', (ev) => {
+    if (
+      ev.target &&
+      (ev.target.id === 'deleteAccountPassword' || ev.target.id === 'deleteAccountConfirm')
+    )
+      deleteAccountSyncSubmit();
+  });
+  document.addEventListener('submit', (ev) => {
+    if (ev.target && ev.target.id === 'deleteAccountForm') {
+      ev.preventDefault();
+      deleteAccountSubmit();
+    }
+  });
+
   // "Forgot recovery key? → Sign out and reset" ships in the localized
   // account.{en,uk,ru}.html as a bare <a href="/uk">. It navigates home and
   // does nothing else: the session cookie survives, so the user lands back
@@ -1347,6 +1457,12 @@
       // actually terminated first, which is the whole point of "reset".
       ev.preventDefault();
       signOut(t.getAttribute('href') || '/');
+    } else if (action === 'delete-account-open') {
+      ev.preventDefault();
+      deleteAccountToggle(true);
+    } else if (action === 'delete-account-cancel') {
+      ev.preventDefault();
+      deleteAccountToggle(false);
     } else if (action === 'resend-verification') {
       ev.preventDefault();
       resendVerification(t);
