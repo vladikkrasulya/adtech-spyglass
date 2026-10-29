@@ -23,9 +23,9 @@ const VENDORS = [
   {
     displayName: 'DOMPurify',
     packageName: 'dompurify',
-    version: '3.4.14',
+    version: '3.4.17',
     repository: 'https://github.com/cure53/DOMPurify',
-    release: '3.4.14 (tag 3.4.14 at commit 4e6fe24)',
+    release: '3.4.17 (tag 3.4.17 at commit a77a3e7)',
     sourceAsset: 'node_modules/dompurify/dist/purify.es.mjs',
     publicAsset: 'public/vendor/dompurify.es.js',
     sourceLicense: 'node_modules/dompurify/LICENSE',

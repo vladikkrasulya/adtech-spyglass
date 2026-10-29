@@ -81,6 +81,16 @@ services:
     # keeps the normal always-restart behavior. See scripts/deploy-lib.sh
     # COMPOSE_TRANSITION_FILES / arm_restart_policy() and docs/OPERATIONS.md.
     restart: always
+    # Least privilege for a plain Node HTTP server that listens on an unprivileged
+    # port and writes only under /data: no Linux capabilities, no setuid
+    # escalation, and a process cap against fork bombs. Takes effect on the next
+    # container recreate (scripts/deploy.sh does that); nothing here changes the
+    # image.
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
     healthcheck:
       # IPv4 explicit (alpine resolves "localhost" as ::1 first; app listens IPv4 only).
       test: ['CMD-SHELL', 'wget -qO- --tries=1 --timeout=3 http://127.0.0.1:3000/ > /dev/null']

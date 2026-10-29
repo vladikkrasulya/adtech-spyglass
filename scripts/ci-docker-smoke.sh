@@ -140,7 +140,7 @@ grep -q 'v18.0.11' <<<"$MARKED_JS" || {
   echo "FAIL: production-served Marked asset version drifted" >&2
   exit 1
 }
-grep -q 'DOMPurify 3.4.14' <<<"$DOMPURIFY_JS" || {
+grep -q 'DOMPurify 3.4.17' <<<"$DOMPURIFY_JS" || {
   echo "FAIL: production-served DOMPurify asset version drifted" >&2
   exit 1
 }
@@ -150,8 +150,8 @@ grep -q 'Package: marked@18.0.11' <<<"$NOTICE" || {
   echo "FAIL: vendor notice omits Package: marked@18.0.11" >&2
   exit 1
 }
-grep -q 'Package: dompurify@3.4.14' <<<"$NOTICE" || {
-  echo "FAIL: vendor notice omits Package: dompurify@3.4.14" >&2
+grep -q 'Package: dompurify@3.4.17' <<<"$NOTICE" || {
+  echo "FAIL: vendor notice omits Package: dompurify@3.4.17" >&2
   exit 1
 }
 docker exec "$CONTAINER" test -f "/app/public/vendor/licenses/Marked-MIT.txt"

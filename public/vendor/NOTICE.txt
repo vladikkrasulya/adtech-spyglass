@@ -18,12 +18,12 @@ License copy: public/vendor/licenses/Marked-MIT.txt
 License SHA-256: 8e3a3f82f59a60958f56ca08f445647c32a4733dc7ca6c2c46f6eb898471ab9c
 
 DOMPurify
-Package: dompurify@3.4.14
+Package: dompurify@3.4.17
 Repository: https://github.com/cure53/DOMPurify
-Release: 3.4.14 (tag 3.4.14 at commit 4e6fe24)
+Release: 3.4.17 (tag 3.4.17 at commit a77a3e7)
 Source artifact: node_modules/dompurify/dist/purify.es.mjs
 Public asset: public/vendor/dompurify.es.js
-SHA-256: c9b47d08c160843d5e51fdd3f67a6a2c15e2ee26d3b84ec5132288e947a55fcf
+SHA-256: 60c5d5ccbb466de3de3ba863461a92bf134f8c156cef7992da43e0f659bc5cbd
 Parity: byte-identical
 License: Apache-2.0
 License source: node_modules/dompurify/LICENSE

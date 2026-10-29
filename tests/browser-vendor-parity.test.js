@@ -28,9 +28,9 @@ const VENDORS = [
   {
     displayName: 'DOMPurify',
     packageName: 'dompurify',
-    version: '3.4.14',
+    version: '3.4.17',
     repository: 'https://github.com/cure53/DOMPurify',
-    release: '3.4.14 (tag 3.4.14 at commit 4e6fe24)',
+    release: '3.4.17 (tag 3.4.17 at commit a77a3e7)',
     sourceAsset: 'node_modules/dompurify/dist/purify.es.mjs',
     publicAsset: 'public/vendor/dompurify.es.js',
     sourceLicense: 'node_modules/dompurify/LICENSE',
@@ -140,7 +140,7 @@ function createSyntheticVendorRepo() {
     'package.json',
     JSON.stringify({
       devDependencies: {
-        dompurify: '3.4.14',
+        dompurify: '3.4.17',
         marked: '18.0.11',
       },
     }),
@@ -152,14 +152,14 @@ function createSyntheticVendorRepo() {
       packages: {
         '': {
           devDependencies: {
-            dompurify: '3.4.14',
+            dompurify: '3.4.17',
             marked: '18.0.11',
           },
         },
         'node_modules/dompurify': {
-          version: '3.4.14',
+          version: '3.4.17',
           dev: true,
-          resolved: 'https://registry.npmjs.org/dompurify/-/dompurify-3.4.14.tgz',
+          resolved: 'https://registry.npmjs.org/dompurify/-/dompurify-3.4.17.tgz',
           integrity: 'sha512-synthetic-dompurify',
         },
         'node_modules/marked': {
@@ -181,7 +181,7 @@ function createSyntheticVendorRepo() {
   writeFixtureFile(
     root,
     'node_modules/dompurify/package.json',
-    JSON.stringify({ version: '3.4.14' }),
+    JSON.stringify({ version: '3.4.17' }),
   );
   writeFixtureFile(root, 'node_modules/dompurify/dist/purify.es.mjs', 'dompurify-v1\n');
   writeFixtureFile(root, 'node_modules/dompurify/LICENSE', 'dompurify-license-v1\n');
