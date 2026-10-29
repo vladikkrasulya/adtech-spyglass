@@ -9,11 +9,13 @@ All notable changes to ortbtools are documented here. Format follows
 ### Fixed
 
 - Reference response specimens served by `GET /api/v1/sample` no longer raise a critical `crosscheck.id_mismatch`: the synthesized request keeps the response id instead of a `demo-` prefix. VAST specimens (`mtype` 2) now get a video slot accepting every VAST protocol and the VPAID JS mime, so `clean-banner`, `pop-clean-response` and `vast-clean-inline` show zero critical cross-check findings.
+- `POST /api/auth/verify-email/request` no longer answers `email_sent: true` when the mailer is in its dev-mode short-circuit (no `RESEND_API_KEY`) and nothing was delivered; it reports `email_sent: false` like `/register` does. The delivered path is unchanged.
 
 ### Security
 
 - The SSRF guard (`isPrivateIp`, used by `POST /api/creative/asset`) now treats NAT64 (`64:ff9b::/96`, `64:ff9b:1::/48`), 6to4 (`2002::/16`), IPv4-compatible (`::a.b.c.d`), IPv6 multicast, `198.18.0.0/15`, `224.0.0.0/4` and `240.0.0.0/4` addresses as non-public. IPv6 literals are judged by their parsed value, so every spelling of one address gets the same verdict.
 - `POST /api/proxy` no longer leaks the server's egress IPv4. The built-in allow-list (`httpbin.org`, `postman-echo.com`) echoed the caller's address (`origin`, `x-forwarded-for`) to any signed-in user, unmasking a host hidden behind the Cloudflare tunnel. The built-in list is now empty; operators opt in per endpoint with `ORTBTOOLS_PROXY_ALLOWED_HOSTS` (exact hostnames). Known IP-echo and request-capture hosts are refused even when listed. A request without `url`/`data` now gets `400 invalid_input` instead of a leaked Node exception after an outbound socket was already opened.
+- Login CSRF: every `POST /api/auth/*` route now refuses cross-site browser requests (`403 cross_site_request` for a foreign `Sec-Fetch-Site`/`Origin`, `415 unsupported_media_type` for a body that is not `application/json`) before the body is read or a session cookie is set. The app's own forms and clients that send no browser headers are unaffected.
 
 ### v1.23.0 — close the remaining product questions (2026-09-09)
 
