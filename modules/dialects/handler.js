@@ -25,6 +25,7 @@
  */
 
 const { readJson, sendJson, sendError } = require('../../lib/http');
+const { createLibraryQuota, writeRateLimited } = require('../../lib/library-quota');
 const { clearCacheForDb } = require('../../packages/core/dialects/user-dialect-runtime');
 const log = require('../../lib/logger').child('dialects');
 
@@ -44,7 +45,8 @@ const PARAMS_MAX = 8000;
 const SIGNAL_PATH_RX = /^[a-zA-Z_][a-zA-Z0-9_.[\]]*$/;
 
 function createDialectsModule(deps) {
-  const { auth, db } = deps;
+  const { auth, db, libraryWriteLimiter } = deps;
+  const quota = createLibraryQuota(db);
 
   const stmts = {
     listDialects: db.prepare(`
@@ -220,10 +222,12 @@ function createDialectsModule(deps) {
   function handleCreate(req, res) {
     const user = requireUser(req, res);
     if (!user) return;
+    if (writeRateLimited(libraryWriteLimiter, user, res)) return;
     return readJson(req)
       .then((body) => {
         const err = validateName(body.name);
         if (err) return sendError(res, 400, err, 'Invalid dialect name');
+        quota.assertCanAdd(user.id, 'dialects');
         const now = Date.now();
         const isDefault = body.is_default ? 1 : 0;
         let id;
@@ -240,7 +244,7 @@ function createDialectsModule(deps) {
       })
       .catch((e) => {
         log.error({ err: e }, 'create dialect failed');
-        sendError(res, 400, e.code || 'bad_request', e.message);
+        sendError(res, e.status || 400, e.code || 'bad_request', e.message);
       });
   }
 
@@ -311,6 +315,7 @@ function createDialectsModule(deps) {
     if (id == null) return sendError(res, 400, 'id_invalid', 'id must be a positive integer');
     const d = getOwnedDialect(id, user.id);
     if (!d) return sendError(res, 404, 'not_found', 'Dialect not found');
+    if (writeRateLimited(libraryWriteLimiter, user, res)) return;
 
     return readJson(req)
       .then((body) => {
@@ -319,6 +324,7 @@ function createDialectsModule(deps) {
         const mapping = canonicalMapping(body);
         const now = Date.now();
         const r = db.transaction(() => {
+          quota.assertCanAdd(user.id, 'mappings');
           assertPathAvailable(d.id, mapping);
           return stmts.insertMapping.run(
             d.id,
@@ -473,6 +479,7 @@ function createDialectsModule(deps) {
   function handleImport(req, res) {
     const user = requireUser(req, res);
     if (!user) return;
+    if (writeRateLimited(libraryWriteLimiter, user, res)) return;
 
     return readJson(req)
       .then((body) => {
@@ -536,6 +543,8 @@ function createDialectsModule(deps) {
         const importedName = (body.name.trim() + ' (imported)').slice(0, NAME_MAX);
         let newId;
         const tx = db.transaction(() => {
+          quota.assertCanAdd(user.id, 'dialects');
+          quota.assertCanAdd(user.id, 'mappings', { rows: mappings.length });
           const r = stmts.insertDialect.run(user.id, importedName, 0, now, now);
           newId = r.lastInsertRowid;
           for (const m of mappings) {
@@ -562,7 +571,7 @@ function createDialectsModule(deps) {
       })
       .catch((e) => {
         log.error({ err: e }, 'import dialect failed');
-        sendError(res, 400, e.code || 'bad_request', e.message);
+        sendError(res, e.status || 400, e.code || 'bad_request', e.message);
       });
   }
 
