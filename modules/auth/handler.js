@@ -3,7 +3,7 @@
 const log = require('../../lib/logger').child('auth');
 
 /**
- * modules/auth/handler.js — /api/auth/* (11 routes; every POST is CSRF-guarded, see below).
+ * modules/auth/handler.js — /api/auth/* (12 routes; every POST is CSRF-guarded, see below).
  *
  * The biggest backend migration: extracted verbatim from server.js
  * `handleAuthRoute`, which was a sub-dispatcher matching `pathname ===
@@ -108,6 +108,7 @@ const AUTH_CHANGED_PUBLIC_MSG = {
  *   readLocaleCookie?: (req: import('http').IncomingMessage) => (string|null),
  *   VERIFY_TOKEN_TTL: number,
  *   RESET_TOKEN_TTL: number,
+ *   purgeUserAnalytics?: (userId: number) => Promise<unknown>,
  * }} deps
  */
 function createAuthRoutesModule(deps) {
@@ -132,6 +133,9 @@ function createAuthRoutesModule(deps) {
     readLocaleCookie,
     VERIFY_TOKEN_TTL,
     RESET_TOKEN_TTL,
+    // Best-effort ClickHouse erasure after an account is deleted (optional —
+    // self-hosters without ClickHouse simply omit it).
+    purgeUserAnalytics,
   } = deps;
 
   // Locale for a transactional email (and for EMAIL_UNSENT_PUBLIC_MSG, which
@@ -611,6 +615,77 @@ function createAuthRoutesModule(deps) {
       .catch((e) => sendAuthFailure(req, res, e));
   }
 
+  // Self-service account deletion (GDPR-style erasure). Requires the current
+  // password in a JSON body on top of the session and the cross-site guard.
+  // One SQLite transaction deletes the user (cascade) and anonymises their
+  // event_log rows; sessions, the cookie and ClickHouse are handled after the
+  // commit and never turn a committed deletion into an error response.
+  function handleDeleteAccount(req, res) {
+    const user = auth.getCurrentUser(req);
+    if (!user) return sendError(res, 401, 'unauthorized', 'Sign in first');
+    if (!auth.checkDeleteAccountLimit(req, user.id)) {
+      return sendError(
+        res,
+        429,
+        'rate_limited',
+        'Too many account deletion attempts. Try again in 15 minutes.',
+      );
+    }
+    return readJson(req)
+      .then(async (b) => {
+        if (!b || typeof b.password !== 'string' || !b.password) {
+          return sendError(res, 400, 'invalid_request', 'password required');
+        }
+        const fullUser = Users.getByEmail(user.email);
+        const ok = fullUser && (await auth.verifyPassword(b.password, fullUser.password_hash));
+        if (!ok) return sendError(res, 401, 'invalid_credentials', 'Wrong current password');
+        auth.assertWritable?.();
+        // The password hash changing during the bcrypt wait means a concurrent
+        // reset/rotate; make the caller confirm again rather than delete on
+        // a stale proof.
+        if (Users.getByEmail(user.email)?.password_hash !== fullUser.password_hash) {
+          return sendError(
+            res,
+            401,
+            'session_state_changed',
+            AUTH_CHANGED_PUBLIC_MSG[resolveEmailLocale(null, req)],
+          );
+        }
+
+        const result = Users.deleteAccount(user.id);
+        if (!result.deleted) {
+          return sendError(res, 404, 'not_found', 'Account no longer exists');
+        }
+
+        // Committed from here on. The user row is gone, so no cookie can
+        // authenticate any more; the steps below drop the in-memory sessions,
+        // journal the revocations and expire the cookie.
+        try {
+          auth.invalidateUserSessions(user.id);
+        } catch (err) {
+          log.error({ err }, 'delete-account session invalidation failed');
+          notifyAdmin('<b>delete-account session-invalidate failed</b>', {
+            tag: 'delete-account-sessions',
+            level: 'error',
+          });
+        }
+        try {
+          auth.destroySession(req, res); // expires the cookie
+        } catch (_e) {
+          /* destroySession already set the expiring cookie before throwing */
+        }
+
+        if (typeof purgeUserAnalytics === 'function') {
+          Promise.resolve()
+            .then(() => purgeUserAnalytics(user.id))
+            .catch((err) => log.warn({ err: err && err.message }, 'analytics purge failed'));
+        }
+        log.info({ eventLogAnonymised: result.eventLogAnonymised }, 'account deleted');
+        return sendJson(res, 200, { success: true, deleted: true });
+      })
+      .catch((e) => sendAuthFailure(req, res, e));
+  }
+
   // Every state-changing route is a POST. Refuse cross-site browser requests
   // (login CSRF via a `text/plain` form post, forced logout/registration)
   // before the handler reads the body or touches a session. GET routes (`me`,
@@ -637,6 +712,7 @@ function createAuthRoutesModule(deps) {
       post('/api/auth/forgot-password', handleForgotPassword),
       post('/api/auth/reset-password/state', handleResetPasswordState),
       post('/api/auth/reset-password', handleResetPassword),
+      post('/api/auth/delete-account', handleDeleteAccount),
     ],
   };
 }
