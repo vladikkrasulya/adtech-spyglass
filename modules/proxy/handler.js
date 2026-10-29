@@ -4,21 +4,25 @@
  * modules/proxy/handler.js — POST /api/proxy
  *
  * SSRF-safe outbound POST harness used by the Playground's
- * "Send to external endpoint" tool. The host must be on a small,
- * static allow-list (httpbin.org, postman-echo.com — public RTB-
- * shaped echo services). Anything else returns 403 host_not_allowed
- * with the allow-list echoed back so the UI can render a helpful
- * error.
+ * "Send to external endpoint" tool. The host must be on an operator-
+ * supplied allow-list (ORTBTOOLS_PROXY_ALLOWED_HOSTS, comma-separated
+ * exact hostnames). The built-in list is EMPTY: the harness is off until
+ * the operator names a real ad-tech endpoint. Anything not listed returns
+ * 403 host_not_allowed with the allow-list echoed back so the UI can
+ * render a helpful error.
+ *
+ * Public echo / IP-reflection services (httpbin, postman-echo, ipify,
+ * ifconfig.* ...) are refused even when listed: they reflect the server's
+ * egress address (`origin`, X-Forwarded-For) back to the caller, which
+ * unmasks a host that is otherwise hidden behind a tunnel/CDN.
  *
  * Auth-gated (session cookie). No DB, no rate-limiter, no locale —
  * the module's only real deps are auth + Node http/https. Factory
  * keeps the same shape as the other modules for uniformity even
  * though the surface is tiny.
  *
- * The allow-list is INTENTIONALLY hard-coded inside the module:
- * adding a host requires a code review + deploy, not an env flip.
- * If you ever need it dynamic, inject via deps.allowedHosts instead
- * of plumbing env into the handler.
+ * The allow-list is injected via deps.allowedHosts (server.js reads the
+ * env var); the module itself never reads the environment.
  *
  * Wiring (in server.js):
  *   const { createProxyModule } = require('./modules/proxy/handler');
@@ -29,7 +33,60 @@ const http = require('http');
 const https = require('https');
 const { readJson, sendJson, sendError } = require('../../lib/http');
 
-const DEFAULT_ALLOWED_HOSTS = ['httpbin.org', 'postman-echo.com'];
+// No built-in hosts. httpbin.org and postman-echo.com used to be listed, but
+// both echo the caller's source address back in the body (`origin`,
+// `x-forwarded-for`), which handed any signed-in user the server's home IPv4.
+/** @type {string[]} */
+const DEFAULT_ALLOWED_HOSTS = [];
+
+// Hosts that reflect the requester's address (or capture requests for later
+// retrieval). Matched as the host itself or any subdomain. Refused even if an
+// operator lists them: they defeat origin hiding.
+const IP_ECHO_HOSTS = [
+  'httpbin.org',
+  'httpbingo.org',
+  'postman-echo.com',
+  'ipify.org',
+  'ifconfig.me',
+  'ifconfig.co',
+  'ifconfig.io',
+  'icanhazip.com',
+  'ipinfo.io',
+  'ipecho.net',
+  'ident.me',
+  'checkip.amazonaws.com',
+  'wtfismyip.com',
+  'ip-api.com',
+  'ipapi.co',
+  'myip.com',
+  'whatismyip.com',
+  'webhook.site',
+  'requestbin.com',
+  'pipedream.net',
+  'requestcatcher.com',
+];
+
+/**
+ * @param {string} hostname lower-case hostname
+ */
+function isIpEchoHost(hostname) {
+  const h = String(hostname || '')
+    .toLowerCase()
+    .replace(/\.$/, '');
+  return IP_ECHO_HOSTS.some((echo) => h === echo || h.endsWith('.' + echo));
+}
+
+/**
+ * Parse ORTBTOOLS_PROXY_ALLOWED_HOSTS (comma-separated exact hostnames).
+ * @param {string | undefined} raw
+ * @returns {string[]}
+ */
+function parseAllowedHosts(raw) {
+  return String(raw || '')
+    .split(',')
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean);
+}
 
 // Hard caps applied to outbound proxy requests. Tightened in v0.38.1 after
 // Gemini Pro 3.1 SSRF audit (F-1, F-2, F-3):
@@ -53,10 +110,13 @@ const ALLOWED_PORTS = new Set(['', '80', '443']);
  */
 function createProxyModule(deps) {
   const { auth } = deps;
-  const allowedHosts =
-    Array.isArray(deps.allowedHosts) && deps.allowedHosts.length
-      ? deps.allowedHosts.slice()
-      : DEFAULT_ALLOWED_HOSTS.slice();
+  // An explicit empty list disables the harness; echo/IP-reflection hosts are
+  // dropped no matter who supplied them.
+  const allowedHosts = (
+    Array.isArray(deps.allowedHosts) ? deps.allowedHosts : DEFAULT_ALLOWED_HOSTS
+  )
+    .map((h) => String(h).toLowerCase())
+    .filter((h) => !isIpEchoHost(h));
 
   function handleProxy(req, res) {
     const user = auth.getCurrentUser(req);
@@ -65,11 +125,16 @@ function createProxyModule(deps) {
     }
     readJson(req)
       .then(({ url, data }) => {
+        if (typeof url !== 'string' || !url) {
+          return sendError(res, 400, 'invalid_input', 'url is required');
+        }
+        if (data === undefined) {
+          return sendError(res, 400, 'invalid_input', 'data is required');
+        }
         const targetUrl = new URL(url);
         const hostname = targetUrl.hostname;
         // Strict host match (post-audit F-3): allow-list compares the FULL
-        // hostname only, no subdomain wildcard. The allow-list is two
-        // specific hosts; if either ever permits user-registered
+        // hostname only, no subdomain wildcard. If a listed host ever permits user-registered
         // subdomains, the prior `.endsWith('.' + h)` rule would have
         // tunneled SSRF through (DNS rebinding via attacker.httpbin.org).
         const isAllowed = allowedHosts.some((h) => hostname === h);
@@ -164,4 +229,10 @@ function createProxyModule(deps) {
   };
 }
 
-module.exports = { createProxyModule, DEFAULT_ALLOWED_HOSTS };
+module.exports = {
+  createProxyModule,
+  DEFAULT_ALLOWED_HOSTS,
+  IP_ECHO_HOSTS,
+  isIpEchoHost,
+  parseAllowedHosts,
+};

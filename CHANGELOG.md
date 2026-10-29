@@ -13,6 +13,7 @@ All notable changes to ortbtools are documented here. Format follows
 ### Security
 
 - The SSRF guard (`isPrivateIp`, used by `POST /api/creative/asset`) now treats NAT64 (`64:ff9b::/96`, `64:ff9b:1::/48`), 6to4 (`2002::/16`), IPv4-compatible (`::a.b.c.d`), IPv6 multicast, `198.18.0.0/15`, `224.0.0.0/4` and `240.0.0.0/4` addresses as non-public. IPv6 literals are judged by their parsed value, so every spelling of one address gets the same verdict.
+- `POST /api/proxy` no longer leaks the server's egress IPv4. The built-in allow-list (`httpbin.org`, `postman-echo.com`) echoed the caller's address (`origin`, `x-forwarded-for`) to any signed-in user, unmasking a host hidden behind the Cloudflare tunnel. The built-in list is now empty; operators opt in per endpoint with `ORTBTOOLS_PROXY_ALLOWED_HOSTS` (exact hostnames). Known IP-echo and request-capture hosts are refused even when listed. A request without `url`/`data` now gets `400 invalid_input` instead of a leaked Node exception after an outbound socket was already opened.
 
 ### v1.23.0 — close the remaining product questions (2026-09-09)
 

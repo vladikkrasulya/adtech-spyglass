@@ -723,7 +723,7 @@ const { createBlogModule } = require('./modules/blog/handler');
 const seo = require('./lib/seo');
 const landings = require('./lib/landings');
 const blogService = require('./lib/blog-service');
-const { createProxyModule } = require('./modules/proxy/handler');
+const { createProxyModule, parseAllowedHosts } = require('./modules/proxy/handler');
 // Stage 5 — Insights Dashboard analytics endpoint
 const { createAnalyticsModule } = require('./modules/analytics/handler');
 const { createTelemetryModule } = require('./modules/telemetry/handler');
@@ -831,7 +831,12 @@ router.register(createCreativeAssetModule({ auth, assetLimiter }));
 router.register(createAdminModule({ db, Users, auth }));
 router.register(createAdminBlogModule());
 router.register(createBlogModule({ readLimiter, auth, READ_MAX_PER_WINDOW }));
-router.register(createProxyModule({ auth }));
+router.register(
+  createProxyModule({
+    auth,
+    allowedHosts: parseAllowedHosts(process.env.ORTBTOOLS_PROXY_ALLOWED_HOSTS),
+  }),
+);
 
 // Wave 3 modules (auth bundle, library, stream)
 const { createAuthRoutesModule } = require('./modules/auth/handler');
@@ -875,7 +880,9 @@ router.register(createSamplesModule({ auth, Samples }));
 // echoes attacker-controlled JSON to public request bins is an abuse amplifier
 // (attacker burns *our* IP+TLS to hit their webhook). webhook.site was the
 // worst offender — wildcard subdomain → any attacker-controlled bin — so it's
-// off the allow-list.
+// off the allow-list. The allow-list comes from ORTBTOOLS_PROXY_ALLOWED_HOSTS
+// and is empty by default; IP-echo services (httpbin, postman-echo, …) are
+// refused because they reflect the server's egress IP back to the caller.
 
 // Merge two detectFormat() results (request side + response side) into
 // a single, de-duplicated tag set. Returns the canonical empty shape if

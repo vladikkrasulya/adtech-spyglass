@@ -133,7 +133,7 @@ Wrapped-key fields are opaque to the server. Reset and wipe behavior is part of
 | User dialects     | dialect CRUD/import/export plus mapping CRUD under `/api/dialects`            | Current user only                                         |
 | Partner inference | `POST /api/intel/suggest-partner`                                             | Transient deterministic inference for signed-in save flow |
 | Creative asset    | `POST /api/creative/asset`                                                    | Signed-in, explicit-click raster inlining                 |
-| Outbound proxy    | `POST /api/proxy`                                                             | Signed-in allowlisted test harness                        |
+| Outbound proxy    | `POST /api/proxy`                                                             | Signed-in operator-allowlisted harness                    |
 
 Workspace handlers perform the auth gate themselves and always scope persistence calls by user id.
 A partner deletion unassigns its samples; it does not transfer another user's data.
@@ -198,8 +198,8 @@ compatibility. Creative containment is separately enforced by the iframe sandbox
 ## External Processing Boundary
 
 - Analyze, behavior, mirror, replay, and Intel do not forward submitted payloads to a model.
-- `/api/proxy` is an explicit authenticated user-requested transmission to a small code-reviewed
-  allowlist.
+- `/api/proxy` is an explicit authenticated user-requested transmission to an operator-configured
+  allowlist (`ORTBTOOLS_PROXY_ALLOWED_HOSTS`, empty by default; IP-echo services are refused).
 - `/api/creative/asset` is an explicit authenticated user-requested image fetch to a creative-named
   host, subject to the pinned-address SSRF boundary above.
 - Resend receives transactional email data only from auth flows when configured.
