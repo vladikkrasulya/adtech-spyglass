@@ -61,6 +61,10 @@ function createCreativeAssetModule({ auth, assetLimiter } = {}) {
     } catch (e) {
       return sendError(res, 400, 'bad_request', e.message);
     }
+    // `null`, an array or a scalar parse as valid JSON but are not a request.
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return sendError(res, 400, 'bad_request', 'Body must be a JSON object');
+    }
     const url = typeof body.url === 'string' ? body.url.trim() : '';
     if (!url || url.length > URL_MAX) {
       return sendError(res, 400, 'url_invalid', 'url missing or too long');

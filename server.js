@@ -504,6 +504,13 @@ function serveStaticFile(req, res) {
     res.end('bad_request');
     return;
   }
+  // A NUL byte (`/%00`) makes fs.readFile throw synchronously, which used to
+  // surface as a 500 and an error report for any anonymous request.
+  if (sanitized.includes('\0')) {
+    res.writeHead(400, { 'Content-Type': 'text/plain' });
+    res.end('bad_request');
+    return;
+  }
   const normalized = path.normalize(sanitized).replace(/^(\.\.(\/|\\))+/, '');
   const filePath = path.join(PUBLIC_DIR, normalized);
   const resolved = path.resolve(filePath);

@@ -28,6 +28,7 @@ const eventLog = require('../../lib/event-log');
  */
 
 const { sendJson, sendError } = require('../../lib/http');
+const { requireAdminBearer } = require('../../lib/admin-auth');
 
 /**
  * @param {{
@@ -40,15 +41,7 @@ function createAdminModule(deps) {
   const { db, Users, auth } = deps;
 
   function handleAdminStats(req, res) {
-    const expected = process.env.ADMIN_STATS_TOKEN;
-    if (!expected) {
-      return sendError(res, 503, 'admin_stats_disabled', 'ADMIN_STATS_TOKEN not configured');
-    }
-    const auth_h = req.headers['authorization'] || '';
-    const provided = auth_h.startsWith('Bearer ') ? auth_h.slice(7) : '';
-    if (!provided || provided !== expected) {
-      return sendError(res, 401, 'unauthorized', 'Bearer token required');
-    }
+    if (!requireAdminBearer(req, res, { disabledCode: 'admin_stats_disabled' })) return;
     try {
       const dayAgoMs = Date.now() - 24 * 3600 * 1000;
       const samples_total = db.prepare('SELECT COUNT(*) AS n FROM samples').get().n;
@@ -79,21 +72,11 @@ function createAdminModule(deps) {
     }
   }
 
-  // Same Bearer-token auth as /api/admin/stats — read at request time so
-  // env rotation doesn't require a restart.
+  // Same Bearer-token auth as /api/admin/stats (constant-time compare plus a
+  // failed-attempt lockout; the token is read at request time so rotation does
+  // not need a restart).
   function requireAdminToken(req, res) {
-    const expected = process.env.ADMIN_STATS_TOKEN;
-    if (!expected) {
-      sendError(res, 503, 'admin_disabled', 'ADMIN_STATS_TOKEN not configured');
-      return false;
-    }
-    const auth_h = req.headers['authorization'] || '';
-    const provided = auth_h.startsWith('Bearer ') ? auth_h.slice(7) : '';
-    if (!provided || provided !== expected) {
-      sendError(res, 401, 'unauthorized', 'Bearer token required');
-      return false;
-    }
-    return true;
+    return requireAdminBearer(req, res, { disabledCode: 'admin_disabled' });
   }
 
   function parseIntOrNull(s) {

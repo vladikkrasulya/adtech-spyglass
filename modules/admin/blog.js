@@ -18,6 +18,7 @@ const crypto = require('crypto');
 const { sendJson, sendError, readJson } = require('../../lib/http');
 const log = require('../../lib/logger').child('admin-blog');
 const { chQuery, chInsert, chExec, chEsc } = require('../../lib/clickhouse');
+const { requireAdminBearer } = require('../../lib/admin-auth');
 const {
   publishPost,
   rejectPost,
@@ -85,18 +86,7 @@ function removeOwnFile(filePath, identity) {
 }
 
 function requireAdminToken(req, res) {
-  const expected = process.env.ADMIN_STATS_TOKEN;
-  if (!expected) {
-    sendError(res, 503, 'admin_disabled', 'ADMIN_STATS_TOKEN not configured');
-    return false;
-  }
-  const auth_h = req.headers['authorization'] || '';
-  const provided = auth_h.startsWith('Bearer ') ? auth_h.slice(7) : '';
-  if (!provided || provided !== expected) {
-    sendError(res, 401, 'unauthorized', 'Bearer token required');
-    return false;
-  }
-  return true;
+  return requireAdminBearer(req, res, { disabledCode: 'admin_disabled' });
 }
 
 function createAdminBlogModule() {

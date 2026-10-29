@@ -48,6 +48,7 @@ const {
   RETENTION_DAYS,
 } = require('../../lib/product-telemetry');
 const { chQuery } = require('../../lib/clickhouse');
+const { requireAdminBearer } = require('../../lib/admin-auth');
 const { resolveClientIp } = require('../../lib/client-ip');
 
 /** Enough for the fixed-shape beacon record with generous headroom. */
@@ -151,15 +152,7 @@ function createTelemetryModule(deps) {
 
   // ── GET /api/v1/telemetry/summary ────────────────────────────────────────
   async function handleSummary(req, res, parsed) {
-    const expected = process.env.ADMIN_STATS_TOKEN;
-    if (!expected) {
-      return sendError(res, 503, 'telemetry_summary_disabled', 'ADMIN_STATS_TOKEN not configured');
-    }
-    const header = req.headers['authorization'] || '';
-    const provided = header.startsWith('Bearer ') ? header.slice(7) : '';
-    if (!provided || provided !== expected) {
-      return sendError(res, 401, 'unauthorized', 'Bearer token required');
-    }
+    if (!requireAdminBearer(req, res, { disabledCode: 'telemetry_summary_disabled' })) return;
     if (!isProductTelemetryEnabled()) {
       return sendError(res, 503, 'telemetry_disabled', 'Product telemetry is disabled');
     }
