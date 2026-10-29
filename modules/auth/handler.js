@@ -3,7 +3,7 @@
 const log = require('../../lib/logger').child('auth');
 
 /**
- * modules/auth/handler.js — /api/auth/* (11 routes).
+ * modules/auth/handler.js — /api/auth/* (11 routes; every POST is CSRF-guarded, see below).
  *
  * The biggest backend migration: extracted verbatim from server.js
  * `handleAuthRoute`, which was a sub-dispatcher matching `pathname ===
@@ -47,7 +47,7 @@ const log = require('../../lib/logger').child('auth');
  *   degrades to preferred_locale -> 'en' instead of throwing.
  */
 
-const { readJson, sendJson, sendError } = require('../../lib/http');
+const { readJson, sendJson, sendError, guardCrossSite } = require('../../lib/http');
 
 /**
  * The ONE string the client is allowed to see when an outbound email
@@ -358,7 +358,21 @@ function createAuthRoutesModule(deps) {
       });
     }
     return sendVerifyEmail({ email: user.email }, tok, getPublicBaseUrl(), locale).then(
-      () => sendJson(res, 200, { success: true, email_sent: true }),
+      (result) => {
+        // The mailer's dev-mode short-circuit resolves { dev: true, link }
+        // without delivering anything (no RESEND_API_KEY / not production).
+        // Claiming "sent" there left users waiting for a mail that never
+        // comes; report it the way /register does. The generic message is
+        // enough — the cause (missing key) is logged by the mailer itself.
+        if (result && result.dev) {
+          return sendJson(res, 200, {
+            success: true,
+            email_sent: false,
+            email_error: EMAIL_UNSENT_PUBLIC_MSG[locale],
+          });
+        }
+        return sendJson(res, 200, { success: true, email_sent: true });
+      },
       (sendErr) => {
         log.error({ err: sendErr }, 'verify-email request send failed');
         notifyAdmin(
@@ -597,32 +611,32 @@ function createAuthRoutesModule(deps) {
       .catch((e) => sendAuthFailure(req, res, e));
   }
 
+  // Every state-changing route is a POST. Refuse cross-site browser requests
+  // (login CSRF via a `text/plain` form post, forced logout/registration)
+  // before the handler reads the body or touches a session. GET routes (`me`,
+  // the emailed `verify-email/confirm` link) stay open by design.
+  const csrfGuarded = (handler) =>
+    guardCrossSite(handler, () => ({ publicBaseUrl: getPublicBaseUrl() }));
+  const post = (path, handler) => ({ method: 'POST', path, handler: csrfGuarded(handler) });
+
   return {
     id: 'auth',
     routes: [
       { method: 'GET', path: '/api/auth/me', handler: handleMe },
-      { method: 'POST', path: '/api/auth/register', handler: handleRegister },
-      { method: 'POST', path: '/api/auth/login', handler: handleLogin },
-      { method: 'POST', path: '/api/auth/logout', handler: handleLogout },
-      { method: 'POST', path: '/api/auth/preferences', handler: handlePreferences },
-      { method: 'POST', path: '/api/auth/setup-encryption', handler: handleSetupEncryption },
-      {
-        method: 'POST',
-        path: '/api/auth/verify-email/request',
-        handler: handleVerifyEmailRequest,
-      },
+      post('/api/auth/register', handleRegister),
+      post('/api/auth/login', handleLogin),
+      post('/api/auth/logout', handleLogout),
+      post('/api/auth/preferences', handlePreferences),
+      post('/api/auth/setup-encryption', handleSetupEncryption),
+      post('/api/auth/verify-email/request', handleVerifyEmailRequest),
       {
         method: 'GET',
         path: '/api/auth/verify-email/confirm',
         handler: handleVerifyEmailConfirm,
       },
-      { method: 'POST', path: '/api/auth/forgot-password', handler: handleForgotPassword },
-      {
-        method: 'POST',
-        path: '/api/auth/reset-password/state',
-        handler: handleResetPasswordState,
-      },
-      { method: 'POST', path: '/api/auth/reset-password', handler: handleResetPassword },
+      post('/api/auth/forgot-password', handleForgotPassword),
+      post('/api/auth/reset-password/state', handleResetPasswordState),
+      post('/api/auth/reset-password', handleResetPassword),
     ],
   };
 }

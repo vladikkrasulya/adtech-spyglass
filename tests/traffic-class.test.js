@@ -253,6 +253,58 @@ test('public addresses just outside the private ranges stay external', () => {
   }
 });
 
+test('NAT64, 6to4, IPv4-compatible and reserved ranges are never public (SSRF guard)', () => {
+  for (const ip of [
+    // NAT64 well-known prefix 64:ff9b::/96, any spelling
+    '64:ff9b::7f00:1',
+    '64:ff9b::127.0.0.1',
+    '[64:ff9b::a9fe:a9fe]',
+    '64:ff9b::808:808', // even a "public" embedded IPv4 is blocked: no NAT64 gateway is expected
+    '64:ff9b:0:0:0:0:7f00:1',
+    '0064:ff9b::7f00:1',
+    // NAT64 local-use prefix 64:ff9b:1::/48
+    '64:ff9b:1::1',
+    '64:ff9b:1:ffff:ffff:ffff:ffff:ffff',
+    // 6to4
+    '2002:7f00:1::1',
+    '2002:c0a8:101::1',
+    // IPv4-compatible (deprecated) and unspecified
+    '::7f00:1',
+    '::127.0.0.1',
+    '::a9fe:a9fe',
+    '0:0:0:0:0:0:7f00:1',
+    '::',
+    // IPv4-mapped in the unnormalized spelling
+    '::ffff:10.0.0.1',
+    // IPv6 multicast, IPv4 benchmarking / multicast / reserved
+    'ff02::1',
+    '198.18.0.1',
+    '198.19.255.255',
+    '224.0.0.1',
+    '240.0.0.1',
+    '255.255.255.255',
+  ]) {
+    assert.equal(isPrivateIp(normalizeIp(ip)), true, `${ip} should be blocked`);
+  }
+});
+
+test('addresses next to the NAT64 / reserved ranges stay public', () => {
+  for (const ip of [
+    '64:ff9a::1',
+    '64:ff9c::1',
+    '64:ff9b:2::1', // outside 64:ff9b:1::/48
+    '2001:db8::1',
+    '2606:4700:4700::1111',
+    '2003::1',
+    '198.17.255.255',
+    '198.20.0.0',
+    '223.255.255.255',
+    '::ffff:203.0.113.9', // mapped public IPv4 stays public
+  ]) {
+    assert.equal(isPrivateIp(normalizeIp(ip)), false, `${ip} should be public`);
+  }
+});
+
 test('an unresolvable IP is treated as internal, never as a user', () => {
   for (const ip of ['', 'unknown', undefined, null, 'not-an-ip-at-all']) {
     const out = classify({ ip });

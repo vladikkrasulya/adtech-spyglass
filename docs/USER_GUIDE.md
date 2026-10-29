@@ -83,9 +83,11 @@
 
 ### Test harness (з акаунтом)
 
-- `/api/proxy` — форвардер на публічні test-bin-и (`httpbin.org`, `postman-echo.com`)
-  для перевірки SSP-side webhook-ів. Auth-захищений щоб не використовувати
-  як abuse-amplifier
+- `/api/proxy` — форвардер на allow-list хостів оператора
+  (`ORTBTOOLS_PROXY_ALLOWED_HOSTS`, за замовчуванням порожній, тобто вимкнений)
+  для перевірки SSP-side webhook-ів. Публічні echo-сервіси (`httpbin.org`,
+  `postman-echo.com`, `ipify` тощо) заборонені: вони повертають зовнішній IP
+  сервера. Auth-захищений щоб не використовувати як abuse-amplifier
 
 ### Інтерфейс
 

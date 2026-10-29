@@ -122,6 +122,13 @@ Registration/login accept a password over the protected connection for server-si
 Wrapped-key fields are opaque to the server. Reset and wipe behavior is part of
 [the data-retention contract](./data-retention.md).
 
+Every `POST` in the auth family refuses cross-site browser requests with `403 cross_site_request`
+(`Sec-Fetch-Site` other than `same-origin`/`none`, or an `Origin` that is not this host or
+`PUBLIC_BASE_URL`) and requests that carry a body without `Content-Type: application/json` with
+`415 unsupported_media_type`. Clients that send neither header (curl, servers) are unaffected.
+`POST /api/auth/verify-email/request` answers `email_sent: false` when the mailer ran in its
+dev-mode short-circuit and delivered nothing.
+
 ### Authenticated Workspace
 
 | Family            | Routes                                                                        | Scope                                                     |
@@ -133,7 +140,7 @@ Wrapped-key fields are opaque to the server. Reset and wipe behavior is part of
 | User dialects     | dialect CRUD/import/export plus mapping CRUD under `/api/dialects`            | Current user only                                         |
 | Partner inference | `POST /api/intel/suggest-partner`                                             | Transient deterministic inference for signed-in save flow |
 | Creative asset    | `POST /api/creative/asset`                                                    | Signed-in, explicit-click raster inlining                 |
-| Outbound proxy    | `POST /api/proxy`                                                             | Signed-in allowlisted test harness                        |
+| Outbound proxy    | `POST /api/proxy`                                                             | Signed-in operator-allowlisted harness                    |
 
 Workspace handlers perform the auth gate themselves and always scope persistence calls by user id.
 A partner deletion unassigns its samples; it does not transfer another user's data.
@@ -167,7 +174,7 @@ the configured internal upstream. It is not a general reverse proxy.
   leaves.
 - Auth has account/IP-oriented registration/login/recovery limiters and persistent session expiry.
 - The authenticated creative-asset fetch enforces the caller-chosen-host boundary documented above.
-- The authenticated outbound proxy uses a static hostname allowlist, HTTP/HTTPS only, approved
+- The authenticated outbound proxy uses an operator-configured hostname allowlist (empty by default; IP-echo hosts refused), HTTP/HTTPS only, approved
   ports, redirect revalidation, response-size cap, and timeout. The user intentionally sends its
   request body to the selected external allowlisted host.
 
@@ -198,8 +205,8 @@ compatibility. Creative containment is separately enforced by the iframe sandbox
 ## External Processing Boundary
 
 - Analyze, behavior, mirror, replay, and Intel do not forward submitted payloads to a model.
-- `/api/proxy` is an explicit authenticated user-requested transmission to a small code-reviewed
-  allowlist.
+- `/api/proxy` is an explicit authenticated user-requested transmission to an operator-configured
+  allowlist (`ORTBTOOLS_PROXY_ALLOWED_HOSTS`, empty by default; IP-echo services are refused).
 - `/api/creative/asset` is an explicit authenticated user-requested image fetch to a creative-named
   host, subject to the pinned-address SSRF boundary above.
 - Resend receives transactional email data only from auth flows when configured.
