@@ -77,6 +77,21 @@ test('WHATWG-canonical IPv4-mapped IPv6 cannot disguise private IPv4', async () 
   }
 });
 
+test('NAT64 and IPv4-compatible literals are refused as private', async () => {
+  // A NAT64 gateway would translate 64:ff9b::7f00:1 into a connection to
+  // 127.0.0.1; IPv4-compatible ::7f00:1 embeds the same address.
+  for (const u of [
+    'http://[64:ff9b::7f00:1]/x',
+    'http://[64:ff9b::127.0.0.1]/x',
+    'http://[64:ff9b::a9fe:a9fe]/latest/meta-data/',
+    'http://[64:ff9b:1::1]/x',
+    'http://[::7f00:1]/x',
+    'http://[2002:7f00:1::1]/x',
+  ]) {
+    assert.equal(await refusalCode(u), 'host_blocked', u);
+  }
+});
+
 test('a public IPv4-mapped literal remains allowed', async () => {
   assert.equal(await refusalCode('http://[::ffff:203.0.113.9]/asset.png'), null);
 });

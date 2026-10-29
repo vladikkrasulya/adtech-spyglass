@@ -10,6 +10,10 @@ All notable changes to ortbtools are documented here. Format follows
 
 - Reference response specimens served by `GET /api/v1/sample` no longer raise a critical `crosscheck.id_mismatch`: the synthesized request keeps the response id instead of a `demo-` prefix. VAST specimens (`mtype` 2) now get a video slot accepting every VAST protocol and the VPAID JS mime, so `clean-banner`, `pop-clean-response` and `vast-clean-inline` show zero critical cross-check findings.
 
+### Security
+
+- The SSRF guard (`isPrivateIp`, used by `POST /api/creative/asset`) now treats NAT64 (`64:ff9b::/96`, `64:ff9b:1::/48`), 6to4 (`2002::/16`), IPv4-compatible (`::a.b.c.d`), IPv6 multicast, `198.18.0.0/15`, `224.0.0.0/4` and `240.0.0.0/4` addresses as non-public. IPv6 literals are judged by their parsed value, so every spelling of one address gets the same verdict.
+
 ### v1.23.0 — close the remaining product questions (2026-09-09)
 
 - Make logout and password-reset revocation survive failed SQLite deletion and process restarts. Private bounded recovery state fences uncertain starts; orderly shutdown drains authentication before checkpointing. Upgrading old sessions or restoring without trusted recovery state requires login again.
