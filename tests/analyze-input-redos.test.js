@@ -113,7 +113,7 @@ test('looksLikeHost: identical to the previous implementation on real pastes', (
     'example.com.',
     'a b c d //x',
     'text HTTPS://UPPER.example',
-    'text   //nbsp.example',
+    'text  \u00a0//nbsp.example',
   ];
   for (const v of examples) {
     assert.equal(looksLikeHost(v), legacyLooksLikeHost(v), JSON.stringify(v));
@@ -121,7 +121,7 @@ test('looksLikeHost: identical to the previous implementation on real pastes', (
 });
 
 test('looksLikeHost: identical to the previous implementation on every short token string', () => {
-  const tokens = [' ', '\t', 'a.com', '//', 'http:', 'https:', '/', 'x', ' ', '@'];
+  const tokens = [' ', '\t', 'a.com', '//', 'http:', 'https:', '/', 'x', '\u00a0', '@'];
   let checked = 0;
   const walk = (prefix, depth) => {
     assert.equal(looksLikeHost(prefix), legacyLooksLikeHost(prefix), JSON.stringify(prefix));
