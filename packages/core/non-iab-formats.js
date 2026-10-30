@@ -205,6 +205,18 @@ function admLooksLikePop(adm) {
 }
 
 /**
+ * A redirect call site followed by a quoted absolute URL. The text between the
+ * call site and the opening quote is `\s*[=(]?\.?\s*\(?\s*` spelled out as
+ * three alternatives, because that form puts up to three `\s*` runs next to
+ * each other: on a keyword followed by a long run of spaces the engine tries
+ * every way of splitting the run between them (cubic). Each alternative has one
+ * `\s*` per separator, so a run of whitespace is scanned once per alternative.
+ * Same language as the original expression (see tests/non-iab-formats-redos).
+ */
+const POP_REDIRECT_URL =
+  /(?:window\.open|(?:top|parent)\.location|location\.(?:href|replace|assign))(?:\s*[=(]?\.\s*(?:\(\s*)?|\s*[=(]\s*(?:\(\s*)?|\s*(?:\(\s*)?)['"`](https?:\/\/[^'"`]+)['"`]/i;
+
+/**
  * Extract the landing-page hostname from a pop `bid.adm`. Returns null if
  * the adm doesn't reveal a URL clearly. Used by the crosscheck rule that
  * compares the landing host to `bid.adomain[]`.
@@ -230,9 +242,7 @@ function extractPopLandingHost(adm) {
   // Keep these in sync with admLooksLikePop — otherwise pop is detected but
   // adomain-vs-landing crosscheck silently can't extract the host and the
   // security comparison is skipped.
-  const inside = s.match(
-    /(?:window\.open|(?:top|parent)\.location|location\.(?:href|replace|assign))\s*[=(]?\.?\s*\(?\s*['"`](https?:\/\/[^'"`]+)['"`]/i,
-  );
+  const inside = s.match(POP_REDIRECT_URL);
   if (inside) {
     try {
       return new URL(inside[1]).hostname.toLowerCase();

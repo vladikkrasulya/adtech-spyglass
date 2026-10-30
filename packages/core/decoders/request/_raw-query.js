@@ -68,8 +68,16 @@ function parseRawQuery(search) {
  */
 function findDecodeDamage(searchParams, raw) {
   const damaged = [];
+  // `searchParams.get(key)` scans the whole list, so one call per key made a
+  // query with many distinct keys quadratic. One pass builds the same
+  // first-value-wins lookup.
+  /** @type {Map<string, string>} */
+  const firstValue = new Map();
+  for (const [name, value] of searchParams) {
+    if (!firstValue.has(name)) firstValue.set(name, value);
+  }
   for (const key of Object.keys(raw)) {
-    const decoded = searchParams.get(key);
+    const decoded = firstValue.get(key);
     if (typeof decoded !== 'string') continue;
     if (!decoded.includes(REPLACEMENT)) continue;
     if (raw[key].includes(REPLACEMENT)) continue;

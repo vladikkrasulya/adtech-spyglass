@@ -90,6 +90,22 @@ function forEachOpenTag(adm, tag, fn) {
   }
 }
 
+/**
+ * Every `<tag …>` open tag in `adm`, as an array. Linear replacement for
+ * `adm.match(/<tag\b[^>]*>/gi)`, which is quadratic on a run of open-tag starts
+ * with no `>` (see `forEachOpenTag`).
+ *
+ * @param {string} adm
+ * @param {string} tag
+ * @returns {string[]}
+ */
+function openTags(adm, tag) {
+  /** @type {string[]} */
+  const out = [];
+  forEachOpenTag(adm, tag, (openTag) => out.push(openTag));
+  return out;
+}
+
 // Pull all attribute=value pairs of `attr` from any `<tag>` occurrence.
 // Used to find apiFramework="VPAID" etc.
 function getAttrValues(adm, tag, attr) {
@@ -502,7 +518,7 @@ function validateVast(adm, path) {
   }
 
   // R11. <MediaFile> should declare both width and height (VAST §3.8).
-  const mfTags = adm.match(/<MediaFile\b[^>]*>/gi) || [];
+  const mfTags = openTags(adm, 'MediaFile');
   let mfNoDims = 0;
   for (const tag of mfTags) {
     if (!/\bwidth\s*=\s*["']\d+["']/i.test(tag) || !/\bheight\s*=\s*["']\d+["']/i.test(tag))
@@ -610,7 +626,7 @@ function validateVast(adm, path) {
       'audio/3gpp',
       'audio/3gpp2',
     ]);
-    const mfTags = adm.match(/<MediaFile\b[^>]*>/gi) || [];
+    const mfTags = openTags(adm, 'MediaFile');
     let badType = null;
     for (const tag of mfTags) {
       const m = /\btype\s*=\s*(["'])([^"']+)\1/i.exec(tag);
@@ -642,7 +658,7 @@ function validateVast(adm, path) {
   //   frame; without dimensions placement is guesswork and the overlay may
   //   not render at all. Analogue of R11 for NonLinear.
   {
-    const nlTags = adm.match(/<NonLinear\b[^>]*>/gi) || [];
+    const nlTags = openTags(adm, 'NonLinear');
     let nlNoDims = 0;
     for (const tag of nlTags) {
       if (!/\bwidth\s*=\s*["']\d+["']/i.test(tag) || !/\bheight\s*=\s*["']\d+["']/i.test(tag))
