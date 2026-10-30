@@ -37,6 +37,7 @@ const { TextDecoder } = require('node:util');
  */
 
 const { readJson, sendJson, sendError, makeError } = require('../../lib/http');
+const { declaredBodyCost } = require('../../lib/byte-budget');
 const { readDeclaredContext } = require('../inspection/handler');
 // Stage-1 finding→source navigation — additive `finding.location` candidate.
 // Pure core module (no payload values, no side regex); side comes from the
@@ -87,6 +88,7 @@ function decodeBehaviorAdm(adm, admB64) {
 /**
  * @param {{
  *   analyzeLimiter: (key: string) => boolean,
+ *   analyzeBudget?: (key: string, bytes: number) => boolean,
  *   behaviorLimiter: (key: string) => boolean,
  *   auth: {
  *     clientIp: (req: import('http').IncomingMessage) => string,
@@ -114,6 +116,7 @@ function decodeBehaviorAdm(adm, admB64) {
 function createAnalyzeModule(deps) {
   const {
     analyzeLimiter,
+    analyzeBudget,
     behaviorLimiter,
     auth,
     ANALYZE_MAX_PER_WINDOW,
@@ -145,6 +148,14 @@ function createAnalyzeModule(deps) {
         429,
         'rate_limited',
         `Too many analyze calls. Try again shortly (limit: ${ANALYZE_MAX_PER_WINDOW}/min/IP).`,
+      );
+    }
+    if (analyzeBudget && !analyzeBudget(auth.clientIp(req), declaredBodyCost(req))) {
+      return sendError(
+        res,
+        429,
+        'rate_limited',
+        'Too much data analyzed in the last minute. Try again shortly.',
       );
     }
     const locale = resolveLocale(parsed);

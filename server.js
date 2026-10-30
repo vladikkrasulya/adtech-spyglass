@@ -50,6 +50,7 @@ const { signToken, verifyToken, TokenError } = require('./tokens');
 const { sendVerifyEmail, sendResetEmail } = require('./email');
 const { notifyAdmin, escapeHtml: notifyEscape } = require('./notify');
 const httpLib = require('./lib/http');
+const { createByteBudget } = require('./lib/byte-budget');
 const _logger = require('./lib/logger');
 const log = _logger.child('server');
 const { captureException, flushSentry } = _logger;
@@ -118,6 +119,12 @@ function makeAnalyzeLimiter(maxPerWindow) {
   };
 }
 const analyzeLimiter = makeAnalyzeLimiter(ANALYZE_MAX_PER_WINDOW);
+// Analysis cost scales with body size (~0.5-1.1 s per MB measured), so the
+// request COUNT above lets one address pin the single event loop with maximal
+// bodies. This rolling per-address VOLUME budget (lib/byte-budget.js) bounds the
+// CPU one address can claim: 8 MiB/min is roughly 9 s of work, ~15 % of a core.
+const ANALYZE_BYTES_PER_MIN = Number(process.env.ANALYZE_BYTES_PER_MIN) || 8 * 1024 * 1024;
+const analyzeBudget = createByteBudget({ maxBytes: ANALYZE_BYTES_PER_MIN });
 // /api/analyze-behavior is more attractive to fuzzers (anonymous, takes
 // arbitrary event arrays). Tighter cap. Real users — even with a
 // 1Hz heartbeat from the probe + UI debounce — never exceed ~3/min.
@@ -511,6 +518,13 @@ function serveStaticFile(req, res) {
     res.end('bad_request');
     return;
   }
+  // A NUL byte (`/%00`) makes fs.readFile throw synchronously, which used to
+  // surface as a 500 and an error report for any anonymous request.
+  if (sanitized.includes('\0')) {
+    res.writeHead(400, { 'Content-Type': 'text/plain' });
+    res.end('bad_request');
+    return;
+  }
   const normalized = path.normalize(sanitized).replace(/^(\.\.(\/|\\))+/, '');
   const filePath = path.join(PUBLIC_DIR, normalized);
   const resolved = path.resolve(filePath);
@@ -753,6 +767,7 @@ const { computeCorpusMatrix: _computeCorpusMatrix } = require('./lib/corpus-matr
 router.register(
   createMirrorModule({
     analyzeLimiter,
+    analyzeBudget,
     auth,
     ANALYZE_MAX_PER_WINDOW,
     resolveLocale,
@@ -763,6 +778,7 @@ router.register(
 router.register(
   createReplayModule({
     analyzeLimiter,
+    analyzeBudget,
     auth,
     ANALYZE_MAX_PER_WINDOW,
     resolveLocale,
@@ -791,6 +807,7 @@ router.register(
 router.register(
   createAnalyzeModule({
     analyzeLimiter,
+    analyzeBudget,
     behaviorLimiter,
     auth,
     ANALYZE_MAX_PER_WINDOW,

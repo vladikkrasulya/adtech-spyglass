@@ -31,10 +31,12 @@ const log = require('../../lib/logger').child('replay');
  */
 
 const { readJson, sendJson, sendError } = require('../../lib/http');
+const { declaredBodyCost } = require('../../lib/byte-budget');
 
 /**
  * @param {{
  *   analyzeLimiter: (key: string) => boolean,
+ *   analyzeBudget?: (key: string, bytes: number) => boolean,
  *   auth: { clientIp: (req: import('http').IncomingMessage) => string },
  *   ANALYZE_MAX_PER_WINDOW: number,
  *   resolveLocale: (parsed: URL) => string,
@@ -48,6 +50,7 @@ const { readJson, sendJson, sendError } = require('../../lib/http');
 function createReplayModule(deps) {
   const {
     analyzeLimiter,
+    analyzeBudget,
     auth,
     ANALYZE_MAX_PER_WINDOW,
     resolveLocale,
@@ -65,6 +68,14 @@ function createReplayModule(deps) {
         429,
         'rate_limited',
         `Too many replay calls. Try again shortly (limit: ${ANALYZE_MAX_PER_WINDOW}/min/IP).`,
+      );
+    }
+    if (analyzeBudget && !analyzeBudget(auth.clientIp(req), declaredBodyCost(req))) {
+      return sendError(
+        res,
+        429,
+        'rate_limited',
+        'Too much data analyzed in the last minute. Try again shortly.',
       );
     }
     const locale = resolveLocale(parsed);
