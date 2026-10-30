@@ -7,6 +7,22 @@ const DOUBLE_ESCAPED_HTML_AMP = /&amp;(?=amp;)/;
 const ALWAYS_TRAILING_PUNCTUATION = new Set(['?', '!', '.', ',', ':', '*', '_', '~']);
 
 /**
+ * Longest pasted string the repair layer works on. A real feed URL is a few
+ * hundred bytes; browsers and servers refuse URLs far below this. Above it the
+ * text is returned untouched, so a multi-megabyte body cannot make the repair
+ * steps (several of which scan the whole string per removed character) cost
+ * more than a few milliseconds. `new URL()` and the decoders still run on it.
+ */
+const MAX_REPAIR_LENGTH = 64 * 1024;
+
+/**
+ * Most nested wrappers (`("<[x](url)>")`) peeled off one paste. Each layer
+ * rescans the remainder, so the bound keeps the total work proportional to the
+ * input rather than to its square. No real paste is wrapped this many times.
+ */
+const MAX_WRAPPER_LAYERS = 64;
+
+/**
  * @param {string} value
  * @returns {boolean}
  */
@@ -36,6 +52,18 @@ function markdownDestination(value) {
 }
 
 /**
+ * @param {number} code UTF-16 code unit
+ * @returns {boolean}
+ */
+function isAsciiAlphanumeric(code) {
+  return (
+    (code >= 0x30 && code <= 0x39) ||
+    (code >= 0x41 && code <= 0x5a) ||
+    (code >= 0x61 && code <= 0x7a)
+  );
+}
+
+/**
  * Apply the trailing-punctuation rule to a value. Whitespace exposed by an
  * actual punctuation removal is transport residue too; consuming it here is
  * what keeps the ordered pipeline stable on a second run.
@@ -45,6 +73,10 @@ function markdownDestination(value) {
  */
 function withoutTrailingPunctuation(value) {
   let result = value;
+  // Parenthesis balance is counted once and updated as characters are dropped;
+  // recounting per removed `)` made a run of them quadratic.
+  let openingCount = -1;
+  let closingCount = -1;
 
   while (result.length > 0) {
     const finalCharacter = result.at(-1);
@@ -55,18 +87,30 @@ function withoutTrailingPunctuation(value) {
     }
 
     if (finalCharacter === ')') {
-      const openingCount = (result.match(/\(/g) || []).length;
-      const closingCount = (result.match(/\)/g) || []).length;
+      if (openingCount < 0) {
+        openingCount = 0;
+        closingCount = 0;
+        for (let i = 0; i < result.length; i += 1) {
+          const code = result.charCodeAt(i);
+          if (code === 0x28) openingCount += 1;
+          else if (code === 0x29) closingCount += 1;
+        }
+      }
       if (closingCount > openingCount) {
         result = result.slice(0, -1).trimEnd();
+        closingCount -= 1;
         continue;
       }
     }
 
     if (finalCharacter === ';') {
-      const entityTail = /&[A-Za-z0-9]+;$/.exec(result);
-      if (entityTail) {
-        result = result.slice(0, -entityTail[0].length).trimEnd();
+      // `&name;` at the very end. Walk back over the name instead of running an
+      // unanchored regex from the start, which rescans the whole string for
+      // every entity removed.
+      let start = result.length - 2;
+      while (start >= 0 && isAsciiAlphanumeric(result.charCodeAt(start))) start -= 1;
+      if (start >= 0 && start < result.length - 2 && result[start] === '&') {
+        result = result.slice(0, start).trimEnd();
         continue;
       }
     }
@@ -91,7 +135,7 @@ function withoutWrappers(value) {
   let trailing = '';
   let changed = false;
 
-  while (true) {
+  for (let layers = 0; layers <= MAX_WRAPPER_LAYERS; layers += 1) {
     const withoutTrailing = withoutTrailingPunctuation(core);
     if (withoutTrailing !== core) {
       trailing = core.slice(withoutTrailing.length) + trailing;
@@ -129,7 +173,9 @@ function withoutWrappers(value) {
  */
 function looksLikeHost(value) {
   const schemeRelative = value.startsWith('//');
-  if (/\s+(?:(?:https?:)?\/\/)/i.test(value)) return false;
+  // One whitespace character is enough: `\s+` matched a run only to then
+  // require the scheme after it, which cost a rescan per space (quadratic).
+  if (/\s(?:(?:https?:)?\/\/)/i.test(value)) return false;
 
   let parsed;
   try {
@@ -248,6 +294,7 @@ function repairInput(input) {
   // function and throwing a TypeError on one is a worse answer than saying
   // there was nothing to repair.
   if (typeof input !== 'string') return { text: '', repairs, warnings };
+  if (input.length > MAX_REPAIR_LENGTH) return { text: input, repairs, warnings };
   let text = input;
 
   /**
@@ -299,4 +346,4 @@ function repairInput(input) {
   return { text, repairs, warnings };
 }
 
-module.exports = { repairInput };
+module.exports = { repairInput, looksLikeHost, MAX_REPAIR_LENGTH };

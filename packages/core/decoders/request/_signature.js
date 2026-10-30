@@ -18,6 +18,20 @@
  */
 
 /**
+ * Drop trailing slashes. A loop, not `/\/+$/`: that regex rescans the whole run
+ * of slashes from every starting slash when the string does not end in one, so
+ * a long run of slashes followed by one other character is quadratic.
+ *
+ * @param {string} s
+ * @returns {string}
+ */
+function stripTrailingSlashes(s) {
+  let end = s.length;
+  while (end > 0 && s.charCodeAt(end - 1) === 0x2f) end -= 1;
+  return end === s.length ? s : s.slice(0, end);
+}
+
+/**
  * Compare a pathname to a decoder's endpoint path, ignoring case and any
  * trailing slashes on either side.
  *
@@ -27,7 +41,7 @@
  */
 function pathEquals(pathname, expected) {
   if (typeof pathname !== 'string' || typeof expected !== 'string') return false;
-  const strip = (s) => s.replace(/\/+$/, '').toLowerCase();
+  const strip = (s) => stripTrailingSlashes(s).toLowerCase();
   return strip(pathname) === strip(expected);
 }
 
