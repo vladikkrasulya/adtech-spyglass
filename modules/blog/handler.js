@@ -17,6 +17,7 @@
 const fs = require('fs');
 const path = require('path');
 const { sendJson, sendError } = require('../../lib/http');
+const { chEsc } = require('../../lib/clickhouse');
 const log = require('../../lib/logger').child('blog');
 
 // Env-overridable (prod: /data/content-posts persistent volume). Default = repo
@@ -26,6 +27,12 @@ const CONTENT_DIR = process.env.CONTENT_DIR || path.join(__dirname, '../../conte
 // (content/posts/{lang}); without this guard the public blog list accepted
 // `?lang=../../docs` and leaked docs/*.md (path traversal — fixed 2026-06-14).
 const LANGS = ['uk', 'en', 'ru'];
+// `category` is interpolated into the ClickHouse SQL for the firehose posts, so
+// it is whitelisted to the characters a category slug can contain. Stripping
+// single quotes was NOT enough: ClickHouse also treats a backslash as an escape,
+// so `category=\` swallowed the template's closing quote and the next parameter
+// became raw SQL (unauthenticated SQL injection, fixed 2026-10-29).
+const CATEGORY_RE = /^[a-z0-9_-]{1,64}$/i;
 // RSS feed links must use the public brand domain (ortbtools.com), NOT the
 // kyivtech proxy host that PUBLIC_BASE_URL points to. Share the one canonical
 // origin with the SEO module.
@@ -106,6 +113,10 @@ function readMarkdownPosts(lang) {
 // ── Per-route cache (60s TTL) ───────────────────────────────────────────────
 const cache = new Map(); // key → { ts, data }
 const CACHE_TTL_MS = 60_000;
+// The key embeds request parameters, and an entry is only evicted when it is
+// read again after the TTL, so an unbounded map let a stream of unique query
+// strings grow the heap without limit. Insertion order = age: drop the oldest.
+const CACHE_MAX_ENTRIES = 500;
 
 function cacheGet(key) {
   const entry = cache.get(key);
@@ -118,6 +129,9 @@ function cacheGet(key) {
 }
 
 function cacheSet(key, data) {
+  if (cache.size >= CACHE_MAX_ENTRIES && !cache.has(key)) {
+    cache.delete(cache.keys().next().value);
+  }
   cache.set(key, { ts: Date.now(), data });
 }
 
@@ -168,33 +182,38 @@ function createBlogModule(deps = {}) {
         editorial = editorial.concat(readMarkdownPosts(l));
       }
 
-      // DB posts from ClickHouse
+      // DB posts from ClickHouse. Both filters are validated BEFORE they reach
+      // the SQL text: an unknown `lang` or a malformed `category` cannot match
+      // any stored post, so the query is skipped instead of "sanitised".
       let dbPosts = [];
-      try {
-        const langClause = filterLang ? `AND lang = '${filterLang.replace(/'/g, '')}'` : '';
-        const catClause = filterCategory
-          ? `AND category = '${filterCategory.replace(/'/g, '')}'`
-          : '';
-        const rows = await chQuery(
-          `SELECT slug, lang, title, category, summary, published_at, tags, url, source_draft_id
-           FROM analytics.blog_posts FINAL
-           WHERE 1=1 ${langClause} ${catClause}
-           ORDER BY published_at DESC
-           LIMIT ${limit + offset + editorial.length}`,
-        );
-        dbPosts = rows.map((r) => ({
-          slug: r.slug,
-          lang: r.lang,
-          title: r.title,
-          category: r.category,
-          summary: r.summary,
-          published_at: r.published_at,
-          tags: r.tags || [],
-          source: 'db',
-          url: r.url || null,
-        }));
-      } catch (e) {
-        log.warn({ err: e }, 'blog list: CH query failed, serving editorial only');
+      const filterValid =
+        (!filterLang || LANGS.includes(filterLang)) &&
+        (!filterCategory || CATEGORY_RE.test(filterCategory));
+      if (filterValid) {
+        try {
+          const langClause = filterLang ? `AND lang = '${chEsc(filterLang)}'` : '';
+          const catClause = filterCategory ? `AND category = '${chEsc(filterCategory)}'` : '';
+          const rows = await chQuery(
+            `SELECT slug, lang, title, category, summary, published_at, tags, url, source_draft_id
+             FROM analytics.blog_posts FINAL
+             WHERE 1=1 ${langClause} ${catClause}
+             ORDER BY published_at DESC
+             LIMIT ${limit + offset + editorial.length}`,
+          );
+          dbPosts = rows.map((r) => ({
+            slug: r.slug,
+            lang: r.lang,
+            title: r.title,
+            category: r.category,
+            summary: r.summary,
+            published_at: r.published_at,
+            tags: r.tags || [],
+            source: 'db',
+            url: r.url || null,
+          }));
+        } catch (e) {
+          log.warn({ err: e }, 'blog list: CH query failed, serving editorial only');
+        }
       }
 
       // Merge: deduplicate editorial over DB (editorial takes precedence for same slug+lang)
@@ -288,7 +307,7 @@ function createBlogModule(deps = {}) {
       const rows = await chQuery(
         `SELECT slug, lang, title, category, summary, body, published_at, tags, url, source_draft_id
          FROM analytics.blog_posts FINAL
-         WHERE slug = '${slug.replace(/'/g, '')}' AND lang = '${lang.replace(/'/g, '')}'
+         WHERE slug = '${chEsc(slug)}' AND lang = '${chEsc(lang)}'
          LIMIT 1`,
       );
       if (!rows.length) {
