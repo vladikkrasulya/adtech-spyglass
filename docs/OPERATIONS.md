@@ -659,7 +659,14 @@ ORTBTOOLS_TAG="$(grep -E '^ORTBTOOLS_TAG=' .env | cut -d= -f2)" docker compose u
 
 ### 4.11 ClickHouse: a least-privilege account for the application
 
-**Why.** The application connects as the ClickHouse account `ortbtools`. The ClickHouse
+**Status.** Applied on 2026-10-30. The live application runs as `ortbtools_app`; the
+entrypoint-created `ortbtools` remains only as the maintenance administrator. The procedure below
+is what was run, with one correction: the settings profile has **no** `allow_ddl = 0 CONST`.
+`allow_ddl = 0` also forbids lightweight `DELETE FROM` (account-deletion purge) and
+`ALTER … UPDATE` on `blog_drafts`, which fail with `QUERY_IS_PROHIBITED`. Protection rests on the
+grants and the host restriction instead.
+
+**Why.** Until 2026-10-30 the application connected as the ClickHouse account `ortbtools`. The ClickHouse
 stack's entrypoint creates that account from `CLICKHOUSE_USER`/`CLICKHOUSE_PASSWORD` with
 `CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1`, so it holds `ACCESS MANAGEMENT` and `GRANT OPTION`
 (observed 2026-10-29). A leaked password or any query injection — the 2026-10-29 audit found one in the
@@ -680,14 +687,15 @@ application never needs that.
 There is no runtime DDL, no `system.*` read and no cross-database access. The schema is created
 by `/srv/DATA/Stacks/clickhouse/initdb/01-ortbtools-schema.sql` (administrator, first start only).
 
-**Plan** (apply in a window the owner approves; nothing here is done by the application):
+**Procedure** (applied 2026-10-30 in an owner-approved window; nothing here is done by the
+application):
 
-1. Create a new account `ortbtools_app` next to the old one. Do not alter `ortbtools` yet.
+1. Create a new account `ortbtools_app` next to the old one. Do not alter `ortbtools`.
 
 ```sql
 -- run as the ClickHouse administrator; choose the password at the prompt, do not paste it into history
+-- no `allow_ddl = 0`: it blocks lightweight DELETE and ALTER UPDATE, which the application needs
 CREATE SETTINGS PROFILE IF NOT EXISTS ortbtools_app_profile SETTINGS
-    allow_ddl = 0 CONST,
     allow_introspection_functions = 0 CONST,
     max_execution_time = 10,
     max_memory_usage = 1000000000,
@@ -697,7 +705,7 @@ CREATE SETTINGS PROFILE IF NOT EXISTS ortbtools_app_profile SETTINGS
 
 CREATE USER IF NOT EXISTS ortbtools_app
   IDENTIFIED WITH sha256_password BY '<chosen at the prompt>'
-  HOST IP '172.16.0.0/12'          -- docker bridge networks only; tighten to the kt-shared subnet
+  HOST IP '172.18.0.0/16'          -- the kt-shared subnet (`docker network inspect kt-shared`)
   DEFAULT DATABASE analytics
   SETTINGS PROFILE 'ortbtools_app_profile';
 
@@ -712,20 +720,34 @@ GRANT ALTER DELETE   ON analytics.ortbtools_events         TO ortbtools_app;
 GRANT ALTER DELETE   ON analytics.ortbtools_product_events TO ortbtools_app;
 ```
 
+Read back with `SHOW GRANTS FOR ortbtools_app`: the lightweight `DELETE FROM` is authorised by
+`ALTER DELETE`. `ortbtools_app` has no grant on `system.*`, no `CREATE`/`DROP`/`ALTER` on other
+tables and no `ACCESS MANAGEMENT`; the `HOST IP` restriction makes a login from the host itself
+(localhost) fail.
+
 2. Check from the application's side before switching (as `ortbtools_app`; `clickhouse-client`
    inside the container, password from the prompt):
    - `SELECT count() FROM analytics.ortbtools_events` works;
    - `SELECT * FROM system.users` fails with "Not enough privileges";
-   - `CREATE TABLE analytics.t (x UInt8) ENGINE = Memory` fails;
+   - `CREATE TABLE analytics.t (x UInt8) ENGINE = Memory`, `DROP TABLE` and `CREATE USER` fail;
+   - `ALTER … DELETE` on `validation_logs` and `ALTER … UPDATE` on `ortbtools_events` fail;
    - `INSERT INTO analytics.ortbtools_product_events (event) VALUES ('probe')` works **and**
-     `analytics.ortbtools_usage_daily` still receives the rollup (if it does not, add
-     `GRANT INSERT ON analytics.ortbtools_usage_daily` — the materialized view's definer rules
-     differ between ClickHouse releases, so this is verified, not assumed);
-   - `DELETE FROM analytics.ortbtools_events WHERE user_id = 999999999` succeeds.
+     `analytics.ortbtools_usage_daily` still receives the rollup (verified 2026-10-30: no extra
+     grant is needed on this release; if a future release stops the rollup, add
+     `GRANT INSERT ON analytics.ortbtools_usage_daily`);
+   - `DELETE FROM analytics.ortbtools_events WHERE user_id = 999999999` and
+     `DELETE FROM analytics.ortbtools_product_events WHERE user_id = 999999999` succeed;
+   - `ALTER TABLE analytics.blog_drafts UPDATE …` succeeds;
+   - a login from outside `kt-shared` (for example from the host over localhost) is rejected.
+
+   Remove the probe rows afterwards (as the administrator), including the rollup row in
+   `ortbtools_usage_daily`, which the application account may not delete.
+
 3. Switch the application: set `CLICKHOUSE_USER=ortbtools_app` and the new password in the
    stack `.env` (mode 0600; back it up first with a dated name; never print it), then recreate
-   the container (owner OK required). Verify `/api/health`, an analyze that writes
-   `validation_logs`, and the news crawler's draft insert in the log.
+   the container (owner OK required). Verify `/api/health`, that `ortbtools_events` grows after
+   requests, that `query_log` shows no failed queries for `ortbtools_app`, and the news crawler's
+   draft read/insert in the log.
 4. Keep using the entrypoint-created account `ortbtools` **only** as the administrator: it stays
    for schema changes and for this procedure, but its credentials leave the application's `.env`
    (store them wherever the other administrator credentials of the ClickHouse stack live, mode
@@ -735,8 +757,10 @@ GRANT ALTER DELETE   ON analytics.ortbtools_product_events TO ortbtools_app;
    is what gives every entrypoint-created account administrator rights. The stack can keep it
    (it is the administrator), but nothing the application uses should rely on it.
 
-**Rollback.** Point `.env` back at `ortbtools` and recreate the container; the administrator
-account is not modified by any step above.
+**Rollback.** Restore the dated `.env` backup (or point `CLICKHOUSE_USER`/`CLICKHOUSE_PASSWORD`
+back at `ortbtools`) and recreate the container with the same image tag; the administrator account
+is not modified by any step above. If the account itself must go, as the administrator:
+`DROP USER ortbtools_app; DROP SETTINGS PROFILE ortbtools_app_profile`.
 
 **What this does not fix.** It limits the blast radius; the injection itself is fixed in code
 (whitelisted filters). The application also still sends its account over plain HTTP inside

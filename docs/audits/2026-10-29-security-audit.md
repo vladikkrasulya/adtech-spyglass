@@ -39,7 +39,7 @@ account deletion) is a separate record and is not repeated here.
 | M5  | Medium   | `readJson` counted UTF-16 units against a byte cap and decoded chunks separately              | Fixed — PR `fix/http-robustness`               |
 | M6  | Medium   | JSON `null`/array body crashed two authenticated handlers (500)                               | Fixed — PR `fix/http-robustness`               |
 | M7  | Medium   | Workflow actions pinned to movable tags; checkout persisted the job token; no dependency gate | Fixed — PR `ci/pin-actions-and-audit`          |
-| M8  | Medium   | Runtime container kept all Linux capabilities and had no process cap                          | Fixed in compose — takes effect at recreate    |
+| M8  | Medium   | Runtime container kept all Linux capabilities and had no process cap                          | Fixed in compose — in effect since 2026-10-30  |
 
 Both D-class items were verified unreachable (the renderer's DOMPurify configuration does not use
 the affected options; `node server.js` never loads npm) and are recorded as hygiene, not as an
@@ -57,11 +57,11 @@ query. The regression test fails on the old code.
 | ID  | Severity | Finding                                                                                                                 | Next step                                                       |
 | --- | -------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | O1  | Medium   | CSP `script-src`/`style-src` still allow `'unsafe-inline'`                                                              | Needs its own spec; blocked by creative `iframe.srcdoc`         |
-| O2  | Medium   | ClickHouse account `ortbtools` can manage access and grant                                                              | Plan in `docs/OPERATIONS.md` §4.11; needs owner window          |
+| O2  | Medium   | ClickHouse account `ortbtools` can manage access and grant                                                              | Done 2026-10-30: `ortbtools_app`, `docs/OPERATIONS.md` §4.11    |
 | O3  | Medium   | Registration is open and does not require a confirmed email                                                             | Gate library writes on a verified address, or add a challenge   |
 | O4  | Medium   | Dialect labeller has a per-user rate limit but no in-flight cap; the CPU-only runner serialises                         | Add a global in-flight cap (returns 429/503)                    |
 | O5  | Medium   | Outbound proxy re-checks the hostname allow-list but not the resolved address (DNS rebinding)                           | Pin to the validated address like `lib/asset-fetch.js`          |
-| O6  | Medium   | Repository is public; secret scanning, push protection and Dependabot alerts are disabled; `main` is unprotected        | Owner decision: enable (no cost, no code)                       |
+| O6  | Medium   | Repository is public; secret scanning, push protection and Dependabot alerts are disabled; `main` is unprotected        | Done 2026-10-30: all enabled; `main` needs a PR and green `ci`  |
 | O7  | Low      | Account deletion cannot purge ClickHouse if it is unreachable; rows then age out by TTL (90/180 d)                      | Retry queue; see roadmap                                        |
 | O8  | Low      | `npm publish` runs without provenance                                                                                   | Add `id-token: write` and `--provenance` when publishing starts |
 | O9  | Low      | Session cookie lacks the `__Host-` prefix; per-account login lockout allows deliberate lockout                          | Document or rename on next auth change                          |
@@ -72,13 +72,17 @@ query. The regression test fails on the old code.
 
 ## ClickHouse account
 
+**Resolved 2026-10-30:** the application now runs as the restricted account `ortbtools_app`; the
+old account stays for maintenance only (`docs/OPERATIONS.md` §4.11). The text below describes the
+state at the time of the audit.
+
 The application uses one ClickHouse account for everything. In the live deployment that account
 has `ACCESS MANAGEMENT` and `GRANT OPTION`, so any query injection (H1 was one) or a leaked
 password is a full database takeover, including creating other users. The application needs far
 less: inserts into five tables, selects from the same tables, `ALTER UPDATE` on `blog_drafts` and a
 lightweight `DELETE` on the two tables that carry `user_id`. The least-privilege plan, the grants,
-the profile and the rollback are in `docs/OPERATIONS.md` §4.11. The application
-needs no code change for it.
+the profile, the verification and the rollback are in `docs/OPERATIONS.md` §4.11. The application
+needed no code change for it.
 
 ## Secrets and history
 
