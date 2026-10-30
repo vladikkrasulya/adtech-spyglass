@@ -47,12 +47,20 @@ Install the root workspace once:
 npm install
 ```
 
+`npm` compiles `better-sqlite3`, which needs `make`, `g++` and `python3`. On a
+host without them, install and test in a throwaway container instead (see the
+README's Tests section).
+
 The root workspace includes the app, `packages/core`, and `packages/cli`.
 Package-local installs are not required.
 
-For the production-like application, copy `.env.example` to `.env`, choose a
-writable host path for the `/data` mount, then build and start the immutable
-image:
+For the production-like application, copy `.env.example` to `.env` and set
+`ORTBTOOLS_TAG` to any local tag (the compose file refuses to start with it
+empty). Create the external network it joins (`docker network create
+kt-shared`) and a `/data` directory owned by uid 1000 at
+`/srv/DATA/AppData/ortbtools`, or override the volume in an untracked
+`docker-compose.local.yml` selected through `COMPOSE_FILE`. Then build and start
+the immutable image:
 
 ```bash
 docker compose up -d --build

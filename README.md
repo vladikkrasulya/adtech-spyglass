@@ -128,9 +128,19 @@ and the `Phase 7 — Zero-knowledge encryption` section of [CHANGELOG.md](./CHAN
 ## Run locally
 
 ```bash
+cp .env.example .env
+sed -i 's/^ORTBTOOLS_TAG=.*/ORTBTOOLS_TAG=local/' .env   # compose refuses to start with it empty
+docker network create kt-shared                         # external network the compose file joins
+sudo install -d -o 1000 -g 1000 /srv/DATA/AppData/ortbtools   # the /data mount; uid 1000 = the image's node user
 docker compose up -d --build
-# UI at http://127.0.0.1:8090
+curl -s http://127.0.0.1:8090/api/health                # UI at http://127.0.0.1:8090
 ```
+
+The compose file expects `/srv/DATA/AppData/ortbtools` for `/data`. To keep data elsewhere,
+override the volume in an untracked `docker-compose.local.yml` and select it with `COMPOSE_FILE`
+in `.env`; do not edit the tracked file for a local setting. Operating a deployment (backups,
+rollback, ingress, ClickHouse) is in [docs/OPERATIONS.md](./docs/OPERATIONS.md), whose §0
+describes the reference host.
 
 The production container is an immutable image: application source, packages,
 public assets, samples, and the vendored design system are baked at build time.
@@ -187,6 +197,17 @@ npm test          # full node:test suite
 npm run ci        # prettier:check → eslint → typecheck → coverage
 npm run test:browser # serial browser files with owned process cleanup
 ```
+
+`npm ci` compiles `better-sqlite3`, so the host needs `make`, `g++` and `python3`. Without a
+toolchain run the suite in a throwaway container:
+
+```bash
+docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD":/app -w /app \
+  node:22.23.2-bookworm bash -lc 'npm ci && node scripts/run-tests.js --unit-only'
+```
+
+Some tests exercise `scripts/deploy.sh` and need `rsync`, a clone with full Git history and GNU
+`ps`; in a minimal container those fail for environmental reasons and are not regressions.
 
 Full and browser-only verification require installed workspace dependencies and executable
 Chrome/Chromium; set `CHROME_BIN` when it is outside the usual installation paths. A missing

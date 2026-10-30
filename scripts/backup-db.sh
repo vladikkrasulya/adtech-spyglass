@@ -10,10 +10,10 @@
 # archive.
 #
 # Install via /etc/cron.d/ortbtools-backup:
-#   30 3 * * * root /srv/DATA/Stacks/ortbtools/scripts/backup-db.sh >> /var/log/ortbtools-backup.log 2>&1
+#   30 3 * * * root /srv/DATA/Stacks/adtech-spyglass/scripts/backup-db.sh >> /var/log/ortbtools-backup.log 2>&1
 #
 # PRE-DEPLOY (the constitution's standing deployment gate):
-#   sudo -n /srv/DATA/Stacks/ortbtools/scripts/backup-db.sh --pre-deploy
+#   sudo -n /srv/DATA/Stacks/adtech-spyglass/scripts/backup-db.sh --pre-deploy
 # `--pre-deploy` stamps the archive names with the time (ortbtools-YYYY-MM-DDTHHMM.db.gz)
 # so an operator gate run NEVER overwrites the nightly YYYY-MM-DD archive of the same
 # day — which is exactly what happened on 2026-09-02, three times, when the gate was
