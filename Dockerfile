@@ -17,6 +17,15 @@ RUN npm ci --omit=dev
 # out of the build context (see tests/immutable-image.test.js for the policy).
 FROM node:22.23.2-alpine
 WORKDIR /app
+# The runtime never installs anything: dependencies come from the builder stage.
+# The base image still ships npm (and corepack/yarn) with their own dependency
+# trees, which scanners flag (tar, brace-expansion, picomatch, ... — 13
+# CRITICAL/HIGH in a 2026-10-29 Trivy scan) although `node server.js` cannot
+# reach them. Removing them is cheaper than tracking the base image's npm bump,
+# and leaves nothing in the container that can fetch or unpack packages.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+      /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+      /usr/local/bin/yarn /usr/local/bin/yarnpkg /opt/yarn-*
 ENV NODE_ENV=production
 # Build provenance, all injected via --build-arg (NOTHING hardcoded here):
 #   BUILD_SHA   — short git SHA, surfaced via /api/health for monitoring/smoke.
