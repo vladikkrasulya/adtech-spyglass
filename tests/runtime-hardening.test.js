@@ -44,5 +44,14 @@ test('the runtime stage removes npm, npx, corepack and yarn before the app is co
 test('the container runs without capabilities or privilege escalation', () => {
   assert.match(compose, /cap_drop:\s*\n\s*- ALL/);
   assert.match(compose, /no-new-privileges:true/);
-  assert.match(compose, /pids_limit:\s*\d+/);
+  assert.match(
+    compose,
+    /^\s+pids:\s*\d+\s*$/m,
+    'process cap lives in deploy.resources.limits.pids',
+  );
+  assert.doesNotMatch(
+    compose,
+    /^\s*pids_limit:/m,
+    'top-level pids_limit conflicts with deploy.resources.limits (Compose v5 rejects it)',
+  );
 });
