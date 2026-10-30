@@ -35,6 +35,7 @@ const log = require('../../lib/logger').child('corpus');
  */
 
 const { readJson, sendJson, sendError } = require('../../lib/http');
+const { writeRateLimited } = require('../../lib/library-quota');
 
 /**
  * @param {{
@@ -47,10 +48,11 @@ const { readJson, sendJson, sendError } = require('../../lib/http');
  *     destroy: (id: number, userId: number) => boolean,
  *   },
  *   computeCorpusMatrix: (userId: number) => object,
+ *   libraryWriteLimiter?: (key: string) => boolean,
  * }} deps
  */
 function createCorpusModule(deps) {
-  const { auth, BehaviorCorpus, computeCorpusMatrix } = deps;
+  const { auth, BehaviorCorpus, computeCorpusMatrix, libraryWriteLimiter } = deps;
 
   function requireUser(req, res) {
     const user = auth.getCurrentUser(req);
@@ -78,7 +80,8 @@ function createCorpusModule(deps) {
   function handleSave(req, res) {
     const user = requireUser(req, res);
     if (!user) return;
-    readJson(req)
+    if (writeRateLimited(libraryWriteLimiter, user, res)) return;
+    return readJson(req)
       .then((body) => {
         const events = body && body.events;
         const label = body && body.label;
@@ -109,7 +112,12 @@ function createCorpusModule(deps) {
           sendJson(res, 200, { success: true, id: r.id });
         } catch (e) {
           log.error({ err: e }, 'corpus/create failed');
-          sendError(res, 400, 'create_failed', e.message);
+          sendError(
+            res,
+            e.status || 400,
+            e.code === 'quota_exceeded' ? e.code : 'create_failed',
+            e.message,
+          );
         }
       })
       .catch((e) => sendError(res, 400, 'invalid_json', e.message));

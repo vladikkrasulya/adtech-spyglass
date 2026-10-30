@@ -141,6 +141,13 @@ const telemetryLimiter = makeAnalyzeLimiter(TELEMETRY_MAX_PER_WINDOW);
 const GIST_WRITE_MAX_PER_WINDOW = Number(process.env.GIST_WRITE_MAX_PER_WINDOW) || 10;
 const gistWriteLimiter = makeAnalyzeLimiter(GIST_WRITE_MAX_PER_WINDOW);
 
+// Library writes (samples, partners, dialects, corpus). Keyed by USER id: the
+// routes are auth-gated, and registration is open, so this bounds how fast one
+// account can grow its library; lib/library-quota.js bounds how large it gets.
+// A human saves a handful of items a minute; 120 leaves room for an import.
+const LIBRARY_WRITE_MAX_PER_WINDOW = Number(process.env.LIBRARY_WRITE_MAX_PER_WINDOW) || 120;
+const libraryWriteLimiter = makeAnalyzeLimiter(LIBRARY_WRITE_MAX_PER_WINDOW);
+
 // Dialect labelling assistant. Keyed by USER id, not IP: the route is
 // auth-gated, and a shared office NAT should not have one person's labelling
 // session throttle everyone else's. Each miss in the deterministic lexicon
@@ -820,12 +827,13 @@ router.register(
   createCorpusModule({
     auth,
     BehaviorCorpus,
+    libraryWriteLimiter,
     computeCorpusMatrix: (userId) =>
       _computeCorpusMatrix({ BehaviorCorpus, analyzeBehavior }, userId),
   }),
 );
 router.register(createAccountModule({ auth, AnalyzeLog }));
-router.register(createDialectsModule({ auth, db }));
+router.register(createDialectsModule({ auth, db, libraryWriteLimiter }));
 router.register(createAiLabelModule({ auth, aiLabelLimiter, db }));
 router.register(createCreativeAssetModule({ auth, assetLimiter }));
 router.register(createAdminModule({ db, Users, auth }));
@@ -876,8 +884,8 @@ router.register(
     // engine has no model to warm. The auth module keeps its no-op stub.
   }),
 );
-router.register(createPartnersModule({ auth, Partners }));
-router.register(createSamplesModule({ auth, Samples }));
+router.register(createPartnersModule({ auth, Partners, libraryWriteLimiter }));
+router.register(createSamplesModule({ auth, Samples, libraryWriteLimiter }));
 // stream module registered after streamGenerator + streamBuffer are
 // instantiated lower in the file — see the second router.register() block
 // near line ~1180.

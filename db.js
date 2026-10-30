@@ -22,6 +22,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
+const { createLibraryQuota } = require('./lib/library-quota');
 
 const DATA_DIR = process.env.ORTBTOOLS_DATA_DIR || '/data';
 const SCHEMA_VERSION = 11;
@@ -699,6 +700,13 @@ const Users = {
   },
 };
 
+const Quota = createLibraryQuota(db);
+
+// A partner is a label, not a document: bound the free-text fields so the
+// per-user row cap is also a size cap.
+const PARTNER_NAME_MAX = 200;
+const PARTNER_NOTES_MAX = 4000;
+
 const Partners = {
   /** @param {{ userId: number }} opts */
   list({ userId }) {
@@ -725,11 +733,19 @@ const Partners = {
       err.code = 'partner_name_required';
       throw err;
     }
+    Quota.assertCanAdd(userId, 'partners');
     const baseSlug = slug ? slugify(slug) : slugify(trimmedName);
     const finalSlug = ensureUniqueSlug(userId, baseSlug);
     const info = db
       .prepare('INSERT INTO partners(user_id, name, slug, notes) VALUES (?, ?, ?, ?)')
-      .run(userId, trimmedName, finalSlug, String(notes || '').trim());
+      .run(
+        userId,
+        trimmedName.slice(0, PARTNER_NAME_MAX),
+        finalSlug,
+        String(notes || '')
+          .trim()
+          .slice(0, PARTNER_NOTES_MAX),
+      );
     return Partners.get({ id: info.lastInsertRowid, userId });
   },
   update({ id, userId, name, slug, notes }) {
@@ -743,9 +759,9 @@ const Partners = {
     db.prepare(
       'UPDATE partners SET name = ?, slug = ?, notes = ? WHERE id = ? AND user_id = ?',
     ).run(
-      name != null ? String(name).trim() : cur.name,
+      name != null ? String(name).trim().slice(0, PARTNER_NAME_MAX) : cur.name,
       finalSlug,
-      notes != null ? String(notes).trim() : cur.notes,
+      notes != null ? String(notes).trim().slice(0, PARTNER_NOTES_MAX) : cur.notes,
       id,
       userId,
     );
@@ -766,6 +782,14 @@ const Partners = {
       .get(id, userId).n;
   },
 };
+
+/** Characters of user content in a sample — what the per-account byte cap counts. */
+function sampleSize({ title, bid_req, bid_res, notes }) {
+  return [title, bid_req, bid_res, notes].reduce(
+    (n, v) => n + (v == null ? 0 : String(v).length),
+    0,
+  );
+}
 
 const Samples = {
   /** @param {{ userId: number, partnerId?: number | 'unassigned' }} opts */
@@ -831,6 +855,9 @@ const Samples = {
     // SQLite + better-sqlite3 transactions are synchronous, no async
     // boundaries inside the txn body, so this is bulletproof.
     const txn = db.transaction(() => {
+      Quota.assertCanAdd(userId, 'samples', {
+        bytes: sampleSize({ title: title || 'untitled', bid_req, bid_res, notes }),
+      });
       const info = db
         .prepare(
           `INSERT INTO samples(user_id, partner_id, title, bid_req, bid_res, req_iv, res_iv, status, notes)
@@ -866,6 +893,14 @@ const Samples = {
         throw err;
       }
     }
+    const grown =
+      sampleSize({
+        title: title != null ? title : cur.title,
+        bid_req: bid_req != null ? bid_req : cur.bid_req,
+        bid_res: bid_res != null ? bid_res : cur.bid_res,
+        notes: notes != null ? notes : cur.notes,
+      }) - sampleSize(cur);
+    if (grown > 0) Quota.assertCanAdd(userId, 'samples', { rows: 0, bytes: grown });
     db.prepare(
       `
       UPDATE samples
@@ -1123,6 +1158,7 @@ const BehaviorCorpus = {
       throw new Error('events_too_large'); // 1 MB cap, more than enough
     }
     const notes = String(entry.notes || '').slice(0, 4096);
+    Quota.assertCanAdd(entry.userId, 'corpus', { bytes: json.length + notes.length });
     const r = db
       .prepare(
         `INSERT INTO behavior_corpus(user_id, label, events_json, source_sample_id, notes)
@@ -1292,6 +1328,18 @@ const Gists = {
     return db.prepare(`DELETE FROM gists WHERE expires_at <= ?`).run(at).changes;
   },
 
+  /**
+   * Characters of ciphertext held by unexpired gists — what the global storage
+   * cap in modules/gists is measured against.
+   *
+   * @param {number} [now]
+   */
+  liveBytes(now) {
+    const at = Number.isFinite(now) ? now : Date.now();
+    return db.prepare(`SELECT COALESCE(SUM(bytes), 0) AS n FROM gists WHERE expires_at > ?`).get(at)
+      .n;
+  },
+
   /** Live (unexpired) gist count — operational visibility only. */
   count(now) {
     const at = Number.isFinite(now) ? now : Date.now();
@@ -1308,6 +1356,7 @@ module.exports = {
   Sessions,
   BehaviorCorpus,
   Gists,
+  Quota,
   slugify,
   SCHEMA_VERSION,
 };

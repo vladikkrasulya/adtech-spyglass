@@ -38,6 +38,7 @@
  */
 
 const { readJson, sendJson, sendError } = require('../../lib/http');
+const { writeRateLimited } = require('../../lib/library-quota');
 
 /**
  * @param {{
@@ -49,10 +50,11 @@ const { readJson, sendJson, sendError } = require('../../lib/http');
  *     delete: (args: {id: number, userId: number}) => boolean,
  *     countSamples: (args: {id: number, userId: number}) => number,
  *   },
+ *   libraryWriteLimiter?: (key: string) => boolean,
  * }} deps
  */
 function createPartnersModule(deps) {
-  const { auth, Partners } = deps;
+  const { auth, Partners, libraryWriteLimiter } = deps;
 
   function requireUser(req, res) {
     const user = auth.getCurrentUser(req);
@@ -72,6 +74,7 @@ function createPartnersModule(deps) {
   function handleCreate(req, res) {
     const user = requireUser(req, res);
     if (!user) return;
+    if (writeRateLimited(libraryWriteLimiter, user, res)) return;
     return readJson(req)
       .then((b) => {
         if (!b.name || !String(b.name).trim()) {
@@ -83,7 +86,7 @@ function createPartnersModule(deps) {
         const p = Partners.create({ ...b, userId: user.id });
         sendJson(res, 200, { success: true, partner: p });
       })
-      .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
+      .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
   }
 
   function handleUpdate(req, res, _parsed, match) {
@@ -93,6 +96,7 @@ function createPartnersModule(deps) {
     if (!Number.isInteger(id) || id <= 0) {
       return sendError(res, 400, 'id_invalid', 'id must be a positive integer');
     }
+    if (writeRateLimited(libraryWriteLimiter, user, res)) return;
     return readJson(req)
       .then((b) => {
         // Server-controlled keys MUST win over the request body (see handleCreate).
@@ -100,7 +104,7 @@ function createPartnersModule(deps) {
         if (!p) return sendError(res, 404, 'not_found', 'Partner not found');
         sendJson(res, 200, { success: true, partner: p });
       })
-      .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
+      .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
   }
 
   function handleDelete(req, res, _parsed, match) {

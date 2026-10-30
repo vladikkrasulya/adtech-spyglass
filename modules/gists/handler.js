@@ -70,6 +70,30 @@ const MAX_CIPHERTEXT_CHARS = GLOBAL_MAX_BODY_BYTES - ENVELOPE_HEADROOM;
 /** Bundle formats this build knows how to produce. Read-back is not filtered. */
 const SUPPORTED_BUNDLE_VERSIONS = new Set([1]);
 
+/**
+ * Storage ceilings. Creation is anonymous, so without these a script could fill
+ * the disk that also holds the account database: one request stores up to
+ * ~2 MiB and the per-IP request limiter alone allowed ~1 GB per hour from a
+ * single address, and any number of addresses.
+ *
+ *   - global: live (unexpired) ciphertext across all gists. When it is reached
+ *     new links are refused with 507 until old ones expire; reading existing
+ *     links and every other feature keep working.
+ *   - per client IP: rolling 24 h byte budget, so one address cannot spend the
+ *     whole global allowance on its own.
+ */
+const MIB = 1024 * 1024;
+const DEFAULT_MAX_TOTAL_BYTES = 256 * MIB;
+const DEFAULT_IP_DAILY_BYTES = 24 * MIB;
+const IP_QUOTA_WINDOW_MS = 24 * 60 * 60 * 1000;
+const IP_QUOTA_MAX_TRACKED = 10_000;
+
+/** @param {string} name @param {number} fallback */
+function positiveIntEnv(name, fallback) {
+  const n = Number.parseInt(process.env[name] || '', 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
 const DEFAULT_TTL_DAYS = 30;
 const MIN_TTL_DAYS = 1;
 const MAX_TTL_DAYS = 365;
@@ -103,12 +127,40 @@ function sanitizeB64(value, maxChars) {
 
 /**
  * @param {object} deps
- * @param {{ create: Function, get: Function, pruneExpired: Function }} deps.Gists
+ * @param {{ create: Function, get: Function, pruneExpired: Function, liveBytes?: () => number }} deps.Gists
  * @param {(key: string) => boolean} deps.gistWriteLimiter
  * @param {(key: string) => boolean} [deps.readLimiter]
  */
 function createGistsModule(deps) {
   const { Gists, gistWriteLimiter, readLimiter } = deps;
+
+  /** @type {Map<string, { windowStart: number, bytes: number }>} */
+  const ipBytes = new Map();
+  /**
+   * Charge `bytes` to this address's rolling budget. Returns false (and charges
+   * nothing) when it would be exceeded.
+   * @param {string} ip @param {number} bytes
+   */
+  function chargeIp(ip, bytes) {
+    const now = Date.now();
+    const budget = positiveIntEnv('ORTBTOOLS_GIST_IP_DAILY_BYTES', DEFAULT_IP_DAILY_BYTES);
+    let entry = ipBytes.get(ip);
+    if (!entry || now - entry.windowStart >= IP_QUOTA_WINDOW_MS) {
+      if (ipBytes.size >= IP_QUOTA_MAX_TRACKED) {
+        for (const [k, v] of ipBytes) {
+          if (now - v.windowStart >= IP_QUOTA_WINDOW_MS) ipBytes.delete(k);
+        }
+        // Still full of live windows (a flood of distinct addresses): the
+        // global cap is the backstop, so start over rather than grow.
+        if (ipBytes.size >= IP_QUOTA_MAX_TRACKED) ipBytes.clear();
+      }
+      entry = { windowStart: now, bytes: 0 };
+      ipBytes.set(ip, entry);
+    }
+    if (entry.bytes + bytes > budget) return false;
+    entry.bytes += bytes;
+    return true;
+  }
 
   // ── POST /api/v1/gists ───────────────────────────────────────────────────
   function handleCreate(req, res) {
@@ -157,6 +209,30 @@ function createGistsModule(deps) {
             400,
             'unsupported_bundle_version',
             `bundle_version must be one of: ${[...SUPPORTED_BUNDLE_VERSIONS].join(', ')}`,
+          );
+        }
+
+        // Storage ceilings (see the block above DEFAULT_TTL_DAYS). The global
+        // check runs first so a refused request does not spend the IP budget.
+        const maxTotal = positiveIntEnv('ORTBTOOLS_GIST_MAX_TOTAL_BYTES', DEFAULT_MAX_TOTAL_BYTES);
+        if (
+          typeof Gists.liveBytes === 'function' &&
+          Gists.liveBytes() + ciphertext.length > maxTotal
+        ) {
+          log.warn({ maxTotal }, 'gist storage cap reached; refusing new share links');
+          return sendError(
+            res,
+            507,
+            'gist_storage_full',
+            'Share-link storage is full. Try again later.',
+          );
+        }
+        if (!chargeIp(ip, ciphertext.length)) {
+          return sendError(
+            res,
+            429,
+            'gist_quota_exceeded',
+            'Daily share-link volume for this address is used up. Try again tomorrow.',
           );
         }
 

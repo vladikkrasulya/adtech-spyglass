@@ -193,6 +193,12 @@ the configured internal upstream. It is not a general reverse proxy.
   leaves.
 - Auth has account/IP-oriented registration/login/recovery limiters and persistent session expiry.
 - The authenticated creative-asset fetch enforces the caller-chosen-host boundary documented above.
+- Storage is bounded on every write path. Anonymous share links (`POST /api/v1/gists`) answer
+  `507 gist_storage_full` when live ciphertext reaches a global cap and `429 gist_quota_exceeded`
+  when one address spends its rolling 24 h byte budget (`ORTBTOOLS_GIST_MAX_TOTAL_BYTES`,
+  `ORTBTOOLS_GIST_IP_DAILY_BYTES`). Each account's library has row and byte caps
+  (`ORTBTOOLS_LIBRARY_MAX_*`) that answer `413 quota_exceeded`, and library writes (samples,
+  partners, dialects, corpus) share a per-user write limiter that answers `429 rate_limited`.
 - The authenticated outbound proxy uses an operator-configured hostname allowlist (empty by default; IP-echo hosts refused), HTTP/HTTPS only, approved
   ports, redirect revalidation, response-size cap, and timeout. The user intentionally sends its
   request body to the selected external allowlisted host.
