@@ -83,14 +83,13 @@ services:
     restart: always
     # Least privilege for a plain Node HTTP server that listens on an unprivileged
     # port and writes only under /data: no Linux capabilities, no setuid
-    # escalation, and a process cap against fork bombs. Takes effect on the next
-    # container recreate (scripts/deploy.sh does that); nothing here changes the
-    # image.
+    # escalation, and a process cap against fork bombs (deploy.resources.limits.pids
+    # below). Takes effect on the next container recreate (scripts/deploy.sh does
+    # that); nothing here changes the image.
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges:true
-    pids_limit: 256
     healthcheck:
       # IPv4 explicit (alpine resolves "localhost" as ::1 first; app listens IPv4 only).
       test: ['CMD-SHELL', 'wget -qO- --tries=1 --timeout=3 http://127.0.0.1:3000/ > /dev/null']
@@ -102,6 +101,11 @@ services:
       resources:
         limits:
           memory: 768m
+          # Process cap. Set here, NOT as a top-level `pids_limit`: Compose v5
+          # rejects the two together ("can't set distinct values on 'pids_limit'
+          # and 'deploy.resources.limits.pids'") once deploy.resources.limits is
+          # present, and the local override sets the same key.
+          pids: 256
 
 networks:
   default:
