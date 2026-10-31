@@ -80,7 +80,8 @@ const advisoryRules = {
   '@opentelemetry/core': {
     affected: (version) => compareVersions(version, '2.8.0') < 0,
     affectedRange: '<2.8.0',
-    required: true,
+    // Not part of the graph since @sentry/node 11; the floor still applies if it returns.
+    required: false,
   },
   '@opentelemetry/instrumentation-http': {
     affected: (version) => compareVersions(version, '0.218.0') <= 0,
@@ -109,14 +110,14 @@ function lockPathMatchesPackage(lockPath, packageName) {
 
 // Preserve the already-reviewed minimum without requiring a test edit for each
 // compatible update. New resolutions still need release review and both audits.
-const MIN_REVIEWED_SENTRY_VERSION = '10.72.0';
+const MIN_REVIEWED_SENTRY_VERSION = '11.9.0';
 
 function assertReviewedSentryGraph(manifestRange, rootLockRange, resolvedVersion) {
   assert.equal(typeof manifestRange, 'string', 'the root Sentry dependency is required');
   assert.match(
     manifestRange,
-    /^\^10\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/,
-    'the Sentry range must be a stable caret range limited to major 10',
+    /^\^11\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/,
+    'the Sentry range must be a stable caret range limited to major 11',
   );
   const manifestFloor = manifestRange.slice(1);
   assert.ok(
@@ -126,7 +127,7 @@ function assertReviewedSentryGraph(manifestRange, rootLockRange, resolvedVersion
   assert.equal(rootLockRange, manifestRange, 'the lock root must match the Sentry manifest range');
 
   const resolved = parseVersion(resolvedVersion);
-  assert.equal(resolved.major, 10, 'the locked Sentry version must remain on major 10');
+  assert.equal(resolved.major, 11, 'the locked Sentry version must remain on major 11');
   assert.equal(resolved.prerelease.length, 0, 'the locked Sentry version must be stable');
   assert.ok(
     compareVersions(resolvedVersion, manifestFloor) >= 0,
@@ -175,11 +176,11 @@ test('version comparator and advisory predicates enforce their exact boundaries'
 
 test('Sentry policy accepts compatible stable updates without weakening the reviewed minimum', () => {
   for (const [range, resolved] of [
-    ['^10.72.0', '10.72.0'],
-    ['^10.72.0', '10.73.0'],
-    ['^10.73.0', '10.73.1'],
-    ['^10.73.0', '10.73.0+build.1'],
-    ['^10.99.0', '10.100.0'],
+    ['^11.9.0', '11.9.0'],
+    ['^11.9.0', '11.10.0'],
+    ['^11.10.0', '11.10.1'],
+    ['^11.10.0', '11.10.0+build.1'],
+    ['^11.99.0', '11.100.0'],
   ]) {
     assert.doesNotThrow(
       () => assertReviewedSentryGraph(range, range, resolved),
@@ -196,44 +197,44 @@ test('Sentry policy rejects lowered, broad, unstable or inconsistent dependency 
     '',
     '*',
     'latest',
-    '10.73.0',
-    '~10.73.0',
-    '>=10.72.0',
-    '^10.72.0 || ^11.0.0',
-    '^10.x',
-    '^10.73',
-    '^10.073.0',
-    '^10.73.0-rc.1',
-    ' ^10.73.0',
-    '^10.73.0 ',
-    '^9.99.0',
-    '^11.0.0',
-    '^10.71.99',
+    '11.10.0',
+    '~11.10.0',
+    '>=11.9.0',
+    '^11.9.0 || ^12.0.0',
+    '^11.x',
+    '^11.10',
+    '^11.010.0',
+    '^11.10.0-rc.1',
+    ' ^11.10.0',
+    '^11.10.0 ',
+    '^10.99.0',
+    '^12.0.0',
+    '^11.8.99',
   ]) {
     assert.throws(
-      () => assertReviewedSentryGraph(range, range, '10.73.0'),
+      () => assertReviewedSentryGraph(range, range, '11.10.0'),
       /Sentry/,
       `reject unsupported declaration ${String(range)}`,
     );
   }
 
-  for (const rootLockRange of [undefined, '^10.72.0', '^11.0.0']) {
+  for (const rootLockRange of [undefined, '^11.9.0', '^12.0.0']) {
     assert.throws(
-      () => assertReviewedSentryGraph('^10.73.0', rootLockRange, '10.73.0'),
+      () => assertReviewedSentryGraph('^11.10.0', rootLockRange, '11.10.0'),
       /lock root must match/,
     );
   }
 
-  for (const resolved of [undefined, 'invalid', '9.99.0', '11.0.0', '10.73.0-rc.1', '10.72.9']) {
+  for (const resolved of [undefined, 'invalid', '10.99.0', '12.0.0', '11.10.0-rc.1', '11.9.9']) {
     assert.throws(
-      () => assertReviewedSentryGraph('^10.73.0', '^10.73.0', resolved),
-      /version|expected >=10\.73\.0/,
+      () => assertReviewedSentryGraph('^11.10.0', '^11.10.0', resolved),
+      /version|expected >=11\.10\.0/,
       `reject incompatible resolution ${String(resolved)}`,
     );
   }
 });
 
-test('root manifest and lock retain the reviewed Sentry 10.x floor', () => {
+test('root manifest and lock retain the reviewed Sentry 11.x floor', () => {
   const rootLockEntry = packageLock.packages?.[''];
   const sentryLockEntry = packageLock.packages?.['node_modules/@sentry/node'];
 
