@@ -2,7 +2,7 @@
 
 **Core verdict cut-off**: 2026-08-25 18:46 UTC · **evidence ledger synchronized**: 20:21 UTC  
 **Node**: `vkbox`  
-**Evidence root**: `/home/vk/.local/share/ortbtools-research/bench/`  
+**Evidence root**: `/home/<user>/.local/share/ortbtools-research/bench/`  
 **Model under decision**: `gemma4-prod`, digest
 `112b5e266519c958d490400f9f038669147246cb1654a05b51ea3d1ed882e68b`
 
@@ -159,7 +159,7 @@ No migration is automatic. The proposal for human review is:
    `required-by-adapter`.
 
 Full fact/evidence/rationale rows are in
-`/home/vk/.local/share/ortbtools-research/bench/taxonomy/ADJUDICATION.md`.
+`/home/<user>/.local/share/ortbtools-research/bench/taxonomy/ADJUDICATION.md`.
 
 ## Success-criteria disposition
 

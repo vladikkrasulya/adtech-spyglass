@@ -108,10 +108,10 @@ section; `v1.19.1` is latest.
 set -euo pipefail
 
 bash -n scripts/cleanup-rollback-tags.sh
-bash -n /home/vk/.local/bin/cleanup-server.sh
+bash -n /home/<user>/.local/bin/cleanup-server.sh
 grep -Fqx \
-  'ORTBTOOLS_ROLLBACK_CLEANUP="/srv/DATA/Stacks/ortbtools/scripts/cleanup-rollback-tags.sh"' \
-  /home/vk/.local/bin/cleanup-server.sh
+  'ORTBTOOLS_ROLLBACK_CLEANUP="<stacks>/ortbtools/scripts/cleanup-rollback-tags.sh"' \
+  /home/<user>/.local/bin/cleanup-server.sh
 node --test tests/cleanup-rollback-tags.test.js
 
 actual_refs="$({
@@ -128,7 +128,7 @@ actual_refs="$({
 expected_refs=$'2026-09-02T11:22:09.035789798+02:00\tortbtools:rollback-pre-89d9ec9\n2026-09-02T10:22:09.293726541+02:00\tortbtools:rollback-pre-b729505\n2026-08-27T13:49:40.56193287+02:00\tortbtools:rollback-pre-adde7f5\n2026-08-27T09:12:08.806223939+02:00\tortbtools:rollback-pre-d854ae2\n2026-08-26T21:00:31.268593606+02:00\tortbtools:rollback-pre-17945d6\n2026-08-25T19:10:02.510821762+02:00\tortbtools:rollback-pre-1bccb56\n2026-08-25T16:14:31.130627333+02:00\tortbtools:rollback-pre-1b41d5b\n2026-08-22T08:59:56.070901577+02:00\tortbtools:rollback-pre-9fdabf2\n2026-08-20T19:04:55.923362298+02:00\tortbtools:rollback-pre-bfe754a\n2026-08-20T19:04:55.923362298+02:00\tortbtools:rollback-pre-b412778'
 test "$actual_refs" = "$expected_refs"
 
-archive=/srv/DATA/Backups/archive/ortbtools-wip-backups-2026-06-28
+archive=$BACKUP_DIR/archive/ortbtools-wip-backups-2026-06-28
 test "$(stat -c '%d:%i' "$archive")" = '66306:6029631'
 test "$(find "$archive" -type f | wc -l)" = 16
 test "$(find "$archive" -type d | wc -l)" = 5
@@ -138,7 +138,7 @@ manifest="$(
   find . -type f -print0 | LC_ALL=C sort -z | xargs -0r sha256sum | sha256sum | awk '{print $1}'
 )"
 test "$manifest" = bcff9e6f7da070b9a11cf4777dde4aba943bfbbed4f8c82ecd0e54d9c1651487
-test ! -e /srv/DATA/Backups/ortbtools/wip-backups-2026-06-28
+test ! -e $BACKUP_DIR/wip-backups-2026-06-28
 ```
 
 Expected: shell syntax and the installed repository-helper handoff are valid; isolated regression

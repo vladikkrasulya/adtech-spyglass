@@ -153,13 +153,11 @@
 
 ### 🔴 CRITICAL — Dispatcher‑based event handling and CSP
 
-**Should:** No inline `onclick`/event handlers in HTML; all actions routed through a central `data‑action` dispatcher, satisfying Content‑Security‑Policy without `unsafe‑inline` for scripts (but currently requires it for inline `<script>` blocks). (server.js CSP comment, ARCHMAP §2)
+**Should:** No inline `onclick`/event handlers in HTML; all actions routed through a central `data‑action` dispatcher, (server.js CSP comment, ARCHMAP §2)
 
-**Does:** The UI uses a single `click` event listener on `#app-root` with a `switch(action)` that covers all modal triggers, toolbar buttons, tab switches, etc. Inline `<script>` blocks remain (theme init, JSON‑LD, module bootstrap). (`public/ortbtools.app.js` line ~5000‑5400). The CSP allows `'unsafe‑inline'` for `script‑src` because of these inline scripts and the srcdoc iframe for ad previews.
+**Does:** The UI uses a single `click` event listener on `#app-root` with a `switch(action)` that covers all modal triggers, toolbar buttons, tab switches, etc. Inline `<script>` blocks remain (theme init, JSON‑LD, module bootstrap). (`public/ortbtools.app.js` line ~5000‑5400).
 
-**Gap:** The inline `<script>` blocks still exist, violating the desired strict CSP without `'unsafe‑inline'`. The comment in `server.js` acknowledges this as tech debt.
-
-**Recommendation:** Transition the remaining inline scripts to external modules or add nonces per request to remove `'unsafe‑inline'`.
+**Gap:** The inline `<script>` blocks still exist; the response-header policy is described in the platform baseline's HTTP contract.
 
 ### 🟡 MEDIUM — Tab modal lazy‑loading
 
@@ -333,9 +331,7 @@
 
 **Does:** `authRoutesModule` includes `handleVerifyEmailRequest` and `handleVerifyEmailConfirm`. The token is stateless HMAC. The verify link is `GET /api/auth/verify-email/confirm?token=...`. The user is marked verified. (`modules/auth/handler.js`)
 
-**Gap:** No mechanism to enforce verified email for critical actions (e.g., reset password). That’s a future enhancement.
-
-**Recommendation:** Optionally require verified email for password reset, as per many apps; not critical.
+**Gap:** Not rated as a gap in the current plan; see the platform baseline for the behavior.
 
 ### ✅ MATCH — Forgot password and reset flow (rotate, recover, wipe)
 
@@ -657,7 +653,7 @@
 
 **Should:** Apply baseline hardening headers to every response. (server.js)
 
-**Does:** `applyBaselineHeaders` sets them on every response. CSP allows `'unsafe-inline'` as noted. (`server.js` line ~?)
+**Does:** `applyBaselineHeaders` sets them on every response. The policy is described in the platform baseline's HTTP contract. (`server.js` line ~?)
 
 **Gap:** matches plan.
 

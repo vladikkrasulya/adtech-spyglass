@@ -53,7 +53,7 @@ and the dependency proposal remain independently verifiable.
       `packages/core/README.md`, and `packages/cli/README.md`
 - [x] T011 [P] [US1] Mark the pre-Spec-Kit handoff historical in `walkthrough.md`
 - [x] T012 [P] [US1] Correct the resolved ADR-012 debt in
-      `/home/vk/.claude/projects/-srv-DATA-Stacks-ortbtools/memory/`
+      `/home/<user>/.claude/projects/<project>/memory/`
 - [x] T013 [US1] Run the stale-claim searches and scoped formatting checks from
       `specs/017-project-tail-reconciliation/quickstart.md`
 
@@ -88,12 +88,12 @@ set in the reconciliation contract.
 inventory with the recorded pre-action evidence.
 
 - [x] T017 [P] [US3] Replace lexical rollback-tag retention with timestamp ordering in the tracked
-      `scripts/cleanup-rollback-tags.sh`, delegate to it from `/home/vk/.local/bin/cleanup-server.sh`,
+      `scripts/cleanup-rollback-tags.sh`, delegate to it from `/home/<user>/.local/bin/cleanup-server.sh`,
       and document the installed retention contract in `docs/OPERATIONS.md`
 - [x] T018 [US3] Reconstruct only provable recent rollback refs and apply corrected retention through
-      `/home/vk/.local/bin/cleanup-server.sh`
-- [x] T019 [P] [US3] Move `/srv/DATA/Backups/ortbtools/wip-backups-2026-06-28` intact to
-      `/srv/DATA/Backups/archive/ortbtools-wip-backups-2026-06-28`
+      `/home/<user>/.local/bin/cleanup-server.sh`
+- [x] T019 [P] [US3] Move `$BACKUP_DIR/wip-backups-2026-06-28` intact to
+      `$BACKUP_DIR/archive/ortbtools-wip-backups-2026-06-28`
 - [x] T020 [US3] Regression-test cleanup ordering and failure handling, then verify shell syntax,
       installed helper handoff, newest-ten ordering, image provenance, archive inode, entry count,
       byte count, and manifest hash per `specs/017-project-tail-reconciliation/quickstart.md`

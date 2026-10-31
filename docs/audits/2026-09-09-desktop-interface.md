@@ -7,7 +7,7 @@ in the [roadmap](../../specs/ROADMAP.md).
 The owner requested a visual consistency pass with desktop as the primary target,
 including saved examples, common desktop resolutions, ultrawide displays, and
 125%/150% scaling. The baseline was the live v1.20.0 image `ortbtools:76570e4`
-on `vkbox`; changes were developed against `f01fbd2`, its release-record commit.
+on the production host; changes were developed against `f01fbd2`, its release-record commit.
 This maintenance pass ships as app 1.20.1; Core and CLI contracts are unchanged.
 
 ## Visual requirements and corrections
