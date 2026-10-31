@@ -101,6 +101,24 @@ test('proxy: 401 when not authenticated', async () => {
   assert.equal(body.code, 'unauthorized');
 });
 
+// ── Rate limit ───────────────────────────────────────────────────────────
+
+test('proxy: 429 when the per-user limiter refuses, keyed by user id', async () => {
+  const keys = [];
+  const proxyLimiter = (key) => {
+    keys.push(key);
+    return false;
+  };
+  const mod = createProxyModule({ auth: authed(), allowedHosts: [TEST_HOST], proxyLimiter });
+  const res = await callHandler(mod.routes[0].handler, {
+    url: 'http://' + TEST_HOST + '/',
+    data: {},
+  });
+  assert.equal(res._status, 429);
+  assert.equal(parseBody(res).code, 'rate_limited');
+  assert.deepEqual(keys, ['1']);
+});
+
 // ── Host allow-list ──────────────────────────────────────────────────────
 
 test('proxy: 403 host_not_allowed for arbitrary external host', async () => {

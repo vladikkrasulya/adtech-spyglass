@@ -251,6 +251,7 @@ function createDialectsModule(deps) {
   function handleUpdate(req, res, _parsed, match) {
     const user = requireUser(req, res);
     if (!user) return;
+    if (writeRateLimited(libraryWriteLimiter, user, res)) return;
     const id = parseIntId(match.params.id);
     if (id == null) return sendError(res, 400, 'id_invalid', 'id must be a positive integer');
     const d = getOwnedDialect(id, user.id);
@@ -362,6 +363,7 @@ function createDialectsModule(deps) {
   function handleUpdateMapping(req, res, _parsed, match) {
     const user = requireUser(req, res);
     if (!user) return;
+    if (writeRateLimited(libraryWriteLimiter, user, res)) return;
     const mid = parseIntId(match.params.mapping_id);
     if (mid == null) return sendError(res, 400, 'id_invalid', 'mapping_id invalid');
     const m = stmts.getMappingWithOwner.get(mid);

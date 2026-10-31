@@ -1,6 +1,6 @@
 # Current Roadmap
 
-**Last reconciled**: 2026-10-29
+**Last reconciled**: 2026-10-31
 
 This file contains only active status, ordering, dependencies, and next gates. Feature detail belongs
 in the linked feature package, durable rationale in [ADRs](./DECISIONS.md), and completed history in
@@ -10,41 +10,28 @@ Current release: **v1.23.0** (redeployed 2026-09-23 at `3131d7ac`, chore: pin No
 
 Completed maintenance: [019 Close audited project debt](./019-close-project-debt/spec.md) shipped as [v1.19.4](https://github.com/vladikkrasulya/adtech-spyglass/releases/tag/v1.19.4) on 2026-09-07. Q1/Q5–Q7, email/event-log verification, Blog integrity, dependency PRs 78–80, release records and local-work reconciliation are closed. [Its inventory](./019-close-project-debt/inventory.md) records the evidence, retained maintenance baseline and separate future capabilities.
 
-## Development Path (2026-10-29)
+## Development Path
 
-Owner request: audit every project for critical vulnerabilities and write down the way forward.
-This section is the current ordering; the findings and their dispositions are in the
-[2026-10-29 security audit](../docs/audits/2026-10-29-security-audit.md). Effort is a working
-estimate in focused days, not a commitment.
+Ordering for the next stretch of work. Effort is a working estimate in focused days, not a
+commitment.
 
-**Current state.** Live image is the audit-fixed build of v1.23.0 (`ortbtools:125b9dd`, redeployed
-2026-10-30 with the hardening merged up to that commit). The container's memory, swap and process
-(`pids`) caps are in effect and the application runs as the restricted ClickHouse account
-`ortbtools_app`; later changes on `main` (compose and documentation) apply at the next deploy. Core is
-0.48.0 and CLI 0.1.5 and are workspace-only (never published). The product surface is complete for
-the 033 scope; what remains is operational maturity and the security backlog below.
+**Current state.** Core is 0.48.0 and CLI 0.1.5 and are workspace-only (never published). The
+product surface is complete for the 033 scope; what remains is operational maturity and the
+product directions below.
 
-**Technical debt that matters.** (1) `unsafe-inline` in the CSP. (2) The ClickHouse account was
-over-privileged (resolved 2026-10-30: the application runs as `ortbtools_app`). (3) Pinned third-party code is updated by hand: the vendored Marked and DOMPurify must move
-through `scripts/sync-browser-vendors.js`, so Dependabot bumps of `marked` or `dompurify` cannot pass
-CI on their own. (4) Locale templates and inspector templates are triplicated per language
-(i18n/duplication items from the May tech-debt audit; mostly mechanical). (5) Operations
-documentation described a different host until the host-reality documentation change (see Now).
-(6) Local work recovered on 2026-10-14 sits on `origin/restore/*` branches and is not reconciled
+**Maintenance themes.** (1) Pinned third-party code is updated by hand: the vendored Marked and
+DOMPurify must move through `scripts/sync-browser-vendors.js`, so Dependabot bumps of `marked` or
+`dompurify` cannot pass CI on their own. (2) Locale templates and inspector templates are
+triplicated per language (i18n/duplication items from the May tech-debt audit; mostly mechanical).
+(3) Local work recovered on 2026-10-14 sits on `origin/restore/*` branches and is not reconciled
 with `main`.
 
-### Security backlog
+### Platform hardening
 
-| Item                                         | Why                                                                                                                                                                       | Effort   | Depends on / blocked by                                                                                                                                                                                                                                                                                         |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Remove `unsafe-inline` from `script-src`     | A reflected or stored markup bug would run script; CSP is the backstop                                                                                                    | 3-5 days | Own spec (`speckit.assess` first). Blocked by creative `iframe.srcdoc`: a `srcdoc` document inherits the parent CSP, so inline creative handlers need a dedicated sandboxed preview document with its own CSP before the parent can drop `unsafe-inline`. Nonces for the three locale shells are the easy half. |
-| ClickHouse least-privilege account           | Done 2026-10-30: the application runs as `ortbtools_app` (grants only, no `allow_ddl = 0`); an injection or leaked password no longer allows DDL or user management       | done     | Applied; procedure, verification and rollback in `docs/OPERATIONS.md` §4.11                                                                                                                                                                                                                                     |
-| Gate library writes on a verified email      | Open registration plus quotas still allows cheap account farming                                                                                                          | 1-2 days | Email delivery is live (Resend); decide UX for unverified users                                                                                                                                                                                                                                                 |
-| Outbound proxy: pin to the validated address | Closes DNS rebinding for allow-listed hosts (proxy is off by default)                                                                                                     | 1 day    | Reuse `lib/asset-fetch.js` resolution                                                                                                                                                                                                                                                                           |
-| Account-deletion follow-ups                  | `validation_logs` has no `user_id` (nothing to purge); the `events` and `product_events` purge is best-effort and falls back to TTL (90/180 days) when ClickHouse is down | 1 day    | Persist failed purges in SQLite and retry on boot                                                                                                                                                                                                                                                               |
-| Explicit Node timeouts and connection cap    | `requestTimeout`/`headersTimeout`/`maxConnections` are defaults today                                                                                                     | 0.5 day  | None                                                                                                                                                                                                                                                                                                            |
-| npm provenance on publish                    | Needed only when publication starts                                                                                                                                       | 0.5 day  | First-publication decision (below)                                                                                                                                                                                                                                                                              |
-| GitHub repository protections                | Done 2026-10-30: secret scanning, push protection and Dependabot alerts on; `main` protected (PR and green `ci`, applies to administrators)                               | done     | Applied; Dependabot security-update PRs remain off                                                                                                                                                                                                                                                              |
+Continuing, as small independent changes. Each one follows the normal path (assessment where the
+design is open, a spec for anything that changes a contract, a regression test with the change)
+and is recorded in `CHANGELOG.md` when it ships. Security reporting and the review process are
+described in [`SECURITY.md`](../SECURITY.md).
 
 ### Product directions
 
@@ -58,27 +45,21 @@ since those were written are omitted.
 - **AdCOM 1.0 and OpenRTB 3.0 deep validation** — the 3.0 path reports `deep_validation_limited`
   today. About 1 week; Core work, no server change.
 - **API platform** — API keys, versioned public contract, rate tiers (`docs/api-v1.md`). About
-  2 weeks; depends on the abuse controls above.
+  2 weeks; follows the platform hardening work.
 - **First npm publication of `@ortbtools/core` and the CLI** — decision pending since 019;
-  needs `NPM_TOKEN`, provenance and an owner decision on the package scope.
+  needs `NPM_TOKEN` and an owner decision on the package scope.
 - **i18n mechanical debt** — template triplication and key parity. 3-4 days, no dependencies.
 - **Fleet standard follow-ups** — see the table below; each needs assessment first.
 
 ### Now / Next / Later
 
-| Horizon                | Work                                                                                                 | Effort           | Needs                                            |
-| ---------------------- | ---------------------------------------------------------------------------------------------------- | ---------------- | ------------------------------------------------ |
-| **Now** (this week)    | Review and merge the hardening pull requests; rebuild and redeploy with the pre-deploy backup        | 0.5 day          | Owner OK for the rebuild                         |
-|                        | Host-reality documentation (OPERATIONS, README, quickstart)                                          | merged with this | None                                             |
-|                        | ClickHouse least-privilege account                                                                   | done 2026-10-30  | None                                             |
-|                        | GitHub repository protections                                                                        | done 2026-10-30  | None                                             |
-|                        | Close superseded pull requests (#82, #83, #84) and triage Dependabot (#94-#98)                       | 0.5 day          | None                                             |
-| **Next** (2-4 weeks)   | Verified-email gate for library writes; labeller in-flight cap; proxy address pinning; Node timeouts | 3 days           | None                                             |
-|                        | Account-deletion purge retry                                                                         | 1 day            | None                                             |
-|                        | CSP: assess and specify the sandboxed preview document                                               | 1 day (spec)     | `speckit.assess`                                 |
-| **Later** (1-3 months) | CSP `unsafe-inline` removal                                                                          | 3-5 days         | The CSP spec above                               |
-|                        | Monitor chapter; AdCOM/3.0 deep validation; API platform                                             | 3-5 weeks        | One spec each; API platform after abuse controls |
-|                        | First npm publication                                                                                | 1-2 days         | Owner decision                                   |
+| Horizon                | Work                                                                           | Effort    | Needs                                       |
+| ---------------------- | ------------------------------------------------------------------------------ | --------- | ------------------------------------------- |
+| **Now** (this week)    | Review and merge the open pull requests                                        | 0.5 day   | None                                        |
+|                        | Close superseded pull requests (#82, #83, #84) and triage Dependabot (#94-#98) | 0.5 day   | None                                        |
+| **Next** (2-4 weeks)   | Platform hardening: small independent changes                                  | 3-5 days  | None                                        |
+| **Later** (1-3 months) | Monitor chapter; AdCOM/3.0 deep validation; API platform                       | 3-5 weeks | One spec each; API platform after hardening |
+|                        | First npm publication                                                          | 1-2 days  | Owner decision                              |
 
 ### Open pull requests: alive or not (recommendation only)
 

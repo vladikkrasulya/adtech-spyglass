@@ -5,12 +5,12 @@ Update: node scripts/sync-browser-vendors.js --write
 Verify: node scripts/sync-browser-vendors.js --check
 
 Marked
-Package: marked@18.0.11
+Package: marked@18.1.1
 Repository: https://github.com/markedjs/marked
-Release: v18.0.11
+Release: v18.1.1
 Source artifact: node_modules/marked/lib/marked.esm.js
 Public asset: public/vendor/marked.es.js
-SHA-256: 05e41134d075ad3a009a748d6c779c3d83cea9b942be911c2d9abade36d1dd31
+SHA-256: 930457e5d55439f90465015cc507d3323366e80df5f7a701b61189d4e1046bda
 Parity: byte-identical
 License: MIT
 License source: node_modules/marked/LICENSE

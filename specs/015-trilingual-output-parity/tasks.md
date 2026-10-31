@@ -451,7 +451,7 @@ tests/locale-routes.test.js tests/model-free-contract.test.js` → **159/159 pas
 - T017: Completed 2026-08-27 through the standing path. Pushed `f8966cb..adde7f5` `main` ->
   `main`; `HEAD == main == origin/main == adde7f5`. Pre-push gate `npm run ci` green (same
   2743/0/0/3 result cited in T016). Fresh pre-deploy backup taken at 13:49, immediately before
-  deploy: `/srv/DATA/Backups/ortbtools/ortbtools-2026-08-27.db.gz` (3,173,360 bytes) and
+  deploy: `$BACKUP_DIR/ortbtools-2026-08-27.db.gz` (3,173,360 bytes) and
   `content-posts-2026-08-27.tar.gz` (1,814 bytes), both `0600 root`. `./scripts/deploy.sh` ->
   "DEPLOY OK: v1.18.0 (adde7f5) is live", image `ortbtools:adde7f5`, readiness healthy at t=6s,
   SMOKE OK across all 19 checks including all three locales of `/inspector`, `/about`,

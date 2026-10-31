@@ -1,0 +1,4 @@
+# Reviewed false positives: constant fixtures inside unit tests (not credentials).
+# Format: <commit>:<file>:<rule>:<line>
+d5693ac7fe0243ec855ba048c36d1cf6c3b7da8b:tests/site-auth.test.js:generic-api-key:70
+24376462c3fd1988447b26ee69a897190bdeac1a:tests/auth-event-pii.test.js:generic-api-key:37

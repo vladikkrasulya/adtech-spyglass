@@ -1,0 +1,158 @@
+rules:
+  # ---------------------------------------------------------------------------
+  # 1. Taint: request data reaching ClickHouse SQL text (the H1 class, 2026-10-29)
+  # ---------------------------------------------------------------------------
+  - id: ortb-clickhouse-tainted-sql
+    mode: taint
+    languages: [javascript]
+    severity: ERROR
+    message: >-
+      Request data flows into ClickHouse SQL text. Stripping quotes is not
+      escaping (ClickHouse also honours backslash: H1, 2026-10-29). Validate against a
+      whitelist/regex and pass through chEsc(), or use a bound parameter
+      (param_x=... with {x:String}).
+    metadata: { cwe: 'CWE-89', owasp: 'A03:2021 Injection' }
+    pattern-sources:
+      - pattern: $URL.searchParams.get(...)
+      - pattern: $REQ.query.$X
+      - pattern: $REQ.params.$X
+      - pattern: $MATCH.params.$X
+      - pattern: await readJson(...)
+      - pattern: await $X.readJson(...)
+    pattern-sanitizers:
+      - pattern: chEsc(...)
+      - pattern: Number(...)
+      - pattern: parseInt(...)
+      - pattern: Math.min(...)
+      - pattern: Math.max(...)
+      - pattern: encodeURIComponent(...)
+      - pattern: $RE.test(...)
+      - by-side-effect: true
+        patterns:
+          - pattern: $ALLOWED.includes($X)
+          - focus-metavariable: $X
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $FN($SQL, ...)
+          - metavariable-regex:
+              metavariable: $FN
+              regex: ^(chQuery|chExec|queryCh|chSelect)$
+          - focus-metavariable: $SQL
+
+  # ---------------------------------------------------------------------------
+  # 2. Structural: a template/concat SQL string with a bare ${expr} (not chEsc /
+  #    numeric coercion) handed to a ClickHouse query function.
+  # ---------------------------------------------------------------------------
+  - id: ortb-clickhouse-interpolated-sql
+    languages: [javascript]
+    severity: WARNING
+    message: >-
+      ClickHouse SQL built with an interpolated value. Wrap every ${...} in
+      chEsc()/Number(), or use a bound parameter. Static fragments (column lists,
+      server-side constants) may be allowed with `// nosemgrep: ortb-clickhouse-interpolated-sql -- reason`.
+    metadata: { cwe: 'CWE-89' }
+    patterns:
+      - pattern-either:
+          - pattern: $FN(`...${$X}...`, ...)
+          - pattern: $FN("..." + $X + "...", ...)
+          - pattern: $FN("..." + $X, ...)
+      - metavariable-regex:
+          metavariable: $FN
+          regex: ^(chQuery|chExec|queryCh|chSelect)$
+      - metavariable-regex:
+          metavariable: $X
+          # not a plain string literal, not chEsc(...)/Number(...), not an UPPER_SNAKE constant
+          regex: ^(?!["'`])(?!chEsc\()(?!Number\()(?![A-Z][A-Z0-9_]*$)[\s\S]+$
+
+  # ---------------------------------------------------------------------------
+  # 3. The exact anti-pattern from H1: "sanitising" by deleting quotes.
+  # ---------------------------------------------------------------------------
+  - id: ortb-quote-stripping-is-not-escaping
+    languages: [javascript]
+    severity: ERROR
+    message: >-
+      `.replace(/'/g, '')` is not SQL escaping (backslash still escapes the closing quote
+      in ClickHouse). Use chEsc() or a whitelist.
+    metadata: { cwe: 'CWE-89' }
+    pattern-either:
+      - pattern: $S.replace(/'/g, "")
+      - pattern: $S.replace(/"/g, "")
+      - pattern: $S.replaceAll("'", "")
+
+  # ---------------------------------------------------------------------------
+  # 4. Server-side direct ClickHouse HTTP clients outside lib/clickhouse.js
+  #    (three copies already exist: blog/handler.js, analytics/handler.js, event-log.js)
+  # ---------------------------------------------------------------------------
+  - id: ortb-own-clickhouse-client
+    languages: [javascript]
+    severity: WARNING
+    message: >-
+      Do not hand-roll a ClickHouse HTTP call; use lib/clickhouse.js so the one
+      reviewed client (and its future bound-parameter API) is the only way in.
+    paths:
+      exclude: ['**/lib/clickhouse.js', '**/tests/**']
+    pattern-either:
+      - pattern: fetch(`...?query=...`, ...)
+      - pattern: fetch($U + "/?query=" + ..., ...)
+      - pattern: fetch(CH_URL + ..., ...)
+      - pattern: fetch(`${CH_URL}/...`, ...)
+
+  # ---------------------------------------------------------------------------
+  # 5. Browser: URL/query-controlled data into HTML sinks
+  # ---------------------------------------------------------------------------
+  - id: ortb-dom-xss-url-to-html
+    mode: taint
+    languages: [javascript]
+    severity: ERROR
+    message: >-
+      URL-controlled data reaches an HTML sink. Use textContent, or escapeHtml()/DOMPurify.sanitize().
+    metadata: { cwe: 'CWE-79', owasp: 'A03:2021 Injection' }
+    paths:
+      include: ['**/public/**']
+      exclude: ['**/public/vendor/**', '**/*.min.js']
+    pattern-sources:
+      - pattern: location.search
+      - pattern: location.hash
+      - pattern: location.href
+      - pattern: document.referrer
+      - pattern: window.name
+      - pattern: new URLSearchParams(...).get(...)
+      - pattern: $P.searchParams.get(...)
+    pattern-sanitizers:
+      - pattern: escapeHtml(...)
+      - pattern: escHtml(...)
+      - pattern: esc(...)
+      - pattern: DOMPurify.sanitize(...)
+      - pattern: encodeURIComponent(...)
+      - pattern: Number(...)
+    pattern-sinks:
+      - pattern: $EL.innerHTML = $X
+      - pattern: $EL.outerHTML = $X
+      - pattern: $EL.insertAdjacentHTML($POS, $X)
+      - pattern: document.write($X)
+
+  # ---------------------------------------------------------------------------
+  # 6. SSRF/open proxy: request data used as an outbound URL outside the guarded
+  #    fetcher (lib/asset-fetch.js) — the class behind the egress-IP leak.
+  # ---------------------------------------------------------------------------
+  - id: ortb-tainted-outbound-url
+    mode: taint
+    languages: [javascript]
+    severity: ERROR
+    message: >-
+      Request data used as an outbound URL. Go through lib/asset-fetch.js (SSRF guard,
+      pinned address, allow-list) instead of calling fetch/http.request directly.
+    metadata: { cwe: 'CWE-918', owasp: 'A10:2021 SSRF' }
+    paths:
+      exclude: ['**/lib/asset-fetch.js', '**/tests/**', '**/public/**']
+    pattern-sources:
+      - pattern: $URL.searchParams.get(...)
+      - pattern: $REQ.query.$X
+      - pattern: await readJson(...)
+    pattern-sinks:
+      - pattern: fetch($U, ...)
+      - pattern: http.request($U, ...)
+      - pattern: https.request($U, ...)
+      - pattern: http.get($U, ...)
+      - pattern: https.get($U, ...)

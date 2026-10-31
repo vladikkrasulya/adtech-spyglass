@@ -203,7 +203,7 @@ toolchain run the suite in a throwaway container:
 
 ```bash
 docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD":/app -w /app \
-  node:22.23.2-bookworm bash -lc 'npm ci && node scripts/run-tests.js --unit-only'
+  node:22.23.4-bookworm bash -lc 'npm ci && node scripts/run-tests.js --unit-only'
 ```
 
 Some tests exercise `scripts/deploy.sh` and need `rsync`, a clone with full Git history and GNU
