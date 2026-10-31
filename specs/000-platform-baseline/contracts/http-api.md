@@ -164,6 +164,12 @@ their 4xx statuses; `503 labeller_unavailable` is unchanged. Because 424 is not 
 page the operator through `sendError`; the labeller route pages explicitly (`alertOperator`), asset
 fetch failures are logged only (a dead third-party CDN is not an operator problem).
 
+`POST /api/dialects/suggest-label` puts a bounded queue in front of the single-slot local model
+(`lib/concurrency-gate.js`: one call at a time, a short queue, a bounded wait). A request that cannot
+get a turn in time is answered `429 labeller_busy` with `Retry-After`, not left to time out; the
+route reads at most 256 KiB of body and refuses a `signal_value` whose JSON text exceeds 512
+characters (`400 signal_value_too_long`), whatever its type.
+
 The creative-asset route is a separate caller-chosen-host SSRF boundary. Before a socket opens, it
 accepts only HTTP(S) on default ports, canonicalizes literal and DNS-returned addresses (including
 IPv4-mapped IPv6 and WHATWG hexadecimal forms) before private-address classification, and rejects a

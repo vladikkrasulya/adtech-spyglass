@@ -1362,14 +1362,26 @@ export async function mountInspector(root, ctx) {
     // so no external images, scripts, fonts, or network beacons can load over HTTPS during preview.
     const cspMeta =
       "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' data:; img-src data: blob:; font-src data:; connect-src 'none'; media-src 'none'; frame-src 'none';\">";
+    // WebRTC is the one outbound channel a content policy cannot name: an ICE
+    // server in a creative's RTCPeerConnection makes the browser send STUN
+    // packets, which reveal the analyst's public address to a host the creative
+    // chose. Remove the constructors before any creative code runs. The property
+    // is made non-configurable so the creative cannot put it back; nested frames
+    // are refused by `frame-src 'none'`, and a frame the creative could create
+    // would be cross-origin (opaque) anyway, so no second realm is reachable.
+    const rtcOff =
+      '<script>(function(){["RTCPeerConnection","webkitRTCPeerConnection","mozRTCPeerConnection"]' +
+      '.forEach(function(k){try{Object.defineProperty(window,k,{value:undefined,writable:false,' +
+      'configurable:false})}catch(e){}})})()</' +
+      'script>';
     const channel = _probeSource ? freshProbeChannel() : null;
-    if (!channel) return { html: documentPrefix + cspMeta + body, channel: null };
+    if (!channel) return { html: documentPrefix + rtcOff + cspMeta + body, channel: null };
     // Wrap in a <script> at the very top so listeners are hooked before
     // creative HTML parses any inline handlers. The placeholder lives only in
     // the trusted probe source, never in payload markup.
     const probe = _probeSource.replace('__ORTBTOOLS_PROBE_CHANNEL__', channel);
     return {
-      html: documentPrefix + '<script>' + probe + '</' + 'script>' + cspMeta + body,
+      html: documentPrefix + '<script>' + probe + '</' + 'script>' + rtcOff + cspMeta + body,
       channel,
     };
   }

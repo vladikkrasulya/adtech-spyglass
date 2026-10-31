@@ -1147,6 +1147,11 @@ if (process.env.FX_DISABLED !== '1') {
 //   - iframe srcdoc creatives that ship inline event handlers from the
 //     publisher's ad markup; the srcdoc iframe inherits parent CSP per
 //     spec so blocking inline would break creative preview entirely
+// frame-src is 'none': the app embeds no frames of its own, and `srcdoc` creative
+// previews are exempt from it. What the directive does is refuse any NAVIGATION
+// of a preview frame (a creative's location change, meta refresh, link click, or
+// a data:/blob:/same-origin document), which `sandbox="allow-scripts"` alone does
+// not stop — a sandboxed frame may still navigate itself.
 // 'unsafe-inline' is a known compromise; future improvement = per-request
 // nonces + drop 'unsafe-inline' for script-src. Tracked in tech-debt.
 //
@@ -1160,7 +1165,7 @@ const CSP = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "connect-src 'self'",
-  "frame-src 'self' data: blob:",
+  "frame-src 'none'",
   "frame-ancestors 'self'",
   "form-action 'self'",
   "base-uri 'self'",

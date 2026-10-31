@@ -472,13 +472,15 @@
         const key =
           r.status === 401
             ? 'unauthorized'
-            : r.status === 429
-              ? 'rate_limited'
-              : code === 'labeller_unavailable'
-                ? 'unavailable'
-                : code === 'labeller_timeout'
-                  ? 'timeout'
-                  : 'generic';
+            : code === 'labeller_busy'
+              ? 'busy'
+              : r.status === 429
+                ? 'rate_limited'
+                : code === 'labeller_unavailable'
+                  ? 'unavailable'
+                  : code === 'labeller_timeout'
+                    ? 'timeout'
+                    : 'generic';
         toast(t('dialect.label.err.' + key), 'error');
         return;
       }
