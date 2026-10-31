@@ -36,7 +36,7 @@ Sent before implementation: scope of deferred product features; repository/npm e
 
 ## Local-work reconciliation completed
 
-All four stashes, five task branches and four linked worktrees are now preserved in the private archive `/home/vk/.local/share/ortbtools-reconciliation/2026-09-07-090946/`. Its verified Git bundle retains nine named archive refs; four complete worktree tarballs were verified against 3492 file digests and then checked again before cleanup. Symlinks and current Git status were compared before removal. `manifest.json`, `cleanup.json` and `RESTORE.txt` document exact recovery; no private draft content is tracked here. Main is the only active worktree and the active stash list is empty. Archive refs remain local under `refs/archive/019/`.
+All four stashes, five task branches and four linked worktrees are now preserved in the private archive `/home/<user>/.local/share/ortbtools-reconciliation/2026-09-07-090946/`. Its verified Git bundle retains nine named archive refs; four complete worktree tarballs were verified against 3492 file digests and then checked again before cleanup. Symlinks and current Git status were compared before removal. `manifest.json`, `cleanup.json` and `RESTORE.txt` document exact recovery; no private draft content is tracked here. Main is the only active worktree and the active stash list is empty. Archive refs remain local under `refs/archive/019/`.
 
 - stash0: UI already delivered in 1b262f3/9d1b883; assessment recovered in 3446273. Archived duplicate.
 - stash1: obsolete host-document draft; valid stale-address concern repaired by runtime discovery instructions. Invalid alternate stack/container names were not adopted.

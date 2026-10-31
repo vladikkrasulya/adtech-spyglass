@@ -162,6 +162,17 @@ Use additional gates when the changed surface requires them:
   changes;
 - a focused browser or production-like smoke for user-visible behavior.
 
+The `ci` job also runs repository checks that `npm run ci` does not:
+
+- **Semgrep** rules in `semgrep/ortbtools.yml` (self-test: `semgrep --test semgrep`).
+  A deliberate exception needs `// nosemgrep: <rule-id> -- reason` on the line.
+- **gitleaks** over the full history (`.gitleaks.toml`). A reviewed false positive
+  is added to `.gitleaksignore` by exact fingerprint, never by path.
+- **Route inventory** (`tests/route-access.test.js`): a new route must be declared in
+  `tests/fixtures/route-access.json` with its access class and limit in the same PR.
+- Trivy filesystem scan and `docker compose config` on the Compose version the
+  host runs.
+
 Do not hard-code test totals in documentation. Record commands, exit status,
 and relevant evidence in the active spec instead.
 

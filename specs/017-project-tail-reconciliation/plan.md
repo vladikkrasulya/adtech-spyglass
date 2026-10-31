@@ -109,8 +109,8 @@ tests/
 walkthrough.md
 
 host-only:
-/home/vk/.local/bin/cleanup-server.sh
-/srv/DATA/Backups/{ortbtools,archive}/
+/home/<user>/.local/bin/cleanup-server.sh
+$BACKUP_DIR/{ortbtools,archive}/
 
 external:
 Git tags and GitHub Releases for the 27 proven mappings

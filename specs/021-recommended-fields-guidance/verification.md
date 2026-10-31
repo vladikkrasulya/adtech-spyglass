@@ -10,7 +10,7 @@ The 13 new error ids, field paths and compatibility decision are listed in [cont
 
 ## Evidence
 
-Evidence directory: `/home/vk/.local/share/ortbtools-research/2026-09-08-021-review-followup/`. Review reproductions against the original implementation remain separately archived under `2026-09-08-fable-021-review/`.
+Evidence directory: `/home/<user>/.local/share/ortbtools-research/2026-09-08-021-review-followup/`. Review reproductions against the original implementation remain separately archived under `2026-09-08-fable-021-review/`.
 
 - `types-before.log`: new regression suite against 977e6b1 — eight failing groups and two passing omission controls.
 - `types-after.log`: all ten groups pass after the repair. Loops cover malformed object/client values and malformed nbr in both protocol families, omission and explicit undefined, valid IPv6 fallback, empty-string guidance and valid integer no-bids. The default CLI and real HTTP analyze endpoint are exercised, including localized error messages.

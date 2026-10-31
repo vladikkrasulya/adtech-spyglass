@@ -9,7 +9,7 @@ All notable changes to ortbtools are documented here. Format follows
 ### Added
 
 - Self-service account deletion. `POST /api/auth/delete-account` (session + cross-site guard + current password in a JSON body; 5 attempts / 15 min per IP and per account) deletes the user and, through the foreign-key cascade, partners, samples, analysis metadata, Behavior Corpus rows, dialects/mappings and sessions, and anonymises the user's `event_log` rows (`user_id` and `ip` set to NULL) in one SQLite transaction. After the commit it revokes the in-memory sessions, expires the cookie and makes a best-effort ClickHouse lightweight `DELETE` on `ortbtools_events` and `ortbtools_product_events` (a ClickHouse failure is logged and never fails the request). The account page has a "Delete account" control (en/uk/ru) with a password prompt and an explicit confirmation checkbox. `docs/PRIVACY.md`, the HTTP API and data-retention contracts describe what is deleted, anonymised and left to TTL.
-- `specs/ROADMAP.md` gains a Development Path section (current state, technical debt, security backlog with effort and blockers, product directions, Now/Next/Later, and an alive-or-superseded verdict for each open pull request), and `docs/audits/2026-10-29-security-audit.md` records the 2026-10-29 audit: scope, findings by severity with their dispositions, and what remains open.
+- `specs/ROADMAP.md` gains a Development Path section (current state, maintenance themes, product directions, Now/Next/Later, and an alive-or-superseded verdict for each open pull request), and `SECURITY.md` describes how security work is done.
 - `lib/http.alertOperator()`: pages the operator for failures that are reported to the client with a non-5xx status.
 - CI supply-chain hardening: workflow actions are pinned to full commit SHAs (a tag can be re-pointed), `actions/checkout` no longer persists the job token, and CI runs `npm audit --omit=dev --audit-level=high`, so a vulnerable runtime dependency blocks a merge. `tests/workflow-hardening.test.js` keeps the pins, the read-only default token and the absence of `pull_request_target` from regressing.
 
@@ -24,20 +24,20 @@ All notable changes to ortbtools are documented here. Format follows
 - Anonymous requests can no longer produce 500s (and error reports) with a malformed path: `/api/samples/%`, `/api/v1/specimen/%ff` and every other `:param` route now fail to match (400/404) instead of throwing out of the router, and a NUL byte in a static path (`/%00`) is a 400. `readJson` counts the body cap in bytes and decodes once, so a multi-byte character split across two chunks is no longer corrupted and a multi-byte body can no longer reach ~3x the cap in memory. `POST /api/creative/asset` and `POST /api/dialects/suggest-label` answer `400` to a JSON `null`/array body instead of `500`.
 - Reference response specimens served by `GET /api/v1/sample` no longer raise a critical `crosscheck.id_mismatch`: the synthesized request keeps the response id instead of a `demo-` prefix. VAST specimens (`mtype` 2) now get a video slot accepting every VAST protocol and the VPAID JS mime, so `clean-banner`, `pop-clean-response` and `vast-clean-inline` show zero critical cross-check findings.
 - `POST /api/auth/verify-email/request` no longer answers `email_sent: true` when the mailer is in its dev-mode short-circuit (no `RESEND_API_KEY`) and nothing was delivered; it reports `email_sent: false` like `/register` does. The delivered path is unchanged.
-- Operations documentation now describes the host that actually runs ortbtools: the stack root `/srv/DATA/Stacks/adtech-spyglass`, the local nightly backup under `/srv/BULK/backups/ortbtools` (no restic, rclone or off-site copy), the Cloudflare tunnel stack, self-hosted GlitchTip, Resend on `ortbtools.com`, and the ClickHouse and Ollama stacks. New in `docs/OPERATIONS.md`: §0 (host reality table), §6.0 (backup, check and restore on this host) and §4.11 (a least-privilege ClickHouse account for the application). README and CONTRIBUTING quickstarts name the required `ORTBTOOLS_TAG`, the external `kt-shared` network and the `/data` directory, and the throwaway-container test command for hosts without a C toolchain.
+- Operations documentation now describes how the production deployment is laid out. New in `docs/OPERATIONS.md`: §0 (deployment layout), §6.0 (nightly backup, check and restore) and §4.11 (a least-privilege ClickHouse account for the application); site-specific locations are written as `$STACK_DIR`, `$DATA_DIR` and `$BACKUP_DIR`. README and CONTRIBUTING quickstarts name the required `ORTBTOOLS_TAG`, the external `kt-shared` network and the `/data` directory, and the throwaway-container test command for hosts without a C toolchain.
 - Server-rendered SEO tags and blog posts no longer corrupt the page when a title, summary or body contains `$&`, `` $` `` or `$'`: the `lib/seo.js` and `lib/landings.js` HTML rewrites pass the replacement as a function, so the text is inserted literally instead of being read as a replacement pattern.
 
 ### Security
 
-- Algorithmic-complexity (ReDoS-class) hardening of anonymous request input. Several code paths reachable from `POST /api/analyze`, `/api/v1/replay` and the URL request decoders took more than linear time in the length of one field, so a single large request could block the event loop. They now run in linear time: URL input repair (a `bidReq` string above 64 KiB skips repair, and wrapper peeling is capped at 64 layers), URL query reading, endpoint path comparison, the pop landing-host extractor, VAST open-tag scanning and request-path normalisation. Results for realistic inputs are unchanged, and `tests/analyze-input-redos.test.js` pins both the equivalence and a 500 ms ceiling on worst-case 2 MB inputs.
-- Unauthenticated SQL injection in `GET /api/v1/blog/list` closed. `lang` and `category` were interpolated into the ClickHouse query after only stripping single quotes, but ClickHouse also honours a backslash escape, so `lang=\` swallowed the closing quote and the next parameter became raw SQL (read access to everything the ClickHouse account can see). Both filters are now whitelisted (`lang` against the supported locales, `category` against `[a-z0-9_-]{1,64}`) and escaped with `chEsc`; an invalid filter skips the query. The route cache is also capped at 500 entries so a stream of unique query strings can no longer grow the heap.
+- Linear-time handling of anonymous request input in the analysis paths (URL input repair, URL query reading, endpoint path comparison, the pop landing-host extractor, VAST open-tag scanning and request-path normalisation). Results for realistic inputs are unchanged, and `tests/analyze-input-redos.test.js` pins both the equivalence and a time ceiling on large inputs.
+- SQL injection in `GET /api/v1/blog/list` closed. Both filters are now whitelisted (`lang` against the supported locales, `category` against `[a-z0-9_-]{1,64}`) and escaped with `chEsc`; an invalid filter skips the query. The route cache is also capped at 500 entries.
 - The SSRF guard (`isPrivateIp`, used by `POST /api/creative/asset`) now treats NAT64 (`64:ff9b::/96`, `64:ff9b:1::/48`), 6to4 (`2002::/16`), IPv4-compatible (`::a.b.c.d`), IPv6 multicast, `198.18.0.0/15`, `224.0.0.0/4` and `240.0.0.0/4` addresses as non-public. IPv6 literals are judged by their parsed value, so every spelling of one address gets the same verdict.
-- Operator token hardening. `ADMIN_STATS_TOKEN` (`/api/admin/*`, `/api/v1/telemetry/summary`, the blog admin routes) is now checked by one shared gate (`lib/admin-auth.js`): a constant-time comparison instead of `!==`, and an address that fails 10 times in 15 minutes is answered `429` until the window clears. Before, 200 wrong guesses in a row all answered `401`.
-- `lib/asset-fetch.js` now has a 20 s wall-clock deadline (`ASSET_TOTAL_TIMEOUT_MS`). The existing 8 s limit is a socket idle timeout, so a host dripping one byte every few seconds held a socket and its buffer open indefinitely.
-- `POST /api/proxy` no longer leaks the server's egress IPv4. The built-in allow-list (`httpbin.org`, `postman-echo.com`) echoed the caller's address (`origin`, `x-forwarded-for`) to any signed-in user, unmasking a host hidden behind the Cloudflare tunnel. The built-in list is now empty; operators opt in per endpoint with `ORTBTOOLS_PROXY_ALLOWED_HOSTS` (exact hostnames). Known IP-echo and request-capture hosts are refused even when listed. A request without `url`/`data` now gets `400 invalid_input` instead of a leaked Node exception after an outbound socket was already opened.
-- CPU-bound analysis can no longer be monopolised by one address. `POST /api/analyze`, `/api/v1/replay` and `/api/v1/mirror` now also charge the declared body size against a rolling per-address byte budget (`ANALYZE_BYTES_PER_MIN`, default 8 MiB/min, `429 rate_limited`). Analysis costs ~0.5-1.1 s per MB, so the existing 60 requests/min let one address keep Node's single event loop busy continuously with maximal bodies and starve every other visitor.
+- Operator token hardening. `ADMIN_STATS_TOKEN` (`/api/admin/*`, `/api/v1/telemetry/summary`, the blog admin routes) is now checked by one shared gate (`lib/admin-auth.js`): a constant-time comparison, and an address that fails 10 times in 15 minutes is answered `429` until the window clears.
+- `lib/asset-fetch.js` now has a 20 s wall-clock deadline (`ASSET_TOTAL_TIMEOUT_MS`) in addition to the 8 s socket idle timeout.
+- `POST /api/proxy`: the built-in allow-list is now empty; operators opt in per endpoint with `ORTBTOOLS_PROXY_ALLOWED_HOSTS` (exact hostnames). Known IP-echo and request-capture hosts are refused even when listed. A request without `url`/`data` now gets `400 invalid_input`.
+- `POST /api/analyze`, `/api/v1/replay` and `/api/v1/mirror` now also charge the declared body size against a rolling per-address byte budget (`ANALYZE_BYTES_PER_MIN`, default 8 MiB/min, `429 rate_limited`).
 - Login CSRF: every `POST /api/auth/*` route now refuses cross-site browser requests (`403 cross_site_request` for a foreign `Sec-Fetch-Site`/`Origin`, `415 unsupported_media_type` for a body that is not `application/json`) before the body is read or a session cookie is set. The app's own forms and clients that send no browser headers are unaffected.
-- Unbounded storage growth closed. Anonymous share links (`POST /api/v1/gists`) are now capped globally (`ORTBTOOLS_GIST_MAX_TOTAL_BYTES`, default 256 MiB of live ciphertext, `507 gist_storage_full`) and per address (`ORTBTOOLS_GIST_IP_DAILY_BYTES`, default 24 MiB per rolling 24 h, `429 gist_quota_exceeded`). Each account's library is capped (`ORTBTOOLS_LIBRARY_MAX_SAMPLES`/`_PARTNERS`/`_CORPUS`/`_DIALECTS`/`_MAPPINGS`/`_BYTES`; `413 quota_exceeded`), partner name and notes are length-bounded, and library writes share a per-user limiter (`LIBRARY_WRITE_MAX_PER_WINDOW`, default 120/min, `429 rate_limited`). Before, one throw-away account could write ~40 MB per second with no ceiling, and the SQLite store shares that disk with the account database.
+- Storage quotas. Anonymous share links (`POST /api/v1/gists`) are now capped globally (`ORTBTOOLS_GIST_MAX_TOTAL_BYTES`, default 256 MiB of live ciphertext, `507 gist_storage_full`) and per address (`ORTBTOOLS_GIST_IP_DAILY_BYTES`, default 24 MiB per rolling 24 h, `429 gist_quota_exceeded`). Each account's library is capped (`ORTBTOOLS_LIBRARY_MAX_SAMPLES`/`_PARTNERS`/`_CORPUS`/`_DIALECTS`/`_MAPPINGS`/`_BYTES`; `413 quota_exceeded`), partner name and notes are length-bounded, and library writes share a per-user limiter (`LIBRARY_WRITE_MAX_PER_WINDOW`, default 120/min, `429 rate_limited`).
 
 ### v1.23.0 — close the remaining product questions (2026-09-09)
 
@@ -1781,7 +1781,7 @@ CSS** (sha256 `689992fa…`, 35012 B) — the overlay is no longer needed.
 
 - **Removed** the `…/kyivtech-portal/public/design-system.css:/app/public/design-system.css:ro`
   bind-mount from `docker-compose.yml`. Production now mounts **exactly one** path:
-  `/srv/DATA/AppData/adtech-spyglass:/data`. The container is fully self-contained
+  `$DATA_DIR:/data`. The container is fully self-contained
   with no cross-project / `kyivtech-portal` runtime dependency. Served CSS is
   byte-identical (baked == previously-mounted == `689992fa…`), so **no visual change**.
 - **CI guard** (`tests/immutable-image.test.js`): new assertion that the production
@@ -1812,7 +1812,7 @@ for safe rollback — this is Stage 1; the design-system mount is removed in v1.
   `design-system.css` (35012 B, sha256 `689992fa…4192ea`, no `url()` deps)
   committed to `public/design-system.css` + provenance in
   `design-system.vendor.json`. The Docker build no longer reads
-  `/srv/DATA/Stacks/kyivtech-portal` — it builds from a clean checkout. The
+  `<portal checkout>` — it builds from a clean checkout. The
   portal mount is **kept this one release** so a rollback to the v1.1.4 image
   (which carries the 783 B stub) still serves real CSS; removed in v1.1.6.
 - **Blog content persisted (Model A).** `CONTENT_DIR` is now env-driven
@@ -2562,7 +2562,7 @@ their own JSON. Click pre-fills `#bidReq` and triggers `#analyzeBtn`.
   doc references updated to reflect the new default. Historical context
   retained where relevant (model lineage gemma3:4b → qwen2.5:3b → gemma4:e2b).
 - Companion ops change: ollama container memory limit bumped 10G → 12G
-  in `/srv/DATA/Stacks/ollama/docker-compose.yml`. gemma4:e2b peaks at
+  in `<stacks>/ollama/docker-compose.yml`. gemma4:e2b peaks at
   8.44 GiB RSS under 3-parallel load (vs qwen ~2 GiB), so the prior 10G
   cap left only 1.5 GiB margin. 12G gives ~3.5 GiB headroom.
 
@@ -2638,7 +2638,7 @@ BID REQUEST / BID RESPONSE textareas to grow them. Implemented:
 
 #### Files
 
-- `/srv/DATA/Stacks/kyivtech-portal/public/design-system.css` —
+- `<portal checkout>/public/design-system.css` —
   declared `--selection-bg` in both themes (separate portal commit;
   design-system.css is shared + bind-mounted into Spyglass).
 - `public/spyglass-shell.css` — `::selection` + `::-moz-selection`
@@ -2696,7 +2696,7 @@ review + stale-fact cross-checks afterwards.
   full bind-mount table verified against compose, the bind-mount
   inode gotcha with v0.42.5/v0.42.8 real-world examples, common ops
   tasks (restart, rebuild, logs, sqlite shell, reset test user
-  password, force-clear sessions), secrets vault (`/srv/DATA/.secrets/
+  password, force-clear sessions), secrets vault (`<secrets vault>/
 api-tokens.env`), backups (kt-backup-\* cron + off-site rclone +
   restore drill), monitoring (Beszel, healthcheck, n8n stats,
   Telegram alerts), 5-scenario incident playbook, deployment flow,
@@ -2974,7 +2974,7 @@ re-pass flags anything.
 
 #### Files
 
-- `/srv/DATA/Stacks/kyivtech-portal/public/design-system.css` —
+- `<portal checkout>/public/design-system.css` —
   `--bg-elev` + `--bg-elev-2` token declarations in both `:root`
   and `[data-theme="dark"]` blocks; dark `--text-dim` bumped.
 - `public/account.{en,uk,ru}.html` — Library empty-state hint
@@ -5773,7 +5773,7 @@ content`, not just `title`. The 800-char cap keeps the O(n×k) scan
   bounded; 800 chars covers the lede of nearly every RSS item.
 - **`items.hot_score`** column dropped from `news` Postgres DB. Was
   `REAL NOT NULL DEFAULT 0`; production count of non-zero rows = 0.
-  Schema doc (`/srv/DATA/Stacks/postgres/init/news_schema.sql`) updated
+  Schema doc (`<stacks>/postgres/init/news_schema.sql`) updated
   so fresh provisioning matches. `hot_score_llm` (Tier 3 LLM-derived
   score 0..1) untouched — that one is in active use.
 
