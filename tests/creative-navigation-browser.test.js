@@ -253,6 +253,48 @@ test(
         await rtc.close();
       }
 
+      // A nested frame gets a fresh window, which would still have the WebRTC
+      // constructors. Every route to a nested document the creative can write
+      // (markup, attribute and property setters, string-to-element APIs,
+      // script-scheme URLs) must leave the socket silent.
+      const CLOSE = '</' + 'script>';
+      const probe = `var p=new RTCPeerConnection({iceServers:[{urls:'stun:127.0.0.1:${stunPort}'}]});p.createDataChannel('x');p.createOffer().then(function(o){return p.setLocalDescription(o)});`;
+      const nestedDoc = `<script>try{${probe}}catch(e){}${CLOSE}`;
+      const attr = nestedDoc.replace(/"/g, '&quot;');
+      const js = (text) => JSON.stringify(text).replace(/<\//g, '<\\/');
+      const nested = {
+        'markup srcdoc': `<iframe srcdoc="${attr}"></iframe>`,
+        'markup srcdoc, odd spelling': `<IFRAME/SRCDOC="${attr}"></IFRAME>`,
+        'markup srcdoc after a > in an attribute': `<iframe title=">" srcdoc="${attr}"></iframe>`,
+        'markup script-scheme src': `<iframe src="java&Tab;script:${encodeURIComponent(probe)}"></iframe>`,
+        'markup srcdoc in a template': `<template id="t"><iframe srcdoc="${attr}"></iframe></template><script>document.documentElement.appendChild(document.getElementById('t').content.cloneNode(true))${CLOSE}`,
+        'setAttribute srcdoc': `<script>var f=document.createElement('iframe');f.setAttribute('srcdoc',${js(nestedDoc)});document.documentElement.appendChild(f)${CLOSE}`,
+        'srcdoc property': `<script>var f=document.createElement('iframe');f.srcdoc=${js(nestedDoc)};document.documentElement.appendChild(f)${CLOSE}`,
+        'script-scheme src property': `<script>var f=document.createElement('iframe');f.src='java'+'script:'+${js(encodeURIComponent(probe))};document.documentElement.appendChild(f)${CLOSE}`,
+        insertAdjacentHTML: `<div id="d"></div><script>document.getElementById('d').insertAdjacentHTML('beforeend','<iframe srcdoc="'+${js(attr)}+'"></iframe>')${CLOSE}`,
+        'document.write': `<script>document.write('<iframe srcdoc="'+${js(attr)}+'"></iframe>')${CLOSE}`,
+        createContextualFragment: `<script>document.documentElement.appendChild(document.createRange().createContextualFragment('<iframe srcdoc="'+${js(attr)}+'"></iframe>'))${CLOSE}`,
+        DOMParser: `<script>var d=new DOMParser().parseFromString('<iframe srcdoc="'+${js(attr)}+'"></iframe>','text/html');document.documentElement.appendChild(document.adoptNode(d.querySelector('iframe')))${CLOSE}`,
+        'shadow root innerHTML': `<div id="d"></div><script>document.getElementById('d').attachShadow({mode:'open'}).innerHTML='<iframe srcdoc="'+${js(attr)}+'"></iframe>'${CLOSE}`,
+        'attribute node': `<script>var f=document.createElement('iframe');var a=document.createAttribute('srcdoc');a.value=${js(nestedDoc)};f.attributes.setNamedItem(a);document.documentElement.appendChild(f)${CLOSE}`,
+      };
+      for (const [name, adm] of Object.entries(nested)) {
+        const page = await browser.newPage();
+        try {
+          await page.goto(serverInfo.url + '/inspector', {
+            waitUntil: 'networkidle2',
+            timeout: 30000,
+          });
+          await page.waitForSelector('#bidReq', { timeout: 10000 });
+          await analyze(page, adm);
+          await page.waitForSelector('#creativePreview iframe', { timeout: 8000 });
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        } finally {
+          await page.close();
+        }
+        assert.equal(udpHits.length, 0, `${name}: no STUN datagram may leave a nested frame`);
+      }
+
       // The inspector must still show an ordinary creative.
       const ok = await browser.newPage();
       try {

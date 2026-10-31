@@ -12,7 +12,7 @@
           "price": 1.8,
           "adomain": ["legacy-brand.example"],
           "mtype": 2,
-          "adm": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"3.0\"><Ad id=\"vast-wrap-001\"><Wrapper><AdSystem>Legacy SSP</AdSystem><VASTAdTagURI><![CDATA[http://wrap.legacy-ssp.example/vast?campaign=001]]></VASTAdTagURI><Impression><![CDATA[http://track.legacy-ssp.example/i?id=001]]></Impression><Creatives><Creative><Linear><VideoClicks><ClickTracking><![CDATA[http://click.legacy-ssp.example/c?id=001]]></ClickTracking></VideoClicks></Linear></Creative></Creatives></Wrapper></Ad></VAST>"
+          "adm": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"3.0\"><Ad id=\"vast-wrap-001\"><Wrapper><AdSystem>Legacy SSP</AdSystem><VASTAdTagURI><![CDATA[http://wrap.legacy-ssp.example/vast?campaign=001]]></VASTAdTagURI><Impression><![CDATA[http://track.legacy-ssp.example/i?id=001]]></Impression><Creatives><Creative><Linear><Duration>00:00:15</Duration><VideoClicks><ClickTracking><![CDATA[http://click.legacy-ssp.example/c?id=001]]></ClickTracking></VideoClicks></Linear></Creative></Creatives></Wrapper></Ad></VAST>"
         }
       ]
     }

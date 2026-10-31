@@ -265,7 +265,16 @@ function createAiLabelModule({ auth, aiLabelLimiter, db, gate } = {}) {
     }
 
     // ── Model fallback: every deterministic source abstained ──────────
+    // Track a caller that disconnects while it waits (for the health check or
+    // for its turn at the model).
+    let clientGone = false;
+    if (typeof res.once === 'function') {
+      res.once('close', () => {
+        if (!res.writableEnded) clientGone = true;
+      });
+    }
     const health = await ollama.verifyPersona();
+    if (clientGone) return undefined;
     if (!health.ok) {
       return sendError(
         res,
@@ -278,15 +287,18 @@ function createAiLabelModule({ auth, aiLabelLimiter, db, gate } = {}) {
     }
 
     try {
-      const suggestion = await modelGate.run(() =>
-        ollama.classifySignal({
+      const suggestion = await modelGate.run(() => {
+        // The caller may have left while waiting for a turn; a call nobody will
+        // read would only delay the people still waiting.
+        if (clientGone) throw Object.assign(new Error('client gone'), { code: 'client_gone' });
+        return ollama.classifySignal({
           signalPath,
           signalValue,
           impSketch: sketch,
           siblingKeys,
           locale,
-        }),
-      );
+        });
+      });
       if (!STORABLE_LABELS.includes(suggestion.label)) {
         // Belt and braces: lib/ollama already checks its own enum, but the
         // set that matters is the one the SAVE route accepts — since
@@ -305,6 +317,7 @@ function createAiLabelModule({ auth, aiLabelLimiter, db, gate } = {}) {
         signal: { path: signalPath, value: signalValue },
       });
     } catch (e) {
+      if (e && e.code === 'client_gone') return undefined; // nobody is listening
       if (e && (e.code === 'gate_full' || e.code === 'gate_wait_timeout')) {
         // Not a model failure and not the caller's fault: the model is busy.
         // Say so plainly, with when to come back; do not page the operator.

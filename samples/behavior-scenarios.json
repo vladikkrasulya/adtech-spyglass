@@ -158,8 +158,8 @@
       "ru": "VAST 3.0 Wrapper с HTTP tracking URL в нодах Impression и Tracking. Современные браузеры блокируют mixed-content поэтому трекеры молча не срабатывают."
     },
     "expected": {
-      "severity_summary": "1 error, 1 warning",
-      "key_findings": ["vast.insecure_url", "vast.linear_duration_missing"]
+      "severity_summary": "0 errors, 1 warning",
+      "key_findings": ["vast.insecure_url"]
     },
     "demonstrates": {
       "en": "Mixed-content tracking loss — insecure trackers fire on HTTP publishers but are silently blocked on HTTPS, causing measurement discrepancies.",

@@ -178,3 +178,42 @@ test('prompt: whatever a caller passes, the model prompt stays small', async () 
   assert.ok(sent, 'the model was called');
   assert.ok(sent.prompt.length < 8000, `prompt is ${sent.prompt.length} chars`);
 });
+
+test('route: a caller that disconnects while queued never reaches the model', async () => {
+  await withStubbedModel(async (stub) => {
+    const started = [];
+    /** @type {(v?: any) => void} */
+    let releaseFirst = () => {};
+    stub(async (/** @type {any} */ input) => {
+      started.push(input.signalValue);
+      if (input.signalValue === 'first') await new Promise((r) => (releaseFirst = r));
+      return { label: 'ignore', confidence: 0.5, reason: 'stub', model: 'stub', source: 'model' };
+    });
+    const mod = createAiLabelModule({
+      auth: authed,
+      gate: createGate({ maxActive: 1, maxQueue: 2, maxWaitMs: 5000 }),
+    });
+    const route = mod.routes.find((r) => r.path === '/api/dialects/suggest-label');
+    const run = (value) => {
+      const res = /** @type {any} */ (makeRes());
+      const listeners = {};
+      res.once = (/** @type {string} */ ev, /** @type {Function} */ fn) => (listeners[ev] = fn);
+      res.writableEnded = false;
+      const done = route.handler(
+        Readable.from([JSON.stringify(unknown({ signal_value: value }))]),
+        res,
+      );
+      return { res, done, hangUp: () => listeners.close && listeners.close() };
+    };
+    const first = run('first');
+    await new Promise((r) => setTimeout(r, 30));
+    const second = run('second');
+    await new Promise((r) => setTimeout(r, 30));
+    second.hangUp();
+    releaseFirst();
+    await Promise.all([first.done, second.done]);
+    assert.deepEqual(started, ['first'], 'the departed caller must not start a model call');
+    assert.equal(first.res.statusCode, 200);
+    assert.equal(second.res.statusCode, 0, 'nothing is written to a closed connection');
+  });
+});
