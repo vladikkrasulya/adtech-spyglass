@@ -16,9 +16,9 @@ const VENDORS = [
   {
     displayName: 'Marked',
     packageName: 'marked',
-    version: '18.0.11',
+    version: '18.1.1',
     repository: 'https://github.com/markedjs/marked',
-    release: 'v18.0.11',
+    release: 'v18.1.1',
     sourceAsset: 'node_modules/marked/lib/marked.esm.js',
     publicAsset: 'public/vendor/marked.es.js',
     sourceLicense: 'node_modules/marked/LICENSE',
@@ -141,7 +141,7 @@ function createSyntheticVendorRepo() {
     JSON.stringify({
       devDependencies: {
         dompurify: '3.4.17',
-        marked: '18.0.11',
+        marked: '18.1.1',
       },
     }),
   );
@@ -153,7 +153,7 @@ function createSyntheticVendorRepo() {
         '': {
           devDependencies: {
             dompurify: '3.4.17',
-            marked: '18.0.11',
+            marked: '18.1.1',
           },
         },
         'node_modules/dompurify': {
@@ -163,9 +163,9 @@ function createSyntheticVendorRepo() {
           integrity: 'sha512-synthetic-dompurify',
         },
         'node_modules/marked': {
-          version: '18.0.11',
+          version: '18.1.1',
           dev: true,
-          resolved: 'https://registry.npmjs.org/marked/-/marked-18.0.11.tgz',
+          resolved: 'https://registry.npmjs.org/marked/-/marked-18.1.1.tgz',
           integrity: 'sha512-synthetic-marked',
         },
       },
@@ -174,7 +174,7 @@ function createSyntheticVendorRepo() {
   writeFixtureFile(
     root,
     'node_modules/marked/package.json',
-    JSON.stringify({ version: '18.0.11' }),
+    JSON.stringify({ version: '18.1.1' }),
   );
   writeFixtureFile(root, 'node_modules/marked/lib/marked.esm.js', 'marked-v1\n');
   writeFixtureFile(root, 'node_modules/marked/LICENSE', 'marked-license-v1\n');
