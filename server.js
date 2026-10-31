@@ -155,6 +155,11 @@ const gistWriteLimiter = makeAnalyzeLimiter(GIST_WRITE_MAX_PER_WINDOW);
 const LIBRARY_WRITE_MAX_PER_WINDOW = Number(process.env.LIBRARY_WRITE_MAX_PER_WINDOW) || 120;
 const libraryWriteLimiter = makeAnalyzeLimiter(LIBRARY_WRITE_MAX_PER_WINDOW);
 
+// Outbound proxy harness (/api/proxy). Keyed by USER id; the route is auth-gated
+// and off until an allow-list is configured, so a low ceiling is plenty.
+const PROXY_MAX_PER_WINDOW = Number(process.env.PROXY_MAX_PER_WINDOW) || 20;
+const proxyLimiter = makeAnalyzeLimiter(PROXY_MAX_PER_WINDOW);
+
 // Dialect labelling assistant. Keyed by USER id, not IP: the route is
 // auth-gated, and a shared office NAT should not have one person's labelling
 // session throttle everyone else's. Each miss in the deterministic lexicon
@@ -866,6 +871,7 @@ router.register(createBlogModule({ readLimiter, auth, READ_MAX_PER_WINDOW }));
 router.register(
   createProxyModule({
     auth,
+    proxyLimiter,
     allowedHosts: parseAllowedHosts(process.env.ORTBTOOLS_PROXY_ALLOWED_HOSTS),
   }),
 );

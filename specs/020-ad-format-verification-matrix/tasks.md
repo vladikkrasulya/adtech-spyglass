@@ -83,4 +83,4 @@ Dependency: T022 applicability review precedes T023/T024 decisions; fixture auth
 
 ## Delivery of the completed implementation
 
-The operator must commit the verified scope, perform the standing-authorized non-force push, and wait for hosted checks before reporting delivery complete. The pre-push hook remains mandatory. These operational outcomes are recorded in `/home/vk/.local/share/ortbtools-research/2026-09-08-coverage-closure/delivery.json`, separately from the completed implementation tasks, so the committed report does not invent its own future commit SHA or hosted result.
+The operator must commit the verified scope, perform the standing-authorized non-force push, and wait for hosted checks before reporting delivery complete. The pre-push hook remains mandatory. These operational outcomes are recorded in `/home/<user>/.local/share/ortbtools-research/2026-09-08-coverage-closure/delivery.json`, separately from the completed implementation tasks, so the committed report does not invent its own future commit SHA or hosted result.

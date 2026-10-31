@@ -139,5 +139,5 @@
   - `~/.local/share/ortbtools-research/prebid-2026-08-20/prebid-server/adapters/gumgum/gumgum.go`
   - `specs/008-openrtb-dialect-verification/{plan,tasks,data-model}.md`, `specs/ROADMAP.md`
   - `specs/decisions/ADR-005-evidence-driven-dialects.md`, `ADR-012-bounded-model-assist-on-dialect-labelling.md`
-  - `/srv/DATA/Stacks/gpunode/docker-compose.yml`, `/srv/DATA/Stacks/ollama-deep/docker-compose.yml`
+  - `<stacks>/gpunode/docker-compose.yml`, `<stacks>/ollama-deep/docker-compose.yml`
   - Session record 2026-08-21…23 (external audit verified claim by claim)

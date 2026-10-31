@@ -39,7 +39,7 @@ preserves the original unbounded-growth defect.
 
 ## Decision 4 — Archive the WIP backup tree by rename, not deletion
 
-**Decision**: Move the exact June 28 directory beneath `/srv/DATA/Backups/archive/` and verify source
+**Decision**: Move the exact June 28 directory beneath `$BACKUP_DIR/archive/` and verify source
 absence plus destination inventory.
 
 **Rationale**: The tree is outside the documented cron contract but may contain recovery evidence.
@@ -146,7 +146,7 @@ unmerged historical branch remains the original owner choice.
   isolated regression tests cover misleading tag order, uninspectable and malformed timestamps,
   removal races, a failed candidate listing, and the at-most-ten case.
 - **Backup archive**: the named tree was renamed intact to
-  `/srv/DATA/Backups/archive/ortbtools-wip-backups-2026-06-28`. Source and destination resolved to
+  `$BACKUP_DIR/archive/ortbtools-wip-backups-2026-06-28`. Source and destination resolved to
   device/inode `66306:6029631`; the archived tree has 16 files, 5 directories, 6,533,879 bytes, and
   content-manifest SHA-256 `bcff9e6f7da070b9a11cf4777dde4aba943bfbbed4f8c82ecd0e54d9c1651487`.
 - **Dependency PR**: refreshed head `d46a0bc65eeb298b0e2a17e92cbe2b10749c01d3` passed its actual

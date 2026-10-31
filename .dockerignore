@@ -63,5 +63,11 @@ coverage/
 .nyc_output/
 tests/
 
+# Security-gate inputs: Semgrep rules and their test cases (CI only)
+semgrep/
+.semgrepignore
+.gitleaks.toml
+.gitleaksignore
+
 # Host-only ops tooling (deploy/rollback/smoke/backup run on the host)
 scripts/

@@ -172,7 +172,7 @@ docker exec postgres psql -U postgres -d news -c \
 # Має бути 0
 ```
 
-Update CH replication script (`/srv/DATA/Stacks/clickhouse/scripts/replicate-news.sh`):
+Update CH replication script (`<stacks>/clickhouse/scripts/replicate-news.sh`):
 
 - `hot_score` НЕ йде в SELECT (він і не йшов раніше — там `hot_score_llm`)
 - Підтвердити що `analytics.news_events` теж не має цієї колонки (немає)
@@ -183,7 +183,7 @@ Update будь-які SQL queries в:
 - Portal `services/news.js`, `services/digest.js`, `services/goodNews.js`
 - ortbtools admin stats? (ні, це інша БД)
 
-Пошуковий рядок: `grep -rn 'hot_score[^_]' /srv/DATA/Stacks/`
+Пошуковий рядок: `grep -rn 'hot_score[^_]' <stacks>/`
 
 ### Тести
 

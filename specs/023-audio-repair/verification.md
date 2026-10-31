@@ -63,12 +63,12 @@ an outcome.
 
 ## Reproduction and Process Isolation
 
-Evidence directory: `/home/vk/.local/share/ortbtools-research/2026-09-08-023-audio-repair/`.
+Evidence directory: `/home/<user>/.local/share/ortbtools-research/2026-09-08-023-audio-repair/`.
 
 From its `worktree/`, the exact complete gate is preserved by:
 
 ```bash
-bash /home/vk/.local/share/ortbtools-research/2026-09-08-023-audio-repair/run-isolated-ci.sh
+bash /home/<user>/.local/share/ortbtools-research/2026-09-08-023-audio-repair/run-isolated-ci.sh
 bash scripts/npm-pack-smoke.sh
 bash scripts/ci-docker-smoke.sh ortbtools-ci-smoke:audio-023-20260908-accepted
 git diff --check

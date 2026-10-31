@@ -136,7 +136,7 @@ MARKED_JS="$(curl -fsS --max-time 8 --user-agent 'ortbtools-ci-docker-smoke/1' \
   "http://127.0.0.1:${PORT}${MARKED_PATH}")"
 DOMPURIFY_JS="$(curl -fsS --max-time 8 --user-agent 'ortbtools-ci-docker-smoke/1' \
   "http://127.0.0.1:${PORT}${DOMPURIFY_PATH}")"
-grep -q 'v18.0.11' <<<"$MARKED_JS" || {
+grep -q 'v18.1.1' <<<"$MARKED_JS" || {
   echo "FAIL: production-served Marked asset version drifted" >&2
   exit 1
 }
@@ -146,8 +146,8 @@ grep -q 'DOMPurify 3.4.17' <<<"$DOMPURIFY_JS" || {
 }
 
 NOTICE="$(docker exec "$CONTAINER" cat /app/public/vendor/NOTICE.txt)"
-grep -q 'Package: marked@18.0.11' <<<"$NOTICE" || {
-  echo "FAIL: vendor notice omits Package: marked@18.0.11" >&2
+grep -q 'Package: marked@18.1.1' <<<"$NOTICE" || {
+  echo "FAIL: vendor notice omits Package: marked@18.1.1" >&2
   exit 1
 }
 grep -q 'Package: dompurify@3.4.17' <<<"$NOTICE" || {
