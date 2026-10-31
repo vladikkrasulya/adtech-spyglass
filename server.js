@@ -268,7 +268,7 @@ const CONTENT_TYPES = {
   '.gif': 'image/gif',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
-  '.txt': 'text/plain',
+  '.txt': 'text/plain; charset=utf-8',
 };
 
 // Locale routing for the static UI. English (the global default) lives at
@@ -832,6 +832,11 @@ router.register(
     db,
   }),
 );
+// Saved-library writes are cookie-authenticated, so they refuse requests that a
+// foreign page made the browser send (see guardMutations / crossSiteRejection).
+// The same guard already fronts every /api/auth/* POST.
+const guardLibrary = (mod) =>
+  httpLib.guardMutations(mod, () => ({ publicBaseUrl: getPublicBaseUrl() }));
 router.register(
   createIntelModule({
     intelLimiter,
@@ -841,16 +846,18 @@ router.register(
   }),
 );
 router.register(
-  createCorpusModule({
-    auth,
-    BehaviorCorpus,
-    libraryWriteLimiter,
-    computeCorpusMatrix: (userId) =>
-      _computeCorpusMatrix({ BehaviorCorpus, analyzeBehavior }, userId),
-  }),
+  guardLibrary(
+    createCorpusModule({
+      auth,
+      BehaviorCorpus,
+      libraryWriteLimiter,
+      computeCorpusMatrix: (userId) =>
+        _computeCorpusMatrix({ BehaviorCorpus, analyzeBehavior }, userId),
+    }),
+  ),
 );
 router.register(createAccountModule({ auth, AnalyzeLog }));
-router.register(createDialectsModule({ auth, db, libraryWriteLimiter }));
+router.register(guardLibrary(createDialectsModule({ auth, db, libraryWriteLimiter })));
 router.register(createAiLabelModule({ auth, aiLabelLimiter, db }));
 router.register(createCreativeAssetModule({ auth, assetLimiter }));
 router.register(createAdminModule({ db, Users, auth }));
@@ -901,8 +908,8 @@ router.register(
     // engine has no model to warm. The auth module keeps its no-op stub.
   }),
 );
-router.register(createPartnersModule({ auth, Partners, libraryWriteLimiter }));
-router.register(createSamplesModule({ auth, Samples, libraryWriteLimiter }));
+router.register(guardLibrary(createPartnersModule({ auth, Partners, libraryWriteLimiter })));
+router.register(guardLibrary(createSamplesModule({ auth, Samples, libraryWriteLimiter })));
 // stream module registered after streamGenerator + streamBuffer are
 // instantiated lower in the file — see the second router.register() block
 // near line ~1180.
@@ -1267,6 +1274,13 @@ function attachRequestLogger(req, res, pathname) {
 
 const server = http.createServer((req, res) => {
   applyBaselineHeaders(res);
+  // Every API response is per-caller or live until a handler says otherwise:
+  // keep shared caches and the browser's back/forward store from keeping a
+  // signed-in user's data. Handlers that serve public, cacheable data set their
+  // own Cache-Control, which replaces this default.
+  if (typeof req.url === 'string' && req.url.startsWith('/api/')) {
+    res.setHeader('Cache-Control', 'no-store');
+  }
 
   let parsed;
   try {
@@ -1280,7 +1294,14 @@ const server = http.createServer((req, res) => {
   try {
     // Backend module router first; falls through on miss to the inline
     // if-chain below as modules migrate over.
-    const hit = router.match(req.method, pathname);
+    // HEAD is GET without a body (Node drops the body for us), so monitors and
+    // link checkers that probe with HEAD get the same status as a GET would.
+    // The live event stream is the one GET that must not be opened by a probe.
+    let hit = router.match(req.method, pathname);
+    if (!hit && req.method === 'HEAD') {
+      const asGet = router.match('GET', pathname);
+      if (asGet && asGet.moduleId !== 'stream') hit = asGet;
+    }
     if (hit) {
       const out = hit.handler(req, res, parsed, hit.match);
       if (out && typeof out.then === 'function') {
