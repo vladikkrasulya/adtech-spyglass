@@ -60,7 +60,7 @@ stub.listen(0, '127.0.0.1', () => {
           method: req.method,
           url: `http://127.0.0.1${req.url}`,
           query_string: String(req.url).split('?')[1] || '',
-          headers: req.headers,
+          headers: /** @type {Record<string, string>} */ (req.headers),
           cookies: { visitor: V.cookie },
         },
       });
