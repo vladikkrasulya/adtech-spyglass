@@ -171,11 +171,7 @@ function createSyntheticVendorRepo() {
       },
     }),
   );
-  writeFixtureFile(
-    root,
-    'node_modules/marked/package.json',
-    JSON.stringify({ version: '18.1.1' }),
-  );
+  writeFixtureFile(root, 'node_modules/marked/package.json', JSON.stringify({ version: '18.1.1' }));
   writeFixtureFile(root, 'node_modules/marked/lib/marked.esm.js', 'marked-v1\n');
   writeFixtureFile(root, 'node_modules/marked/LICENSE', 'marked-license-v1\n');
   writeFixtureFile(

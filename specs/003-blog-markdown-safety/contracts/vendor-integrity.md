@@ -6,7 +6,7 @@ The Blog browser renderer has two reviewed third-party source packages:
 
 | Package   | Exact version | Public runtime asset            | Provenance rule                                                                      | License    |
 | --------- | ------------- | ------------------------------- | ------------------------------------------------------------------------------------ | ---------- |
-| Marked    | `18.1.1`     | `public/vendor/marked.es.js`    | Byte-identical to npm `lib/marked.esm.js`                                            | MIT        |
+| Marked    | `18.1.1`      | `public/vendor/marked.es.js`    | Byte-identical to npm `lib/marked.esm.js`                                            | MIT        |
 | DOMPurify | `3.4.17`      | `public/vendor/dompurify.es.js` | Byte-identical to npm `dist/purify.es.mjs`; release tag `3.4.17` at commit `a77a3e7` | Apache-2.0 |
 
 Both package versions are exact root development dependencies. They provide lockfile integrity,
