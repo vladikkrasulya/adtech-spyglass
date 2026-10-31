@@ -11,9 +11,9 @@ const VENDORS = [
   {
     displayName: 'Marked',
     packageName: 'marked',
-    version: '18.0.11',
+    version: '18.1.1',
     repository: 'https://github.com/markedjs/marked',
-    release: 'v18.0.11',
+    release: 'v18.1.1',
     sourceAsset: 'node_modules/marked/lib/marked.esm.js',
     publicAsset: 'public/vendor/marked.es.js',
     sourceLicense: 'node_modules/marked/LICENSE',
