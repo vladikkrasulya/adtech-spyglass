@@ -272,7 +272,7 @@ runs and 2 consecutive full CI runs green afterwards.
   #4. Merged to `main` and deployed from there. Production had been sitting at
   `0e5b6da` while `main` was `1e12257` — core-only, no behaviour difference —
   and this closes that gap too.
-- Codex is on `feat/vast-timeline` in `/srv/DATA/Work/ortbtools-diff`, building
+- Codex is on `feat/vast-timeline` in `<work>/ortbtools-diff`, building
   Priority #5's VAST extractor under `packages/core/vast-timeline/`. Its brief
   forbids `packages/core/index.js`, `spec-refs.json`, `rules-vast.js`,
   `tests/vast.test.js`, `public/**`, `scripts/gen-browser-core.js`, `server.js`,

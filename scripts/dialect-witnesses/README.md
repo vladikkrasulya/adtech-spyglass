@@ -6,7 +6,7 @@ Prebid Server checkout at `0ba352315253f6692af6497d553cfb12909a1b8b`.
 No third-party source tree is included here. The adapter source is Apache-2.0;
 the retained corpus records its attribution and source citations.
 
-The prepared environment on `vkbox` is
+The prepared environment on the maintainer's host is
 `/tmp/ortbtools-dialect033-kplg6vsh`. Official Go1.25.0 was checked against
 `go.dev` SHA256, and dependencies were downloaded in a separate preparation
 step. Its `evidence/prerequisites.json` contains the exact toolchain/image

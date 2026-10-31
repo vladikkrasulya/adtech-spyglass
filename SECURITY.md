@@ -16,7 +16,7 @@ the maintainer has had a chance to ship a fix.
 
 ## What's out of scope
 
-- Third-party services (Cloudflare Tunnel, Resend, Telegram, IAB GitHub).
+- Third-party services (the edge provider, Resend, Telegram, IAB GitHub).
 - Issues caused by users running modified forks with their own
   configuration.
 - Theoretical attacks on bcrypt / PBKDF2 / AES-GCM / Web Crypto themselves
@@ -98,3 +98,17 @@ network boundary above. A change to creative-asset URL parsing, address normaliz
 DNS resolution, connection targeting, redirects, response types, size, or timeout must update the
 [HTTP/server contract](./specs/000-platform-baseline/contracts/http-api.md) and its asset-fetch and
 traffic-class regression tests in the same change.
+
+## How security work is done
+
+- Every change goes through a pull request with required checks: formatting, lint, type check, the
+  full test suite, an `npm audit` gate on production dependencies, and a Docker smoke of the
+  production image.
+- Third-party workflow actions are pinned to full commit SHAs and the default job token is
+  read-only; `tests/workflow-hardening.test.js` keeps that from regressing.
+- Secret scanning, push protection and dependency alerts are enabled on the repository; vendored
+  browser libraries are updated only through the sync script described above.
+- A security fix ships together with a regression test that fails on the old behavior, and is
+  recorded in the `Security` section of [`CHANGELOG.md`](./CHANGELOG.md) once it is released.
+- The maintainer reviews the code and the deployment periodically and plans the resulting work in
+  small independent changes (see [the roadmap](./specs/ROADMAP.md)).

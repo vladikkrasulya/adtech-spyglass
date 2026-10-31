@@ -22,7 +22,7 @@ now explicitly disposed of below. Closing the cycle does not turn unmet quality 
   operational-state statements are historical. This archive is the final disposition.
 
 The independent archive is
-`/home/vk/.local/share/ortbtools-research/archive/2026-09-05/bench-results-and-replay-code.tgz`
+`/home/<user>/.local/share/ortbtools-research/archive/2026-09-05/bench-results-and-replay-code.tgz`
 on `vkbox` (28,700,578 bytes). Its SHA-256 is
 `a78e5d1ea98cb567f2fce96020ecda5e0b0437d3561de8dc588142dd0415f27d`.
 It is outside the production checkout and data volume. The three incomplete directories are
@@ -76,7 +76,7 @@ active experiment queue. No model was downloaded, restored, deleted or reconfigu
 The compact evidence above is versioned in SpecKit. To verify the independent raw copy on `vkbox`:
 
 ```bash
-cd /home/vk/.local/share/ortbtools-research/archive/2026-09-05
+cd /home/<user>/.local/share/ortbtools-research/archive/2026-09-05
 sha256sum -c SHA256SUMS
 tar -tzf bench-results-and-replay-code.tgz >/dev/null
 ```
