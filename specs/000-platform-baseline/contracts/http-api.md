@@ -130,6 +130,21 @@ Every `POST` in the auth family refuses cross-site browser requests with `403 cr
 `POST /api/auth/verify-email/request` answers `email_sent: false` when the mailer ran in its
 dev-mode short-circuit and delivered nothing.
 
+A password-reset link is single-use: the token is bound to a fingerprint of the account's password
+hash, so it stops working (`400 stale_token`) once any reset has succeeded for that account, which
+also retires every other outstanding link for it. Links issued before the binding was introduced
+carry no fingerprint and stay valid until their own 15-minute expiry.
+
+The state-changing routes of the saved library (samples, partners, dialects including import and
+mappings, Behavior Corpus) apply the same cross-site guard (`403 cross_site_request`, `415
+unsupported_media_type`); their reads are unchanged.
+
+Every `/api/*` response carries `Cache-Control: no-store` unless its handler sets a cache policy
+(public read endpoints do). `HEAD` on a `GET` route answers with that route's status and headers and
+no body; the live event stream and the email-confirmation link (a GET that changes data) answer `HEAD` with `405`. Every `429` carries `Retry-After` (seconds): the
+limiter's window (60 for the per-minute limiters; the time until reset for the daily share-link quota). `/.well-known/security.txt` (RFC 9116) names the
+security contact and carries an `Expires` date that must be renewed before it passes.
+
 `POST /api/auth/delete-account` is the self-service erasure route. It needs a session, the CSRF guard
 above and a JSON body `{ "password": "<current password>" }`. Answers: `200 {success:true,
 deleted:true}` (and an expiring `ot_session` cookie); `400 invalid_request` (no password);

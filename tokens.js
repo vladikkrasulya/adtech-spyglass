@@ -17,6 +17,9 @@
  *   - signature comparison is timing-safe (crypto.timingSafeEqual)
  *   - purpose is part of payload AND verified explicitly to prevent
  *     cross-purpose replay (a `verify` token can't be used as `reset`).
+ *   - a reset token can bind the user's password fingerprint (`pv`), which makes
+ *     it single-use: changing the password invalidates every outstanding reset
+ *     token for that account, still without any server-side token state.
  */
 
 const crypto = require('crypto');
@@ -52,10 +55,28 @@ function hmac(payloadB64u, secret) {
 }
 
 /**
- * @param {{ purpose: string, user_id: number, email: string, expirySeconds: number }} args
+ * Short, stable fingerprint of a stored password hash. A reset token carries it
+ * so the token stops working the moment the password it was issued against
+ * changes — by its own use or any other way — without any server-side token
+ * table. It is derived from the hash with a domain prefix and truncated, so the
+ * token reveals nothing usable about the hash.
+ * @param {string} passwordHash
+ * @returns {string}
+ */
+function passwordFingerprint(passwordHash) {
+  return crypto
+    .createHash(ALGO)
+    .update('ortbtools:reset:pv:' + String(passwordHash))
+    .digest('base64url')
+    .slice(0, 22);
+}
+
+/**
+ * @param {{ purpose: string, user_id: number, email: string, expirySeconds: number, pv?: string }} args
+ *   `pv`: optional password fingerprint (see passwordFingerprint) bound into the token.
  * @returns {string} token
  */
-function signToken({ purpose, user_id, email, expirySeconds }) {
+function signToken({ purpose, user_id, email, expirySeconds, pv }) {
   if (!purpose || typeof purpose !== 'string') {
     throw new Error('signToken: purpose required (string)');
   }
@@ -77,6 +98,7 @@ function signToken({ purpose, user_id, email, expirySeconds }) {
     iat: now,
     exp: now + Math.floor(expirySeconds),
   };
+  if (pv !== undefined) payload.pv = String(pv);
   const payloadB64u = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const sigB64u = hmac(payloadB64u, getSecret()).toString('base64url');
   return `${payloadB64u}.${sigB64u}`;
@@ -85,7 +107,7 @@ function signToken({ purpose, user_id, email, expirySeconds }) {
 /**
  * @param {string} token
  * @param {string} expectedPurpose
- * @returns {{ purpose: string, user_id: number, email: string, iat: number, exp: number }}
+ * @returns {{ purpose: string, user_id: number, email: string, iat: number, exp: number, pv?: string }}
  * @throws {TokenError} with code 'malformed' | 'tampered' | 'expired' | 'wrong-purpose'
  */
 function verifyToken(token, expectedPurpose) {
@@ -139,4 +161,4 @@ function verifyToken(token, expectedPurpose) {
   return payload;
 }
 
-module.exports = { signToken, verifyToken, TokenError };
+module.exports = { signToken, verifyToken, passwordFingerprint, TokenError };

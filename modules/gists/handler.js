@@ -41,6 +41,7 @@ const {
   readJson,
   sendJson,
   sendError,
+  setRetryAfter,
   MAX_BODY_BYTES: GLOBAL_MAX_BODY_BYTES,
 } = require('../../lib/http');
 const log = require('../../lib/logger').child('gists');
@@ -162,6 +163,13 @@ function createGistsModule(deps) {
     return true;
   }
 
+  /** Seconds until this address's daily budget window resets. */
+  function quotaResetSeconds(ip) {
+    const entry = ipBytes.get(ip);
+    if (!entry) return 1;
+    return Math.max(1, Math.ceil((entry.windowStart + IP_QUOTA_WINDOW_MS - Date.now()) / 1000));
+  }
+
   // ── POST /api/v1/gists ───────────────────────────────────────────────────
   function handleCreate(req, res) {
     const ip = (() => {
@@ -228,6 +236,9 @@ function createGistsModule(deps) {
           );
         }
         if (!chargeIp(ip, ciphertext.length)) {
+          // The budget is a fixed 24 h window: tell the caller when it resets,
+          // not the per-minute default.
+          setRetryAfter(res, quotaResetSeconds(ip));
           return sendError(
             res,
             429,

@@ -56,7 +56,7 @@ function createSentryIngestModule({ logger }) {
     // configured proxy and takes the hop a client cannot prepend past.
     const ip = resolveClientIp(req) || 'unknown';
     if (!rateLimitOk(ip)) {
-      res.writeHead(429, { 'Content-Type': 'text/plain' });
+      res.writeHead(429, { 'Content-Type': 'text/plain', 'Retry-After': '60' });
       res.end('rate_limited');
       return;
     }

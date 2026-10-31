@@ -1,0 +1,6 @@
+# Security contact for ortbtools (RFC 9116).
+Contact: mailto:hi@kyivtech.com.ua
+Expires: 2027-04-30T00:00:00.000Z
+Preferred-Languages: en, uk, ru
+Canonical: https://ortbtools.com/.well-known/security.txt
+Policy: https://github.com/vladikkrasulya/adtech-spyglass/blob/main/SECURITY.md

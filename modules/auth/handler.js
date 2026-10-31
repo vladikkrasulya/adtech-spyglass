@@ -47,7 +47,8 @@ const log = require('../../lib/logger').child('auth');
  *   degrades to preferred_locale -> 'en' instead of throwing.
  */
 
-const { readJson, sendJson, sendError, guardCrossSite } = require('../../lib/http');
+const { readJson, sendJson, sendError, guardCrossSite, setRetryAfter } = require('../../lib/http');
+const { passwordFingerprint } = require('../../tokens');
 
 /**
  * The ONE string the client is allowed to see when an outbound email
@@ -168,6 +169,9 @@ function createAuthRoutesModule(deps) {
         : error.code === 'session_state_changed'
           ? AUTH_CHANGED_PUBLIC_MSG[locale]
           : error.message;
+    if (error.status === 429 && Number.isFinite(error.retryAfter)) {
+      setRetryAfter(res, error.retryAfter);
+    }
     return sendError(res, error.status || 400, error.code || 'bad_request', message);
   }
 
@@ -327,6 +331,7 @@ function createAuthRoutesModule(deps) {
     if (!user) return sendError(res, 401, 'unauthorized', 'Sign in first');
     const locale = resolveEmailLocale(user, req);
     if (!auth.checkVerifyEmailLimit(req)) {
+      setRetryAfter(res, 60 * 60);
       return sendError(
         res,
         429,
@@ -419,6 +424,19 @@ function createAuthRoutesModule(deps) {
     }
   }
 
+  /**
+   * True when a reset token is still the one issued against the account's
+   * current password. Tokens minted before password binding existed carry no
+   * `pv`; they remain valid until their own expiry (at most RESET_TOKEN_TTL
+   * after the release that introduced binding).
+   * @param {{ email: string, pv?: string }} payload
+   */
+  function resetTokenCurrent(payload) {
+    if (payload.pv === undefined) return true;
+    const full = Users.getByEmail(payload.email);
+    return !!full && payload.pv === passwordFingerprint(full.password_hash);
+  }
+
   // Public — always returns 200 (don't leak which emails exist).
   function handleForgotPassword(req, res) {
     return readJson(req)
@@ -436,6 +454,9 @@ function createAuthRoutesModule(deps) {
                 user_id: u.id,
                 email: u.email,
                 expirySeconds: RESET_TOKEN_TTL,
+                // Bind the token to the password it was issued against, so using
+                // it (or changing the password any other way) retires it.
+                pv: passwordFingerprint(u.password_hash),
               });
               const locale = resolveEmailLocale(u, req);
               sendResetEmail({ email: u.email }, tok, getPublicBaseUrl(), locale).catch((err) => {
@@ -461,6 +482,7 @@ function createAuthRoutesModule(deps) {
   // Same-token-as-proof: no separate auth needed.
   function handleResetPasswordState(req, res) {
     if (!auth.checkResetStateLimit(req)) {
+      setRetryAfter(res, 15 * 60);
       return sendError(
         res,
         429,
@@ -478,7 +500,7 @@ function createAuthRoutesModule(deps) {
           return sendError(res, 400, code, 'Reset link is invalid or expired');
         }
         const u = Users.get(payload.user_id);
-        if (!u || u.email !== payload.email) {
+        if (!u || u.email !== payload.email || !resetTokenCurrent(payload)) {
           return sendError(res, 400, 'stale_token', 'Reset link is no longer valid');
         }
         const cs = Users.getCryptoState(payload.user_id);
@@ -496,10 +518,12 @@ function createAuthRoutesModule(deps) {
   function handleResetPassword(req, res) {
     // Phase 9b/freeze (audit P0.1): per-IP cap to keep bcrypt.compare in
     // mode='rotate' from being a brute-force endpoint for the user's old
-    // password. Reset tokens are short-lived but reusable until expiry,
-    // so a held token + spamming /reset-password could try thousands of
-    // old-password guesses without this limiter.
+    // password. A token stays usable until a reset succeeds (a wrong old
+    // password does not consume it), so a held token + spamming
+    // /reset-password could try thousands of old-password guesses without
+    // this limiter.
     if (!auth.checkResetPasswordLimit(req)) {
+      setRetryAfter(res, 15 * 60);
       return sendError(
         res,
         429,
@@ -517,7 +541,7 @@ function createAuthRoutesModule(deps) {
           return sendError(res, 400, code, 'Reset link is invalid or expired');
         }
         const u = Users.get(payload.user_id);
-        if (!u || u.email !== payload.email) {
+        if (!u || u.email !== payload.email || !resetTokenCurrent(payload)) {
           return sendError(res, 400, 'stale_token', 'Reset link is no longer valid');
         }
         if (typeof b.newPassword !== 'string') {
@@ -539,6 +563,11 @@ function createAuthRoutesModule(deps) {
           }
           const newHash = await auth.hashPassword(b.newPassword);
           auth.assertWritable?.();
+          // The password hash above took a while; a second request that used the
+          // same token meanwhile has already retired it.
+          if (!resetTokenCurrent(payload)) {
+            return sendError(res, 400, 'stale_token', 'Reset link is no longer valid');
+          }
           if (Users.getByEmail(payload.email)?.password_hash !== fullUser.password_hash) {
             return sendError(
               res,
@@ -567,6 +596,11 @@ function createAuthRoutesModule(deps) {
           }
           const newHash = await auth.hashPassword(b.newPassword);
           auth.assertWritable?.();
+          // The password hash above took a while; a second request that used the
+          // same token meanwhile has already retired it.
+          if (!resetTokenCurrent(payload)) {
+            return sendError(res, 400, 'stale_token', 'Reset link is no longer valid');
+          }
           // Same atomicity contract as 'rotate' — locked-out-on-crash was a
           // missed defect in the original audit (caught on second pass).
           Users.updatePasswordAndCrypto(payload.user_id, newHash, {
@@ -581,6 +615,11 @@ function createAuthRoutesModule(deps) {
           // keeps old state or transitions to clean-slate, never a half-state.
           const newHash = await auth.hashPassword(b.newPassword);
           auth.assertWritable?.();
+          // The password hash above took a while; a second request that used the
+          // same token meanwhile has already retired it.
+          if (!resetTokenCurrent(payload)) {
+            return sendError(res, 400, 'stale_token', 'Reset link is no longer valid');
+          }
           Users.updatePasswordAndWipe(payload.user_id, newHash);
         } else {
           return sendError(res, 400, 'invalid_mode', `Unknown reset mode: ${mode}`);
@@ -624,6 +663,7 @@ function createAuthRoutesModule(deps) {
     const user = auth.getCurrentUser(req);
     if (!user) return sendError(res, 401, 'unauthorized', 'Sign in first');
     if (!auth.checkDeleteAccountLimit(req, user.id)) {
+      setRetryAfter(res, 15 * 60);
       return sendError(
         res,
         429,
@@ -708,6 +748,8 @@ function createAuthRoutesModule(deps) {
         method: 'GET',
         path: '/api/auth/verify-email/confirm',
         handler: handleVerifyEmailConfirm,
+        // Confirming changes data; a HEAD probe must not do it.
+        noHead: true,
       },
       post('/api/auth/forgot-password', handleForgotPassword),
       post('/api/auth/reset-password/state', handleResetPasswordState),

@@ -334,6 +334,7 @@ function createAuth({ Users, Sessions, recovery, logger }) {
       );
       e.code = 'rate_limited';
       e.status = 429;
+      /** @type {any} */ (e).retryAfter = 60 * 60;
       throw e;
     }
     if (typeof email !== 'string' || !EMAIL_RE.test(email.trim().toLowerCase())) {
@@ -394,6 +395,7 @@ function createAuth({ Users, Sessions, recovery, logger }) {
       );
       e.code = 'rate_limited';
       e.status = 429;
+      /** @type {any} */ (e).retryAfter = 15 * 60;
       throw e;
     }
     if (typeof email !== 'string' || typeof password !== 'string') {
