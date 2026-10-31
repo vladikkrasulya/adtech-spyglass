@@ -40,7 +40,7 @@ test('CSP directives remain structural containment and are not treated as Blog s
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
     "connect-src 'self'",
-    "frame-src 'self' data: blob:",
+    "frame-src 'none'",
     "frame-ancestors 'self'",
     "form-action 'self'",
     "base-uri 'self'",

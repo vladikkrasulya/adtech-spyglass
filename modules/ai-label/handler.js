@@ -40,6 +40,10 @@
  *   — the local model was reached but failed. 424 rather than 502/504 because
  *   Cloudflare replaces an origin 502/504 with a plain-text `error code: 5xx`
  *   page and the UI would lose the machine-readable `code`.
+ * Response 429: { code: 'labeller_busy', error } + Retry-After — the model is
+ *   serving other requests and this one could not get a turn in time. A bounded
+ *   queue sits in front of the model (lib/concurrency-gate.js) so a burst is
+ *   answered promptly instead of timing out inside the runner's own queue.
  * Response 503: { code: 'labeller_unavailable', error } — Ollama unreachable
  *   or the model absent. The client must degrade to the manual builder, not
  *   pretend the feature is thinking. `code` is what the UI branches on;
@@ -57,10 +61,28 @@ const {
 } = require('../../packages/core/dialects/user-dialect-runtime');
 const { STORABLE_LABELS } = require('../../packages/core/dialects/key-role-vocabulary');
 const ollama = require('../../lib/ollama');
+const { createGate } = require('../../lib/concurrency-gate');
 const log = require('../../lib/logger').child('ai-label');
 
 const SIGNAL_PATH_MAX = 200;
+// Bounds the value as it will be written into the model prompt: for a string its
+// length, for a number/boolean/object/array its JSON text. A string was already
+// capped; an object or array was not, so one request could put megabytes into
+// the prompt of a single-slot, CPU-bound model.
 const SIGNAL_VALUE_MAX = 512;
+// A real request is a path, a small value and one impression. The route redacts
+// the impression to a few fields, so this only has to admit an unusually large
+// impression the editor sends whole.
+const BODY_MAX_BYTES = 256 * 1024;
+// One model call at a time (the runner is single-slot), a short queue behind it,
+// and a bounded wait: past that the caller is told to retry rather than left to
+// time out inside the runner. Tunable for a faster box.
+const MAX_CONCURRENT = Math.max(1, Number(process.env.AI_LABEL_MAX_CONCURRENT) || 1);
+const MAX_QUEUE = Number.isFinite(Number(process.env.AI_LABEL_MAX_QUEUE))
+  ? Math.max(0, Number(process.env.AI_LABEL_MAX_QUEUE))
+  : 4;
+const QUEUE_WAIT_MS = Number(process.env.AI_LABEL_QUEUE_WAIT_MS) || 12_000;
+const BUSY_RETRY_AFTER_S = 5;
 // Mirrors the ?locale= pattern documented in public/i18n.js and used by
 // /api/analyze and /api/analyze-behavior — here it arrives in the JSON body
 // instead of a query string because this route is a POST with a body
@@ -136,15 +158,34 @@ function redactImp(imp) {
   return { sketch: Object.keys(sketch).length ? sketch : null, siblingKeys };
 }
 
+/**
+ * Length of the value as the prompt will carry it. Strings are measured as
+ * they are; everything else as JSON text. A value JSON cannot represent
+ * (undefined, a function) measures 0 and is harmless — the prompt writes `null`.
+ * @param {unknown} v
+ */
+function signalValueLength(v) {
+  if (typeof v === 'string') return v.length;
+  try {
+    const text = JSON.stringify(v);
+    return typeof text === 'string' ? text.length : 0;
+  } catch (_) {
+    return Infinity;
+  }
+}
+
 function numOrNull(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
 
 /**
- * @param {{auth?: any, aiLabelLimiter?: (key: string) => boolean, db?: any}} [deps]
+ * @param {{auth?: any, aiLabelLimiter?: (key: string) => boolean, db?: any, gate?: {run: <T>(fn: () => Promise<T>) => Promise<T>}}} [deps]
  */
-function createAiLabelModule({ auth, aiLabelLimiter, db } = {}) {
+function createAiLabelModule({ auth, aiLabelLimiter, db, gate } = {}) {
+  const modelGate =
+    gate ||
+    createGate({ maxActive: MAX_CONCURRENT, maxQueue: MAX_QUEUE, maxWaitMs: QUEUE_WAIT_MS });
   /**
    * R-11: the request carries no dialect ID, so the handler resolves the
    * saved mapping itself from the authenticated operator's DEFAULT dialect.
@@ -180,7 +221,7 @@ function createAiLabelModule({ auth, aiLabelLimiter, db } = {}) {
 
     let body;
     try {
-      body = await readJson(req);
+      body = await readJson(req, { maxBytes: BODY_MAX_BYTES });
     } catch (e) {
       return sendError(res, 400, 'bad_request', e.message);
     }
@@ -197,7 +238,7 @@ function createAiLabelModule({ auth, aiLabelLimiter, db } = {}) {
       return sendError(res, 400, 'signal_value_required', 'signal_value is required');
     }
     const signalValue = body.signal_value;
-    if (typeof signalValue === 'string' && signalValue.length > SIGNAL_VALUE_MAX) {
+    if (signalValueLength(signalValue) > SIGNAL_VALUE_MAX) {
       return sendError(res, 400, 'signal_value_too_long', 'signal_value exceeds 512 chars');
     }
     const locale = SUPPORTED_LOCALES.includes(body.locale) ? body.locale : 'en';
@@ -224,7 +265,16 @@ function createAiLabelModule({ auth, aiLabelLimiter, db } = {}) {
     }
 
     // ── Model fallback: every deterministic source abstained ──────────
+    // Track a caller that disconnects while it waits (for the health check or
+    // for its turn at the model).
+    let clientGone = false;
+    if (typeof res.once === 'function') {
+      res.once('close', () => {
+        if (!res.writableEnded) clientGone = true;
+      });
+    }
     const health = await ollama.verifyPersona();
+    if (clientGone) return undefined;
     if (!health.ok) {
       return sendError(
         res,
@@ -237,12 +287,17 @@ function createAiLabelModule({ auth, aiLabelLimiter, db } = {}) {
     }
 
     try {
-      const suggestion = await ollama.classifySignal({
-        signalPath,
-        signalValue,
-        impSketch: sketch,
-        siblingKeys,
-        locale,
+      const suggestion = await modelGate.run(() => {
+        // The caller may have left while waiting for a turn; a call nobody will
+        // read would only delay the people still waiting.
+        if (clientGone) throw Object.assign(new Error('client gone'), { code: 'client_gone' });
+        return ollama.classifySignal({
+          signalPath,
+          signalValue,
+          impSketch: sketch,
+          siblingKeys,
+          locale,
+        });
       });
       if (!STORABLE_LABELS.includes(suggestion.label)) {
         // Belt and braces: lib/ollama already checks its own enum, but the
@@ -262,6 +317,21 @@ function createAiLabelModule({ auth, aiLabelLimiter, db } = {}) {
         signal: { path: signalPath, value: signalValue },
       });
     } catch (e) {
+      if (e && e.code === 'client_gone') return undefined; // nobody is listening
+      if (e && (e.code === 'gate_full' || e.code === 'gate_wait_timeout')) {
+        // Not a model failure and not the caller's fault: the model is busy.
+        // Say so plainly, with when to come back; do not page the operator.
+        log.info({ code: e.code }, 'labeller busy');
+        if (typeof res.setHeader === 'function') {
+          res.setHeader('Retry-After', String(BUSY_RETRY_AFTER_S));
+        }
+        return sendError(
+          res,
+          429,
+          'labeller_busy',
+          'The local model is busy with other requests. Try again in a few seconds.',
+        );
+      }
       // Payload contents are never logged — only the shape of the failure.
       log.warn({ code: e.code, path: signalPath }, 'labeller call failed');
       const timedOut = e.name === 'AbortError';

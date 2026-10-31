@@ -1352,24 +1352,290 @@ export async function mountInspector(root, ctx) {
     }
   }
 
+  /**
+   * Frame-markup guard, shared by the page (before render) and the preview
+   * document (at runtime). It is stringified into the srcdoc, so it must stay
+   * self-contained: no outer variables.
+   *
+   * It does not delete frames. It renames the two attributes through which a
+   * frame can carry its own document or script (`srcdoc`, and a script-scheme
+   * `src`), so the frame stays visible in the markup but loads nothing of the
+   * creative's choosing. Frames with an ordinary `src` are left alone: the
+   * policy refuses them and the refusal ledger reports it.
+   */
+  function makeFrameGuard() {
+    let WS = /[\t\n\f\r ]/;
+    function decode(v) {
+      return String(v)
+        .replace(/&#x([0-9a-f]+);?/gi, function (m, h) {
+          return String.fromCharCode(parseInt(h, 16));
+        })
+        .replace(/&#(\d+);?/g, function (m, d) {
+          return String.fromCharCode(parseInt(d, 10));
+        })
+        .replace(/&colon;?/gi, ':')
+        .replace(/&(?:tab|newline);?/gi, '');
+    }
+    function scriptish(v) {
+      // Drop whitespace and control characters the URL parser ignores.
+      let t = decode(v)
+        .split('')
+        .filter(function (c) {
+          const n = c.charCodeAt(0);
+          return n > 32 && !(n >= 0x7f && n <= 0x9f);
+        })
+        .join('')
+        .toLowerCase();
+      return /^(?:javascript|vbscript|livescript):/.test(t);
+    }
+    function markup(html) {
+      if (typeof html !== 'string' || !/<(?:iframe|frame)(?![a-z0-9])/i.test(html)) return html;
+      let out = '';
+      let i = 0;
+      let n = html.length;
+      let re = /<(?:iframe|frame)(?![a-z0-9])/gi;
+      let m;
+      while ((m = re.exec(html))) {
+        let start = m.index;
+        let j = start + m[0].length;
+        let marks = [];
+        // Attribute scan that follows the HTML tokenizer's own rules.
+        for (;;) {
+          while (j < n && (WS.test(html[j]) || html[j] === '/')) j++;
+          if (j >= n || html[j] === '>') break;
+          let ns = j;
+          while (
+            j < n &&
+            !WS.test(html[j]) &&
+            html[j] !== '/' &&
+            html[j] !== '>' &&
+            html[j] !== '='
+          )
+            j++;
+          if (j === ns) j++; // a lone '=' starts a name
+          let name = html.slice(ns, j).toLowerCase();
+          while (j < n && WS.test(html[j])) j++;
+          let value = '';
+          if (html[j] === '=') {
+            j++;
+            while (j < n && WS.test(html[j])) j++;
+            let q = html[j];
+            if (q === '"' || q === "'") {
+              let e = html.indexOf(q, j + 1);
+              if (e < 0) e = n;
+              value = html.slice(j + 1, e);
+              j = Math.min(n, e + 1);
+            } else {
+              let vs = j;
+              while (j < n && !WS.test(html[j]) && html[j] !== '>') j++;
+              value = html.slice(vs, j);
+            }
+          }
+          if (name === 'srcdoc' || (name === 'src' && scriptish(value))) marks.push(ns);
+        }
+        if (marks.length) {
+          let piece = html.slice(i, start);
+          out += piece;
+          let cursor = start;
+          for (let k = 0; k < marks.length; k++) {
+            out += html.slice(cursor, marks[k]) + 'x-blocked-';
+            cursor = marks[k];
+          }
+          out += html.slice(cursor, j);
+          i = j;
+          re.lastIndex = j;
+        }
+      }
+      return out + html.slice(i);
+    }
+    return { markup: markup, scriptish: scriptish };
+  }
+
+  /**
+   * Runs first inside the preview document (stringified into the srcdoc).
+   *
+   * 1. Removes the WebRTC constructors (non-configurable, so they stay removed).
+   * 2. Refuses to create the one kind of nested frame that gets a fresh window:
+   *    `srcdoc`, or a `javascript:`-style `src`. It covers the property and
+   *    attribute setters, and every API that parses a string into elements
+   *    (`innerHTML`, `outerHTML`, `insertAdjacentHTML`, `document.write`,
+   *    `createContextualFragment`, `DOMParser`, `setHTMLUnsafe`); markup the
+   *    creative ships is cleaned by the page before render.
+   *
+   * Containment, not a proof: a path to a nested document that none of these
+   * hooks sees would not be stopped by this layer.
+   */
+  function previewContainment(makeGuard) {
+    let guard = makeGuard();
+    function lock(obj, key, desc) {
+      try {
+        desc.configurable = false;
+        Object.defineProperty(obj, key, desc);
+      } catch (_e) {
+        /* already locked */
+      }
+    }
+    ['RTCPeerConnection', 'webkitRTCPeerConnection', 'mozRTCPeerConnection'].forEach(function (k) {
+      lock(window, k, { value: undefined, writable: false });
+    });
+    function wrapMethod(proto, name, argIndexes) {
+      let orig = proto && proto[name];
+      if (typeof orig !== 'function') return;
+      lock(proto, name, {
+        value: function () {
+          let args = Array.prototype.slice.call(arguments);
+          argIndexes.forEach(function (ix) {
+            if (typeof args[ix] === 'string') args[ix] = guard.markup(args[ix]);
+          });
+          return orig.apply(this, args);
+        },
+        writable: false,
+      });
+    }
+    function wrapSetter(proto, name) {
+      let d = proto && Object.getOwnPropertyDescriptor(proto, name);
+      if (!d || typeof d.set !== 'function') return;
+      let set = d.set;
+      lock(proto, name, {
+        get: d.get,
+        set: function (v) {
+          return set.call(this, typeof v === 'string' ? guard.markup(v) : v);
+        },
+      });
+    }
+    wrapSetter(Element.prototype, 'innerHTML');
+    wrapSetter(Element.prototype, 'outerHTML');
+    if (typeof ShadowRoot !== 'undefined') wrapSetter(ShadowRoot.prototype, 'innerHTML');
+    wrapMethod(Element.prototype, 'insertAdjacentHTML', [1]);
+    wrapMethod(Element.prototype, 'setHTMLUnsafe', [0]);
+    if (typeof ShadowRoot !== 'undefined') wrapMethod(ShadowRoot.prototype, 'setHTMLUnsafe', [0]);
+    wrapMethod(Document.prototype, 'write', [0, 1, 2, 3]);
+    wrapMethod(Document.prototype, 'writeln', [0, 1, 2, 3]);
+    wrapMethod(Document, 'parseHTMLUnsafe', [0]);
+    wrapMethod(Range.prototype, 'createContextualFragment', [0]);
+    wrapMethod(DOMParser.prototype, 'parseFromString', [0]);
+
+    function frameLike(el) {
+      let t = el && el.tagName ? String(el.tagName).toUpperCase() : '';
+      return t === 'IFRAME' || t === 'FRAME';
+    }
+    function blockedAttr(el, name, value) {
+      if (!frameLike(el)) return false;
+      let n = String(name).toLowerCase();
+      return n === 'srcdoc' || (n === 'src' && guard.scriptish(value));
+    }
+    [
+      ['setAttribute', 0, 1],
+      ['setAttributeNS', 1, 2],
+    ].forEach(function (spec) {
+      let orig = Element.prototype[spec[0]];
+      lock(Element.prototype, spec[0], {
+        value: function () {
+          if (blockedAttr(this, arguments[spec[1]], arguments[spec[2]])) return undefined;
+          return orig.apply(this, arguments);
+        },
+        writable: false,
+      });
+    });
+    ['setAttributeNode', 'setAttributeNodeNS'].forEach(function (name) {
+      let orig = Element.prototype[name];
+      lock(Element.prototype, name, {
+        value: function (attr) {
+          if (attr && blockedAttr(this, attr.name, attr.value)) return null;
+          return orig.apply(this, arguments);
+        },
+        writable: false,
+      });
+    });
+    ['setNamedItem', 'setNamedItemNS'].forEach(function (name) {
+      let orig = NamedNodeMap.prototype[name];
+      lock(NamedNodeMap.prototype, name, {
+        value: function (attr) {
+          // The map's owner is not reachable from here; `srcdoc` only means
+          // something on a frame, and a script-scheme `src` only on a frame.
+          if (
+            attr &&
+            (attr.name === 'srcdoc' || (attr.name === 'src' && guard.scriptish(attr.value)))
+          ) {
+            return null;
+          }
+          return orig.apply(this, arguments);
+        },
+        writable: false,
+      });
+    });
+    // An attribute node already attached to a frame can be edited in place.
+    if (typeof Attr !== 'undefined') {
+      [
+        [Attr.prototype, 'value'],
+        [Node.prototype, 'nodeValue'],
+        [Node.prototype, 'textContent'],
+      ].forEach(function (spec) {
+        let d = Object.getOwnPropertyDescriptor(spec[0], spec[1]);
+        if (!d || typeof d.set !== 'function') return;
+        lock(Attr.prototype, spec[1], {
+          get: function () {
+            return d.get.call(this);
+          },
+          set: function (v) {
+            if (blockedAttr(this.ownerElement, this.name, v)) return;
+            d.set.call(this, v);
+          },
+        });
+      });
+    }
+    ['HTMLIFrameElement', 'HTMLFrameElement'].forEach(function (ctor) {
+      let proto = window[ctor] && window[ctor].prototype;
+      if (!proto) return;
+      let sd = Object.getOwnPropertyDescriptor(proto, 'srcdoc');
+      if (sd && sd.set) lock(proto, 'srcdoc', { get: sd.get, set: function () {} });
+      let sr = Object.getOwnPropertyDescriptor(proto, 'src');
+      if (sr && sr.set) {
+        lock(proto, 'src', {
+          get: sr.get,
+          set: function (v) {
+            if (guard.scriptish(v)) return;
+            sr.set.call(this, v);
+          },
+        });
+      }
+    });
+  }
+
   function buildProbedSrcdoc(creativeHtml) {
     // An HTML5 doctype has to precede even our trusted probe/meta tags, or
     // the browser silently switches the creative to quirks-mode layout.
     const doctype = /^\s*<!doctype html\s*>/i.exec(creativeHtml);
-    const body = doctype ? creativeHtml.slice(doctype[0].length) : creativeHtml;
+    let body = doctype ? creativeHtml.slice(doctype[0].length) : creativeHtml;
     const documentPrefix = doctype ? doctype[0] : '';
     // Inject a restrictive Content-Security-Policy meta tag into the creative iframe
     // so no external images, scripts, fonts, or network beacons can load over HTTPS during preview.
     const cspMeta =
       "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' data:; img-src data: blob:; font-src data:; connect-src 'none'; media-src 'none'; frame-src 'none';\">";
+    // WebRTC is an outbound channel a content policy cannot name: an ICE server
+    // in a creative's RTCPeerConnection makes the browser send STUN packets,
+    // which reveal the analyst's public address to a host the creative chose.
+    // The trusted script below removes the constructors and, because a nested
+    // frame would get a fresh window that still has them (`frame-src` does not
+    // govern `srcdoc` or `javascript:` frames), makes such frames impossible to
+    // create from markup the creative supplies or builds. This is containment,
+    // not a proof: see previewContainment() for what it covers.
+    const containment =
+      '<script>(' +
+      previewContainment.toString() +
+      ')(' +
+      makeFrameGuard.toString() +
+      ')</' +
+      'script>';
+    body = makeFrameGuard().markup(body);
     const channel = _probeSource ? freshProbeChannel() : null;
-    if (!channel) return { html: documentPrefix + cspMeta + body, channel: null };
+    if (!channel) return { html: documentPrefix + containment + cspMeta + body, channel: null };
     // Wrap in a <script> at the very top so listeners are hooked before
     // creative HTML parses any inline handlers. The placeholder lives only in
     // the trusted probe source, never in payload markup.
     const probe = _probeSource.replace('__ORTBTOOLS_PROBE_CHANNEL__', channel);
     return {
-      html: documentPrefix + '<script>' + probe + '</' + 'script>' + cspMeta + body,
+      html: documentPrefix + '<script>' + probe + '</' + 'script>' + containment + cspMeta + body,
       channel,
     };
   }

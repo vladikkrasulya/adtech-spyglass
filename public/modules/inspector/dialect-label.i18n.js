@@ -354,6 +354,11 @@
         en: 'The model timed out. Try again or label manually.',
         ru: 'Модель не успела ответить. Попробуй ещё раз или пометь вручную.',
       },
+      'dialect.label.err.busy': {
+        uk: 'Модель зараз зайнята іншими запитами. Спробуй за кілька секунд або познач вручну.',
+        en: 'The model is busy with other requests. Try again in a few seconds or label manually.',
+        ru: 'Модель сейчас занята другими запросами. Попробуй через несколько секунд или пометь вручную.',
+      },
       'dialect.label.err.rate_limited': {
         uk: 'Забагато запитів поспіль. Зачекай хвилину.',
         en: 'Too many requests in a row. Wait a minute.',
