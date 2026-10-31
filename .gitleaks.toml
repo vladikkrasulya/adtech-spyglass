@@ -1,0 +1,15 @@
+title = "ortbtools gitleaks config"
+
+# A config WITHOUT this block replaces the default rules and detects nothing.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "resend-api-key"
+description = "Resend API key (not in the gitleaks 8.21.2 default rules)"
+regex = '''\bre_[A-Za-z0-9_]{30,48}\b'''
+keywords = ["re_"]
+
+# Known, reviewed non-secrets are listed by exact fingerprint in .gitleaksignore
+# (commit:file:rule:line), not by path, so a real secret added later to the same
+# file is still reported.

@@ -13,6 +13,8 @@ updates:
       time: '09:00'
       timezone: 'Europe/Kyiv'
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7 # skip versions younger than 7 days (poisoned releases are usually yanked fast); security updates ignore this
     groups:
       # Group dev tooling so we don't get 5 PRs every Monday for ESLint/Prettier/TS.
       dev-tools:
@@ -43,5 +45,7 @@ updates:
       interval: 'weekly'
       day: 'monday'
     open-pull-requests-limit: 3
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: 'chore(ci)'

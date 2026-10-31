@@ -1,0 +1,343 @@
+{
+  "_readme": "Route access inventory; semantics are documented in tests/route-access.test.js.",
+  "GET /api/health": {
+    "access": "health",
+    "limit": "none",
+    "reason": "liveness probe, one trivial query"
+  },
+  "POST /glitchtip-ingest/*": {
+    "access": "ingest",
+    "limit": "rateLimitOk"
+  },
+  "POST /api/v1/mirror": {
+    "access": "public",
+    "limit": "analyzeLimiter"
+  },
+  "POST /api/v1/replay": {
+    "access": "public",
+    "limit": "analyzeLimiter"
+  },
+  "GET /api/v1/sample": {
+    "access": "public",
+    "limit": "none",
+    "reason": "cached read of bundled data, no external calls"
+  },
+  "GET /api/v1/sample/list": {
+    "access": "public",
+    "limit": "none",
+    "reason": "cached read of bundled data, no external calls"
+  },
+  "GET /api/v1/behavior/scenarios": {
+    "access": "public",
+    "limit": "none",
+    "reason": "cached read of bundled data, no external calls"
+  },
+  "GET /api/v1/finding-catalog": {
+    "access": "public",
+    "limit": "none",
+    "reason": "cached read of bundled data, no external calls"
+  },
+  "GET /api/v1/fx-rates": {
+    "access": "public",
+    "limit": "readLimiter"
+  },
+  "GET /api/v1/analytics/summary": {
+    "access": "public",
+    "limit": "readLimiter"
+  },
+  "POST /api/v1/telemetry/event": {
+    "access": "public",
+    "limit": "telemetryLimiter"
+  },
+  "GET /api/v1/telemetry/summary": {
+    "access": "admin-token",
+    "limit": "none",
+    "reason": "admin token required; failures throttled in lib/admin-auth.js"
+  },
+  "POST /api/v1/gists": {
+    "access": "public",
+    "limit": "gistWriteLimiter"
+  },
+  "GET /api/v1/gists/:id": {
+    "access": "public",
+    "limit": "readLimiter"
+  },
+  "GET /api/inspection/profiles": {
+    "access": "public",
+    "limit": "readLimiter"
+  },
+  "POST /api/inspection/schain": {
+    "access": "public",
+    "limit": "analyzeLimiter"
+  },
+  "POST /api/analyze": {
+    "access": "public",
+    "limit": "analyzeLimiter"
+  },
+  "POST /api/analyze-behavior": {
+    "access": "public",
+    "limit": "behaviorLimiter"
+  },
+  "POST /api/intel/suggest-name": {
+    "access": "public",
+    "limit": "intelLimiter"
+  },
+  "POST /api/intel/suggest-partner": {
+    "access": "user",
+    "limit": "intelLimiter"
+  },
+  "POST /api/intel/field-purpose": {
+    "access": "public",
+    "limit": "intelLimiter"
+  },
+  "POST /api/intel/simulate-bids": {
+    "access": "public",
+    "limit": "intelLimiter"
+  },
+  "GET /api/behavior/corpus/matrix": {
+    "access": "user",
+    "limit": "none",
+    "reason": "owner-scoped; bounded by the rows the caller owns"
+  },
+  "GET /api/behavior/corpus": {
+    "access": "user",
+    "limit": "none",
+    "reason": "owner-scoped; bounded by the rows the caller owns"
+  },
+  "POST /api/behavior/corpus": {
+    "access": "user",
+    "limit": "libraryWriteLimiter"
+  },
+  "DELETE /api/behavior/corpus/:id": {
+    "access": "user",
+    "limit": "none",
+    "reason": "owner-scoped; bounded by the rows the caller owns"
+  },
+  "GET /api/account/insights": {
+    "access": "user",
+    "limit": "none",
+    "reason": "owner-scoped; bounded by the rows the caller owns"
+  },
+  "POST /api/dialects/import": {
+    "access": "user",
+    "limit": "libraryWriteLimiter"
+  },
+  "GET /api/dialects": {
+    "access": "user",
+    "limit": "none",
+    "reason": "owner-scoped; bounded by the rows the caller owns"
+  },
+  "POST /api/dialects": {
+    "access": "user",
+    "limit": "libraryWriteLimiter"
+  },
+  "PATCH /api/dialects/:id": {
+    "access": "user",
+    "limit": "none",
+    "known_gap": true,
+    "note": "limit declaration pending review"
+  },
+  "DELETE /api/dialects/:id": {
+    "access": "user",
+    "limit": "none",
+    "reason": "owner-scoped; bounded by the rows the caller owns"
+  },
+  "GET /api/dialects/:id/mappings": {
+    "access": "user",
+    "limit": "none",
+    "reason": "owner-scoped; bounded by the rows the caller owns"
+  },
+  "POST /api/dialects/:id/mappings": {
+    "access": "user",
+    "limit": "libraryWriteLimiter"
+  },
+  "PATCH /api/dialects/:id/mappings/:mapping_id": {
+    "access": "user",
+    "limit": "none",
+    "known_gap": true,
+    "note": "limit declaration pending review"
+  },
+  "DELETE /api/dialects/:id/mappings/:mapping_id": {
+    "access": "user",
+    "limit": "none",
+    "reason": "owner-scoped; bounded by the rows the caller owns"
+  },
+  "GET /api/dialects/:id/export": {
+    "access": "user",
+    "limit": "none",
+    "reason": "owner-scoped; bounded by the rows the caller owns"
+  },
+  "POST /api/dialects/suggest-label": {
+    "access": "user",
+    "limit": "aiLabelLimiter"
+  },
+  "POST /api/creative/asset": {
+    "access": "user",
+    "limit": "assetLimiter"
+  },
+  "GET /api/admin/stats": {
+    "access": "admin-token",
+    "limit": "none",
+    "reason": "admin token required; failures throttled in lib/admin-auth.js"
+  },
+  "GET /api/admin/logs": {
+    "access": "admin-token",
+    "limit": "none",
+    "reason": "admin token required; failures throttled in lib/admin-auth.js"
+  },
+  "GET /api/admin/blog/drafts": {
+    "access": "admin-token",
+    "limit": "none",
+    "reason": "admin token required; failures throttled in lib/admin-auth.js"
+  },
+  "POST /api/admin/blog/approve": {
+    "access": "admin-token",
+    "limit": "none",
+    "reason": "admin token required; failures throttled in lib/admin-auth.js"
+  },
+  "POST /api/admin/blog/reject": {
+    "access": "admin-token",
+    "limit": "none",
+    "reason": "admin token required; failures throttled in lib/admin-auth.js"
+  },
+  "POST /api/admin/blog/ingest": {
+    "access": "admin-token",
+    "limit": "none",
+    "reason": "admin token required; failures throttled in lib/admin-auth.js"
+  },
+  "GET /api/v1/blog/list": {
+    "access": "public",
+    "limit": "rateLimited"
+  },
+  "GET /api/v1/blog/post": {
+    "access": "public",
+    "limit": "rateLimited"
+  },
+  "GET /blog/rss.xml": {
+    "access": "public",
+    "limit": "rateLimited"
+  },
+  "POST /api/proxy": {
+    "access": "user",
+    "limit": "none",
+    "known_gap": true,
+    "note": "limit declaration pending review"
+  },
+  "GET /api/auth/me": {
+    "access": "public",
+    "limit": "none",
+    "reason": "session probe: answers {user:null} when anonymous, no side effects"
+  },
+  "POST /api/auth/register": {
+    "access": "public",
+    "limit": "registerLimiter",
+    "limit_file": "auth.js"
+  },
+  "POST /api/auth/login": {
+    "access": "public",
+    "limit": "loginLimiter",
+    "limit_file": "auth.js"
+  },
+  "POST /api/auth/logout": {
+    "access": "public",
+    "limit": "none",
+    "reason": "idempotent session teardown"
+  },
+  "POST /api/auth/preferences": {
+    "access": "user",
+    "limit": "none",
+    "reason": "one cookie/column update for the signed-in user",
+    "evidence_file": "modules/auth/handler.js"
+  },
+  "POST /api/auth/setup-encryption": {
+    "access": "user",
+    "limit": "none",
+    "reason": "one-shot: refused once crypto state exists",
+    "evidence_file": "modules/auth/handler.js"
+  },
+  "POST /api/auth/verify-email/request": {
+    "access": "user",
+    "limit": "checkVerifyEmailLimit",
+    "evidence_file": "modules/auth/handler.js"
+  },
+  "GET /api/auth/verify-email/confirm": {
+    "access": "public",
+    "limit": "none",
+    "reason": "requires a signed single-purpose token"
+  },
+  "POST /api/auth/forgot-password": {
+    "access": "public",
+    "limit": "checkForgotPasswordLimit",
+    "evidence_file": "modules/auth/handler.js"
+  },
+  "POST /api/auth/reset-password/state": {
+    "access": "public",
+    "limit": "checkResetStateLimit",
+    "evidence_file": "modules/auth/handler.js"
+  },
+  "POST /api/auth/reset-password": {
+    "access": "public",
+    "limit": "checkResetPasswordLimit",
+    "evidence_file": "modules/auth/handler.js"
+  },
+  "POST /api/auth/delete-account": {
+    "access": "user",
+    "limit": "checkDeleteAccountLimit",
+    "evidence_file": "modules/auth/handler.js"
+  },
+  "GET /api/partners/:id/samples-count": {
+    "access": "user",
+    "limit": "none",
+    "reason": "owner-scoped; bounded by the rows the caller owns"
+  },
+  "GET /api/partners": {
+    "access": "user",
+    "limit": "none",
+    "reason": "owner-scoped; bounded by the rows the caller owns"
+  },
+  "POST /api/partners": {
+    "access": "user",
+    "limit": "libraryWriteLimiter"
+  },
+  "PATCH /api/partners/:id": {
+    "access": "user",
+    "limit": "libraryWriteLimiter"
+  },
+  "DELETE /api/partners/:id": {
+    "access": "user",
+    "limit": "none",
+    "reason": "owner-scoped; bounded by the rows the caller owns"
+  },
+  "GET /api/samples": {
+    "access": "user",
+    "limit": "none",
+    "reason": "owner-scoped; bounded by the rows the caller owns"
+  },
+  "POST /api/samples": {
+    "access": "user",
+    "limit": "libraryWriteLimiter"
+  },
+  "GET /api/samples/:id": {
+    "access": "user",
+    "limit": "none",
+    "reason": "owner-scoped; bounded by the rows the caller owns"
+  },
+  "PATCH /api/samples/:id": {
+    "access": "user",
+    "limit": "libraryWriteLimiter"
+  },
+  "DELETE /api/samples/:id": {
+    "access": "user",
+    "limit": "none",
+    "reason": "owner-scoped; bounded by the rows the caller owns"
+  },
+  "GET /api/v1/stream": {
+    "access": "public",
+    "limit": "MAX_STREAM_CONNS_PER_IP"
+  },
+  "GET /api/v1/specimen/:hash": {
+    "access": "public",
+    "limit": "none",
+    "reason": "in-memory lookup by a short hash, no external calls"
+  }
+}

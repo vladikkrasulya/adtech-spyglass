@@ -1,0 +1,2 @@
+# Not scan targets: the rules and their annotated test cases (which contain deliberate violations).
+semgrep/
