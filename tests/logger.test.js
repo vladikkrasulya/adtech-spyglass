@@ -215,6 +215,21 @@ test('sentry: valid DSN keeps init, capture and flush APIs compatible without ne
     environment: 'production',
     release: 'deadbee',
     tracesSampleRate: 0,
-    sendDefaultPii: false,
+    dataCollection: {
+      userInfo: false,
+      cookies: false,
+      httpHeaders: {
+        request: { allow: ['user-agent', 'content-type', 'content-length', 'accept', 'host'] },
+        response: false,
+      },
+      httpBodies: [],
+      urlQueryParams: false,
+      genAI: { inputs: false, outputs: false },
+      mcp: { inputs: false, outputs: false },
+      graphQL: { document: false, variables: false },
+      databaseQueryData: false,
+      queues: false,
+      stackFrameVariables: false,
+    },
   });
 });
