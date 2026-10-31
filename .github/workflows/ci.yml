@@ -99,7 +99,8 @@ jobs:
 
       - name: Trivy filesystem (lockfiles, secrets, Dockerfile)
         run: |
-          docker run --rm -v "$PWD:/src:ro" -v "$RUNNER_TEMP/trivy:/root/.cache" \
+          docker run --rm -e TRIVY_DISABLE_TELEMETRY=true -e TRIVY_SKIP_VERSION_CHECK=true \
+            -v "$PWD:/src:ro" -v "$RUNNER_TEMP/trivy:/root/.cache" \
             aquasec/trivy@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c \
             fs --scanners vuln,secret,misconfig --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
             --skip-dirs node_modules --skip-dirs .git --quiet /src
