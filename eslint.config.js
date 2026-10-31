@@ -106,6 +106,8 @@ module.exports = [
       'dist/',
       'build/',
       '.claude/worktrees/',
+      // Annotated rule-test inputs with deliberate violations (run by `semgrep --test`).
+      'semgrep/ortbtools.js',
     ],
   },
 ];
