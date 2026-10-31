@@ -18,7 +18,6 @@
  *   limit   name of the limiter / check that appears in the handler source, or
  *           "none"
  *   reason  required when limit is "none": why no limit is needed
- *   known_gap + note   instead of a reason: a recorded discrepancy to be resolved
  *   evidence_file  file (relative to the repo root) to search instead of the
  *           handler source, for handlers wrapped by a generic helper
  *   limit_file     file in which the limiter name must appear (default: as above)
@@ -27,8 +26,7 @@
  *   - registered routes and fixture entries match exactly;
  *   - `user` routes visibly reject anonymous callers, `admin-token` routes call
  *     the admin-token check, and a named limit is present in the code;
- *   - a state-changing route may not have limit "none" unless it carries a reason
- *     or is marked known_gap.
+ *   - limit "none" always needs a reason.
  */
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -44,7 +42,6 @@ const inventory = JSON.parse(
 delete inventory._readme;
 
 const ACCESS = new Set(['public', 'user', 'admin-token', 'ingest', 'health']);
-const READ_ONLY = new Set(['GET', 'HEAD']);
 const GUARD = {
   user: /\brequireUser\(|\bgetCurrentUser\([^)]*\)[\s\S]{0,300}?\b401\b/,
   'admin-token': /\brequireAdmin(?:Token|Bearer)\(/,
@@ -106,18 +103,7 @@ test('every declaration is well formed', () => {
   for (const [key, d] of Object.entries(inventory)) {
     if (!ACCESS.has(d.access)) bad.push(`${key}: unknown access "${d.access}"`);
     if (typeof d.limit !== 'string' || !d.limit) bad.push(`${key}: limit is required`);
-    if (d.limit === 'none') {
-      if (d.known_gap === true) {
-        if (!d.note) bad.push(`${key}: known_gap needs a note`);
-      } else if (!d.reason) {
-        bad.push(`${key}: limit "none" needs a reason (or known_gap + note)`);
-      }
-    } else if (d.known_gap) {
-      bad.push(`${key}: known_gap only applies to limit "none"`);
-    }
-    if (d.limit === 'none' && !READ_ONLY.has(key.split(' ')[0]) && d.access === 'public') {
-      if (d.known_gap !== true && !d.reason) bad.push(`${key}: public write without a limit`);
-    }
+    if (d.limit === 'none' && !d.reason) bad.push(`${key}: limit "none" needs a reason`);
   }
   assert.deepEqual(bad, []);
 });

@@ -250,6 +250,27 @@ test('dialects HTTP: dialect and mapping caps, import counts every mapping', asy
   );
 });
 
+test('dialects HTTP: PATCH routes are covered by the per-user write limiter', async () => {
+  const keys = [];
+  const mod = createDialectsModule({
+    auth: { getCurrentUser: () => userA },
+    db,
+    libraryWriteLimiter: (key) => {
+      keys.push(key);
+      return false;
+    },
+  });
+  for (const path of ['/api/dialects/:id', '/api/dialects/:id/mappings/:mapping_id']) {
+    const res = fakeRes();
+    await handlerOf(mod, 'PATCH', path)(fakeReq({ name: 'x' }), res, null, {
+      params: { id: '1', mapping_id: '1' },
+    });
+    assert.equal(res.statusCode, 429, path);
+    assert.equal(json(res).code, 'rate_limited');
+  }
+  assert.equal(keys.length, 2);
+});
+
 // ── Gists ───────────────────────────────────────────────────────────────────
 
 const B64 = (chars) => 'QUJD'.repeat(Math.ceil(chars / 4)).slice(0, chars - (chars % 4));

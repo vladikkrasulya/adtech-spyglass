@@ -16,8 +16,8 @@
  * egress address (`origin`, X-Forwarded-For) back to the caller, which
  * unmasks a host that is otherwise hidden behind a tunnel/CDN.
  *
- * Auth-gated (session cookie). No DB, no rate-limiter, no locale —
- * the module's only real deps are auth + Node http/https. Factory
+ * Auth-gated (session cookie) and rate-limited per user (deps.proxyLimiter).
+ * No DB, no locale — the module's other deps are auth + Node http/https. Factory
  * keeps the same shape as the other modules for uniformity even
  * though the surface is tiny.
  *
@@ -106,10 +106,11 @@ const ALLOWED_PORTS = new Set(['', '80', '443']);
  * @param {{
  *   auth: { getCurrentUser: (req: import('http').IncomingMessage) => any },
  *   allowedHosts?: string[],
+ *   proxyLimiter?: (key: string) => boolean,
  * }} deps
  */
 function createProxyModule(deps) {
-  const { auth } = deps;
+  const { auth, proxyLimiter } = deps;
   // An explicit empty list disables the harness; echo/IP-reflection hosts are
   // dropped no matter who supplied them.
   const allowedHosts = (
@@ -122,6 +123,10 @@ function createProxyModule(deps) {
     const user = auth.getCurrentUser(req);
     if (!user) {
       return sendError(res, 401, 'unauthorized', 'Sign in to use the proxy harness');
+    }
+    // Keyed by user id (the route is session-gated), like the library writes.
+    if (proxyLimiter && !proxyLimiter(String(user.id))) {
+      return sendError(res, 429, 'rate_limited', 'Too many proxy requests. Try again shortly.');
     }
     readJson(req)
       .then(({ url, data }) => {

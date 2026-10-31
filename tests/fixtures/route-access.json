@@ -133,9 +133,7 @@
   },
   "PATCH /api/dialects/:id": {
     "access": "user",
-    "limit": "none",
-    "known_gap": true,
-    "note": "limit declaration pending review"
+    "limit": "libraryWriteLimiter"
   },
   "DELETE /api/dialects/:id": {
     "access": "user",
@@ -153,9 +151,7 @@
   },
   "PATCH /api/dialects/:id/mappings/:mapping_id": {
     "access": "user",
-    "limit": "none",
-    "known_gap": true,
-    "note": "limit declaration pending review"
+    "limit": "libraryWriteLimiter"
   },
   "DELETE /api/dialects/:id/mappings/:mapping_id": {
     "access": "user",
@@ -219,9 +215,7 @@
   },
   "POST /api/proxy": {
     "access": "user",
-    "limit": "none",
-    "known_gap": true,
-    "note": "limit declaration pending review"
+    "limit": "proxyLimiter"
   },
   "GET /api/auth/me": {
     "access": "public",
