@@ -1302,11 +1302,16 @@ const server = http.createServer((req, res) => {
     // if-chain below as modules migrate over.
     // HEAD is GET without a body (Node drops the body for us), so monitors and
     // link checkers that probe with HEAD get the same status as a GET would.
-    // The live event stream is the one GET that must not be opened by a probe.
+    // Two GETs must not be run by a probe: the live event stream, and any route
+    // flagged `noHead` because the GET itself changes data (email confirmation).
     let hit = router.match(req.method, pathname);
     if (!hit && req.method === 'HEAD') {
       const asGet = router.match('GET', pathname);
-      if (asGet && asGet.moduleId !== 'stream') hit = asGet;
+      if (asGet && (asGet.noHead || asGet.moduleId === 'stream')) {
+        res.writeHead(405, { Allow: 'GET', 'Content-Type': 'application/json' });
+        return res.end();
+      }
+      if (asGet) hit = asGet;
     }
     if (hit) {
       const out = hit.handler(req, res, parsed, hit.match);

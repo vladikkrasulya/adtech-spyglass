@@ -748,6 +748,8 @@ function createAuthRoutesModule(deps) {
         method: 'GET',
         path: '/api/auth/verify-email/confirm',
         handler: handleVerifyEmailConfirm,
+        // Confirming changes data; a HEAD probe must not do it.
+        noHead: true,
       },
       post('/api/auth/forgot-password', handleForgotPassword),
       post('/api/auth/reset-password/state', handleResetPasswordState),

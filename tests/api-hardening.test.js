@@ -9,7 +9,9 @@
  *   - every 429 says when to retry;
  *   - the saved-library write routes refuse cross-site browser requests;
  *   - a password-reset token works once;
- *   - /.well-known/security.txt is served.
+ *   - /.well-known/security.txt is served;
+ *   - HEAD never runs a GET that changes data (email confirmation);
+ *   - a daily-quota 429 says when the quota resets.
  */
 
 const { test, before, after } = require('node:test');
@@ -56,6 +58,7 @@ before(async () => {
       ORTBTOOLS_DATA_DIR: dataDir,
       EMAIL_TOKEN_SECRET: SECRET,
       ORTBTOOLS_ANALYTICS_DISABLED: '1',
+      ORTBTOOLS_GIST_IP_DAILY_BYTES: '4000',
       NEWS_CRAWLER_DISABLED: '1',
       FX_DISABLED: '1',
     },
@@ -359,4 +362,48 @@ test('/.well-known/security.txt is served and current', async () => {
   // Renew the date in public/.well-known/security.txt (RFC 9116 caps it at a year).
   assert.ok(when > Date.now(), 'security.txt has expired; renew its Expires field');
   assert.ok(when < Date.now() + 366 * 24 * 3600 * 1000, 'Expires must be within a year');
+});
+
+// ── HEAD must not change data ──────────────────────────────────────────────
+
+test('HEAD on the email-confirmation link does not confirm the address', async () => {
+  const email = 'head-confirm@example.test';
+  const { id, cookie } = await register(email);
+  const token = signToken({ purpose: 'verify', user_id: id, email, expirySeconds: 600 });
+  const url = base + '/api/auth/verify-email/confirm?token=' + encodeURIComponent(token);
+
+  const head = await fetch(url, { method: 'HEAD', redirect: 'manual' });
+  assert.equal(head.status, 405);
+  assert.equal(head.headers.get('allow'), 'GET');
+  const before = /** @type {any} */ (
+    await (await fetch(base + '/api/auth/me', { headers: { cookie } })).json()
+  );
+  assert.equal(before.user.email_verified_at, null, 'HEAD must not verify the address');
+
+  const get = await fetch(url, { redirect: 'manual' });
+  assert.equal(get.status, 302);
+  const after = /** @type {any} */ (
+    await (await fetch(base + '/api/auth/me', { headers: { cookie } })).json()
+  );
+  assert.notEqual(after.user.email_verified_at, null, 'GET still confirms');
+});
+
+// ── Retry-After matches the limit that fired ───────────────────────────────
+
+test('the daily share-link quota answers with the time until it resets', async () => {
+  const body = JSON.stringify({
+    ciphertext: 'A'.repeat(1600),
+    iv: 'MDEyMzQ1Njc4OWFi',
+    bundle_version: 1,
+  });
+  let last;
+  for (let i = 0; i < 4; i++) {
+    last = await fetch(base + '/api/v1/gists', { method: 'POST', headers: JSON_HEADERS, body });
+    if (last.status === 429) break;
+  }
+  assert.ok(last);
+  assert.equal(last.status, 429);
+  assert.equal(/** @type {any} */ (await last.json()).code, 'gist_quota_exceeded');
+  const wait = Number(last.headers.get('retry-after'));
+  assert.ok(wait > 23 * 3600 && wait <= 24 * 3600, `Retry-After ${wait} should be ~24 h`);
 });

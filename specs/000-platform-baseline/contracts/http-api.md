@@ -141,8 +141,8 @@ unsupported_media_type`); their reads are unchanged.
 
 Every `/api/*` response carries `Cache-Control: no-store` unless its handler sets a cache policy
 (public read endpoints do). `HEAD` on a `GET` route answers with that route's status and headers and
-no body (the live event stream is excluded). Every `429` carries `Retry-After` (seconds): the
-limiter's window, 60 for the per-minute limiters. `/.well-known/security.txt` (RFC 9116) names the
+no body; the live event stream and the email-confirmation link (a GET that changes data) answer `HEAD` with `405`. Every `429` carries `Retry-After` (seconds): the
+limiter's window (60 for the per-minute limiters; the time until reset for the daily share-link quota). `/.well-known/security.txt` (RFC 9116) names the
 security contact and carries an `Expires` date that must be renewed before it passes.
 
 `POST /api/auth/delete-account` is the self-service erasure route. It needs a session, the CSRF guard
