@@ -214,6 +214,37 @@ test('library writes refuse a request a foreign page caused the browser to send'
     body: JSON.stringify({ name: 'Same Origin Partner' }),
   });
   assert.equal(ok.status, 200);
+  // Routes with :params still receive their route match through the guard.
+  const created = /** @type {any} */ (await ok.json()).partner;
+  const sameOrigin = { cookie, ...JSON_HEADERS, origin: base, 'sec-fetch-site': 'same-origin' };
+  const patched = await fetch(base + '/api/partners/' + created.id, {
+    method: 'PATCH',
+    headers: sameOrigin,
+    body: JSON.stringify({ name: 'Renamed Partner' }),
+  });
+  assert.equal(patched.status, 200);
+  const dialect = await fetch(base + '/api/dialects', {
+    method: 'POST',
+    headers: sameOrigin,
+    body: JSON.stringify({ name: 'guard-dialect', is_default: false }),
+  });
+  assert.equal(dialect.status, 200);
+  const dialectId = /** @type {any} */ (await dialect.json()).dialect.id;
+  const mapping = await fetch(base + '/api/dialects/' + dialectId + '/mappings', {
+    method: 'POST',
+    headers: sameOrigin,
+    body: JSON.stringify({
+      signal_path: 'imp[].ext.guard_probe',
+      signal_value: 'v',
+      semantic_label: 'identifier',
+    }),
+  });
+  assert.notEqual(mapping.status, 500, 'a guarded route with :params must still run');
+  const removed = await fetch(base + '/api/partners/' + created.id, {
+    method: 'DELETE',
+    headers: sameOrigin,
+  });
+  assert.equal(removed.status, 200);
   // A body that is not declared JSON is refused even without browser signals.
   const wrongType = await fetch(base + '/api/partners', {
     method: 'POST',
