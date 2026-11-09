@@ -32,10 +32,10 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^26.6.5",
+    "@types/node": "^26.6.6",
     "dompurify": "3.4.17",
-    "eslint": "^10.13.0",
-    "globals": "^17.13.0",
+    "eslint": "^10.14.0",
+    "globals": "^17.14.0",
     "jsdom": "^30.0.1",
     "marked": "18.1.1",
     "pino-pretty": "^13.2.0",
