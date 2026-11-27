@@ -47,6 +47,7 @@ const {
   scanExtForFormatHints,
   isPopFormat,
   isPushFormat,
+  isPopunderXml,
   admLooksLikePop,
   normaliseFormatName,
 } = require('./non-iab-formats');
@@ -646,7 +647,10 @@ function detectFormat(payload, userDialect) {
             if (isPopFormat(hint.format)) formats.add(FORMATS.POPS);
             else if (isPushFormat(hint.format)) formats.add(FORMATS.PUSH);
           }
-          if (formats.has(FORMATS.POPS) && admLooksLikePop(bid.adm)) {
+          if (isPopunderXml(bid.adm)) {
+            // Unambiguous OpenRTB Popunder XML creative (<popunderAd>...</popunderAd>).
+            formats.add(FORMATS.POPS);
+          } else if (formats.has(FORMATS.POPS) && admLooksLikePop(bid.adm)) {
             // Already tagged from ext signal — admLooksLikePop here is a
             // confirmation, not a standalone trigger. Keeping the
             // double-check inline for clarity.

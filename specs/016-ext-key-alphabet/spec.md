@@ -594,25 +594,25 @@ metadata field; the Ext-RTB contract defines `subage` as subscription age in day
 
 #### Frozen 14-scenario regression oracle
 
-The two `adtype=8` rows are different bench contexts, not duplicates. "Live replica" means the
+The two `adtype=8` rows are different bench contexts, not duplicates. "Synthetic replica" means the
 required redacted synthetic fixture, never the original payload.
 
-| Origin       | Signal/context                | Role-layer source/state               | Canonical role or candidates                        | Projected `label`  | `valueStatus`    | Required role confidence / final route                           |
-| ------------ | ----------------------------- | ------------------------------------- | --------------------------------------------------- | ------------------ | ---------------- | ---------------------------------------------------------------- |
-| Tune         | `adtype=8`, banner context    | corpus + named / `resolved`           | `format-declaration`                                | `custom`           | `unknown`        | `0.90`; no model                                                 |
-| Tune         | `ad_type=70`, video context   | named / `resolved`                    | `format-declaration`                                | `custom`           | `unknown`        | `0.90`; no model                                                 |
-| Tune         | `format=12`, banner context   | corpus + named / `resolved`           | `format-declaration`                                | `custom`           | `unknown`        | `0.40`; no model                                                 |
-| Tune         | `adtype=8`, pop-shape context | corpus + named / `resolved`           | `format-declaration`; pop shape is explanation only | `custom`           | `unknown`        | `0.90`; no model                                                 |
-| Tune         | `limit=1`                     | named / `ambiguous`                   | `delivery-control`, `pricing`, `format-declaration` | absent             | absent           | no overall confidence; no model                                  |
-| Tune         | `flag=1`                      | named / `ambiguous`                   | `delivery-control`, `format-declaration`            | absent             | absent           | no overall confidence; no model                                  |
-| Tune         | `mode=2`                      | named / `abstain`                     | none                                                | absent             | absent           | model; label `delivery-control`, `custom`, or `ignore`; `0–0.30` |
-| Tune         | `imp_count=3`                 | repo-grounded named rule / `resolved` | `measurement`                                       | `measurement`      | `not-applicable` | `0.70`; no model                                                 |
-| Hold-out     | `creative_type=3`             | named / `resolved`                    | `format-declaration`                                | `custom`           | `unknown`        | `0.70`; no model                                                 |
-| Hold-out     | `ttl=300`                     | repo-grounded named rule / `resolved` | `delivery-control`                                  | `delivery-control` | `not-applicable` | `0.70`; no model                                                 |
-| Hold-out     | `build="20260812"`            | repo-grounded named rule / `resolved` | `metadata`                                          | `metadata`         | `not-applicable` | `0.70`; no model                                                 |
-| Hold-out     | `t=1`                         | named / `abstain`                     | none                                                | absent             | absent           | model; label `custom` or `ignore`; `0–0.30`                      |
-| Live replica | `ad_type=30`                  | named / `resolved`                    | `format-declaration`                                | `custom`           | `unknown`        | `0.90`; no model                                                 |
-| Live replica | `subage=18`                   | repo-grounded named rule / `resolved` | `measurement`                                       | `measurement`      | `not-applicable` | `0.90`; no model                                                 |
+| Origin            | Signal/context                | Role-layer source/state               | Canonical role or candidates                        | Projected `label`  | `valueStatus`    | Required role confidence / final route                           |
+| ----------------- | ----------------------------- | ------------------------------------- | --------------------------------------------------- | ------------------ | ---------------- | ---------------------------------------------------------------- |
+| Tune              | `adtype=8`, banner context    | corpus + named / `resolved`           | `format-declaration`                                | `custom`           | `unknown`        | `0.90`; no model                                                 |
+| Tune              | `ad_type=98`, video context   | named / `resolved`                    | `format-declaration`                                | `custom`           | `unknown`        | `0.90`; no model                                                 |
+| Tune              | `format=12`, banner context   | corpus + named / `resolved`           | `format-declaration`                                | `custom`           | `unknown`        | `0.40`; no model                                                 |
+| Tune              | `adtype=8`, pop-shape context | corpus + named / `resolved`           | `format-declaration`; pop shape is explanation only | `custom`           | `unknown`        | `0.90`; no model                                                 |
+| Tune              | `limit=1`                     | named / `ambiguous`                   | `delivery-control`, `pricing`, `format-declaration` | absent             | absent           | no overall confidence; no model                                  |
+| Tune              | `flag=1`                      | named / `ambiguous`                   | `delivery-control`, `format-declaration`            | absent             | absent           | no overall confidence; no model                                  |
+| Tune              | `mode=2`                      | named / `abstain`                     | none                                                | absent             | absent           | model; label `delivery-control`, `custom`, or `ignore`; `0–0.30` |
+| Tune              | `imp_count=3`                 | repo-grounded named rule / `resolved` | `measurement`                                       | `measurement`      | `not-applicable` | `0.70`; no model                                                 |
+| Hold-out          | `creative_type=3`             | named / `resolved`                    | `format-declaration`                                | `custom`           | `unknown`        | `0.70`; no model                                                 |
+| Hold-out          | `ttl=300`                     | repo-grounded named rule / `resolved` | `delivery-control`                                  | `delivery-control` | `not-applicable` | `0.70`; no model                                                 |
+| Hold-out          | `build="20260812"`            | repo-grounded named rule / `resolved` | `metadata`                                          | `metadata`         | `not-applicable` | `0.70`; no model                                                 |
+| Hold-out          | `t=1`                         | named / `abstain`                     | none                                                | absent             | absent           | model; label `custom` or `ignore`; `0–0.30`                      |
+| Synthetic replica | `ad_type=99`                  | named / `resolved`                    | `format-declaration`                                | `custom`           | `unknown`        | `0.90`; no model                                                 |
+| Synthetic replica | `subage=18`                   | repo-grounded named rule / `resolved` | `measurement`                                       | `measurement`      | `not-applicable` | `0.90`; no model                                                 |
 
 #### Claim-aware model-ceiling oracle
 
@@ -736,7 +736,7 @@ silently resolved. A named key outside the corpus remains outside the
 
 ### Measurable Outcomes
 
-- **SC-001**: For the named `ad_type=30` synthetic fixture, the operator sees canonical role
+- **SC-001**: For the named `ad_type=99` synthetic fixture, the operator sees canonical role
   `format-declaration`, projected label `custom`, role confidence exactly `0.90`, value status
   `unknown`, an explicit vendor-private explanation, no specific format, and zero model invocations.
 - **SC-002**: A frozen routing matrix contains at least one fixture for every adjudication

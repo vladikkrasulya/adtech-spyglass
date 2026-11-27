@@ -174,12 +174,52 @@ function isPushFormat(name) {
   return PUSH_FORMAT_NAMES.has(normaliseFormatName(name));
 }
 
+const POPUNDER_XML_TAG = /<popunderAd(?:\s[^>]*)?>/i;
+
+/**
+ * True if `adm` contains an OpenRTB Popunder XML wrapper (`<popunderAd>...`).
+ *
+ * @param {unknown} adm
+ * @returns {boolean}
+ */
+function isPopunderXml(adm) {
+  if (typeof adm !== 'string') return false;
+  return POPUNDER_XML_TAG.test(adm);
+}
+
+/**
+ * Extract the URL string from a `<popunderAd>...<url>...</url>...</popunderAd>`
+ * XML payload (with or without `<![CDATA[...]]>`). Returns null if absent or
+ * not an http(s) URL.
+ *
+ * @param {string} s
+ * @returns {string | null}
+ */
+function extractPopunderXmlUrl(s) {
+  const popMatch = s.match(POPUNDER_XML_TAG);
+  if (!popMatch || popMatch.index == null) return null;
+  const start = popMatch.index + popMatch[0].length;
+  const popClose = s.slice(start).match(/<\/popunderAd\s*>/i);
+  const body =
+    popClose && popClose.index != null ? s.slice(start, start + popClose.index) : s.slice(start);
+  const urlOpen = body.match(/<url(?:\s[^>]*)?>/i);
+  if (!urlOpen || urlOpen.index == null) return null;
+  const urlStart = urlOpen.index + urlOpen[0].length;
+  const urlClose = body.slice(urlStart).match(/<\/url\s*>/i);
+  if (!urlClose || urlClose.index == null) return null;
+  let raw = body.slice(urlStart, urlStart + urlClose.index).trim();
+  const cdata = raw.match(/^<!\[CDATA\[([\s\S]*?)\]\]>$/i);
+  if (cdata) raw = cdata[1].trim();
+  return /^https?:\/\/\S+$/i.test(raw) ? raw : null;
+}
+
 /**
  * Heuristic: does this bid.adm look like a pop creative? Pops don't ship
  * banner HTML — they ship one of:
  *   - a bare landing URL the SSP wraps in window.open at render time
  *   - a `<script>window.open(URL)</script>` blob
  *   - a `location.href = URL` / `top.location = URL` redirect
+ *   - an OpenRTB Popunder XML wrapper (`<popunderAd><url>...</url></popunderAd>`)
  *
  * False positives possible: a banner with a click-tracker that includes
  * `window.open` would match. But ortbtools uses this signal only when
@@ -193,6 +233,8 @@ function admLooksLikePop(adm) {
   if (typeof adm !== 'string') return false;
   const s = adm.trim();
   if (!s) return false;
+  // OpenRTB Popunder XML wrapper
+  if (isPopunderXml(s)) return true;
   // Bare URL — SSPs wrap it in window.open at render time.
   if (/^https?:\/\/[^\s"'<>]+$/i.test(s)) return true;
   // window.open(...)
@@ -237,6 +279,15 @@ function extractPopLandingHost(adm) {
       /* fall through */
     }
   }
+  // OpenRTB Popunder XML wrapper: <popunderAd><url>...</url></popunderAd>
+  const xmlUrl = extractPopunderXmlUrl(s);
+  if (xmlUrl) {
+    try {
+      return new URL(xmlUrl).hostname.toLowerCase();
+    } catch {
+      /* fall through */
+    }
+  }
   // Try URL inside the redirect call sites that admLooksLikePop recognizes.
   // window.open(URL) / location.{href,replace,assign} / top.location / parent.location.
   // Keep these in sync with admLooksLikePop — otherwise pop is detected but
@@ -268,6 +319,7 @@ module.exports = {
   scanExtForFormatHints,
   isPopFormat,
   isPushFormat,
+  isPopunderXml,
   admLooksLikePop,
   extractPopLandingHost,
 };

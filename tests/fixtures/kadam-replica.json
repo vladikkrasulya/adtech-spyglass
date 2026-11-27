@@ -1,8 +1,8 @@
 {
-  "_comment": "Redacted SYNTHETIC replicas of the two live observations behind feature 016 (FR-012). No live payload bytes: ids, domains, prices and asset layout are invented; only the signal keys, their numeric values and the structural facts the classifier reads (native present, secure, zero floor) reproduce the observed shape. Constitution III: synthetic or redacted evidence only.",
+  "_comment": "Synthetic fixtures for feature 016 (FR-012). All ids, domains, prices, asset layout, and numeric ext codes are invented synthetic examples. Constitution III: synthetic evidence only.",
   "adTypeReplica": {
     "signalPath": "imp[0].ext.ad_type",
-    "signalValue": 30,
+    "signalValue": 99,
     "imp": {
       "id": "1",
       "secure": 1,
@@ -12,7 +12,11 @@
         "ver": "1.2",
         "request": "{\"plcmtcnt\":1,\"assets\":[{\"id\":1,\"required\":1,\"title\":{\"len\":75}}]}"
       },
-      "ext": { "ad_type": 30, "limit": 1, "subage": 18 }
+      "ext": {
+        "ad_type": 99,
+        "limit": 1,
+        "subage": 18
+      }
     },
     "expected": {
       "role": "format-declaration",
@@ -34,7 +38,11 @@
         "ver": "1.2",
         "request": "{\"plcmtcnt\":1,\"assets\":[{\"id\":1,\"required\":1,\"title\":{\"len\":75}}]}"
       },
-      "ext": { "ad_type": 30, "limit": 1, "subage": 18 }
+      "ext": {
+        "ad_type": 99,
+        "limit": 1,
+        "subage": 18
+      }
     },
     "expected": {
       "role": "measurement",
