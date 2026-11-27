@@ -3848,8 +3848,8 @@ export async function mountInspector(root, ctx) {
   // widened into isPushMaterialShape — two properties of the carrier, not
   // style preferences, force that:
   //  - the two alias tables genuinely disagree. `text` is a TITLE alias in
-  //    the dialect and a DESCRIPTION alias in renderPushToHtml (Kadam feed
-  //    materials, push-x-kadam-array-alias-mixed), so handing bid.ext to the
+  //    the dialect and a DESCRIPTION alias in renderPushToHtml (vendor feed
+  //    materials, push-x-vendor-array-alias-mixed), so handing bid.ext to the
   //    renderer raw would print the headline into the body slot for
   //    inpage-x-widget-openrtb-aliases;
   //  - the price lives one level up on the Bid while the creative lives in
@@ -3964,7 +3964,7 @@ export async function mountInspector(root, ctx) {
     return { link: native.link && typeof native.link === 'object' ? native.link : {}, assets };
   }
 
-  // DEF-441 — a documented vendor Native material. Kadam's Native feed answers
+  // DEF-441 — a documented vendor Native material. Vendor Native feeds answer
   // with `{title, url, image, cpc}`: a headline, a landing link and one picture,
   // and deliberately NO push click alias — which is exactly why
   // isPushMaterialShape refuses it (a bare `url` is a native landing link, not a
@@ -4070,7 +4070,7 @@ export async function mountInspector(root, ctx) {
   // under a vendor-specific wire wrapper. Every path below was read directly
   // out of an actual documented fixture (pop-x-feed-bid-redirect's
   // `redirecturl`, pop-exads-wrapper's `bid.url`, pop-x-feed-linkfeed-get's
-  // `result.link[]`, pop-kadam-clickunder's `result.listing[]`,
+  // `result.link[]`, pop-vendor-clickunder's `result.listing[]`,
   // pop-adon3-under/-over-multi's `ads[]`, pop-ppcmate-json-material/-multi's
   // bare material array) — a corpus-closed list, not a generic recursive URL
   // scan, mirroring findAdm/findPushMaterial's own explicit-shape style. A
@@ -4179,7 +4179,7 @@ export async function mountInspector(root, ctx) {
             ? m.imgUrl
             : null;
     const title = typeof m.title === 'string' ? m.title : null;
-    // `text`, not just `description`: push-x-kadam-array-alias-mixed's
+    // `text`, not just `description`: push-x-vendor-array-alias-mixed's
     // alias materials carry the description under `text`.
     const desc =
       typeof m.description === 'string'

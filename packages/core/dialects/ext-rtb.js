@@ -6,7 +6,7 @@
  *
  *   - ext.bsection / ext.btags (vendor blocking taxonomies, must be int arrays)
  *   - ext.subage* and site.ext.idzone — push-traffic detection
- *   - macro support — only AUCTION_PRICE/CURRENCY/LOSS are honored
+ *   - macro support — AUCTION_PRICE/CURRENCY/LOSS/BID_ID/ID/IMP_ID and CLICK_URL/CLICK_URL_ENC
  *
  * Stays SEPARATE from rules-request.js / rules-response.js so the default IAB
  * dialect never surfaces ext-rtb-only "warnings" that aren't in the spec.
@@ -17,7 +17,16 @@ const { isObj } = require('../helpers');
 
 const F = makeFinding;
 
-const SUPPORTED_MACROS = new Set(['AUCTION_PRICE', 'AUCTION_CURRENCY', 'AUCTION_LOSS']);
+const SUPPORTED_MACROS = new Set([
+  'AUCTION_PRICE',
+  'AUCTION_CURRENCY',
+  'AUCTION_LOSS',
+  'AUCTION_BID_ID',
+  'AUCTION_ID',
+  'AUCTION_IMP_ID',
+  'CLICK_URL',
+  'CLICK_URL_ENC',
+]);
 
 function validateRequest(req) {
   const findings = [];
@@ -35,19 +44,19 @@ function validateRequest(req) {
     if (!isObj(imp)) return; // R4: tolerate `imp:[null]`
     const num = i + 1;
     const p = `imp[${i}]`;
-    const impExt = imp.ext || {};
+    const impExt = isObj(imp.ext) ? imp.ext : {};
     const sitePush =
       req.site && req.site.ext && req.site.ext.idzone ? String(req.site.ext.idzone) : '';
-    const isLikelyPush = !!(
+    const hasSubage =
       impExt.subage != null ||
       impExt.subage0 != null ||
-      impExt.subage_dt ||
-      impExt.subage_ts ||
-      /push|sub/i.test(sitePush)
-    );
+      impExt.subage_dt != null ||
+      impExt.subage_ts != null ||
+      impExt.subage_ts_ms != null;
+    const isLikelyPush = hasSubage || /push|sub/i.test(sitePush);
     if (isLikelyPush) {
       isPush = true;
-      if (impExt.subage == null) {
+      if (!hasSubage) {
         findings.push(F('extrtb.imp.subage_missing', LEVELS.WARNING, `${p}.ext.subage`, { num }));
       }
     }
