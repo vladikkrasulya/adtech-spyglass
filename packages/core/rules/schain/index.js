@@ -201,30 +201,48 @@ function inspectCopies(copies, declaredSender, { serializedNodeExt = false } = {
     };
     comparison.reason = 'no_valid_chain';
   }
+  const hasIdentity = (node) =>
+    isPlainObject(node) &&
+    typeof node.asi === 'string' &&
+    node.asi.length > 0 &&
+    typeof node.sid === 'string' &&
+    node.sid.length > 0;
   for (const copy of copies) {
     const own = [];
     validateSchainObject(copy.chain, copy.path, own, serializedNodeExt);
     findings.push(...own);
-    if (own.some((finding) => finding.level === LEVELS.ERROR)) continue;
-    let signature;
-    try {
-      signature = JSON.stringify(
-        semanticValue({
-          ...copy.chain,
-          nodes: copy.chain.nodes.map((node) => ({
-            ...node,
-            asi: node.asi.toLowerCase(),
-            ...(typeof node.domain === 'string' ? { domain: node.domain.toLowerCase() } : {}),
-          })),
-        }),
-      );
-    } catch {
-      findings.push(F('schain.comparison_limit', LEVELS.ERROR, copy.path));
-      continue;
+    const hasError = own.some((finding) => finding.level === LEVELS.ERROR);
+    let copyValid = !hasError;
+    if (copyValid) {
+      let signature;
+      try {
+        signature = JSON.stringify(
+          semanticValue({
+            ...copy.chain,
+            nodes: copy.chain.nodes.map((node) => ({
+              ...node,
+              asi: node.asi.toLowerCase(),
+              ...(typeof node.domain === 'string' ? { domain: node.domain.toLowerCase() } : {}),
+            })),
+          }),
+        );
+        valid.push({ ...copy, signature });
+      } catch {
+        findings.push(F('schain.comparison_limit', LEVELS.ERROR, copy.path));
+        copyValid = false;
+      }
     }
-    valid.push({ ...copy, signature });
+    const nodes =
+      isPlainObject(copy.chain) &&
+      Array.isArray(copy.chain.nodes) &&
+      copy.chain.nodes.length > 0 &&
+      copy.chain.nodes.length <= MAX_NODES
+        ? copy.chain.nodes
+        : null;
+    if (!nodes) continue;
     const seen = new Map();
-    copy.chain.nodes.forEach((node, idx) => {
+    nodes.forEach((node, idx) => {
+      if (!hasIdentity(node)) return;
       const identity = JSON.stringify([node.asi.toLowerCase(), node.sid]);
       if (seen.has(identity)) {
         findings.push(
@@ -238,14 +256,15 @@ function inspectCopies(copies, declaredSender, { serializedNodeExt = false } = {
       } else seen.set(identity, idx);
     });
     if (senderOK) {
-      const idx = copy.chain.nodes.length - 1;
-      const node = copy.chain.nodes[idx];
+      const idx = nodes.length - 1;
+      const node = nodes[idx];
+      if (!hasIdentity(node)) continue;
       const status =
         node.asi.toLowerCase() === declaredSender.asi.toLowerCase() &&
         node.sid === declaredSender.sid
           ? 'match'
           : 'mismatch';
-      comparison.copies.push({ path: copy.path, status });
+      if (copyValid) comparison.copies.push({ path: copy.path, status });
       if (status === 'mismatch')
         findings.push(
           F('schain.declared_sender_mismatch', LEVELS.WARNING, `${copy.path}.nodes[${idx}]`, {

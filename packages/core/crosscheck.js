@@ -264,6 +264,35 @@ function crosscheck(req, res, _ctx) {
         ? -1
         : deals30.findIndex((deal) => isObj(deal) && deal.id === entry.raw.deal);
     const negativeDeal30 = deal30Index >= 0 && classifyPrice(deals30[deal30Index].flr).negative;
+    const isPrivateAuction = isObj(imp.pmp) && imp.pmp.private_auction === 1;
+    const pmpDeals =
+      isObj(imp.pmp) && Array.isArray(imp.pmp.deals) ? imp.pmp.deals.filter(isObj) : [];
+    const bidDealId = typeof bid.dealid === 'string' && bid.dealid.length > 0 ? bid.dealid : null;
+    const matchedPmpDeal = bidDealId ? pmpDeals.find((d) => d.id === bidDealId) : null;
+    const seatObj = Array.isArray(seatbid) ? seatbid[entry.sNum - 1] : null;
+    const bidSeat =
+      isObj(seatObj) && typeof seatObj.seat === 'string' && seatObj.seat ? seatObj.seat : null;
+    const privateAuctionRejected = isPrivateAuction && !matchedPmpDeal;
+    if (privateAuctionRejected) {
+      out.push(
+        C(
+          'crosscheck.seat.not_allowed',
+          false,
+          CROSS_LEVELS.CRIT,
+          bid.dealid !== undefined ? `${bp}.dealid` : `${bp}.${leaf.impid}`,
+          {
+            ...baseParams,
+            seat: bidSeat
+              ? `${bidSeat} (no valid dealid)`
+              : bidDealId
+                ? `dealid "${bidDealId}"`
+                : '(no dealid)',
+            privateAuction: true,
+            dealid: bid.dealid ?? null,
+          },
+        ),
+      );
+    }
     const dealFloor = negativeDeal30
       ? { floor: deals30[deal30Index].flr, floorCur: undefined, unusable: true }
       : resolveDealFloor(bid, imp);
@@ -275,7 +304,7 @@ function crosscheck(req, res, _ctx) {
     // spec-defined meaning (no minimum = 0) that we CAN compare against,
     // while a garbage floor leaves us with no number at all.
     const floorUnusable = floorPresent && !hasExplicitFloor;
-    if (!hasExplicitFloor && !floorNoteEmitted.has(impKey)) {
+    if (!privateAuctionRejected && !hasExplicitFloor && !floorNoteEmitted.has(impKey)) {
       const impIdx = reqView.imp.findIndex(
         (i) => isObj(i) && i.id != null && String(i.id) === impKey,
       );
@@ -304,6 +333,8 @@ function crosscheck(req, res, _ctx) {
           raw: priceRaw === undefined ? 'undefined' : JSON.stringify(priceRaw),
         }),
       );
+    } else if (privateAuctionRejected) {
+      // Open-auction / unmatched-dealid bids cannot clear a private auction.
     } else if (floorUnusable) {
       // Nothing to compare against, and any number printed here would be one
       // the request does not contain — so no verdict, the same call the
@@ -520,16 +551,38 @@ function crosscheck(req, res, _ctx) {
         : [];
       const declared = imp.banner.w && imp.banner.h ? [{ w: imp.banner.w, h: imp.banner.h }] : [];
       const allSizes = [...declared, ...formatList];
-      const fits = allSizes.some(
-        (f) => isObj(f) && Number(f.w) === Number(bid.w) && Number(f.h) === Number(bid.h),
-      );
+      const fits = allSizes.some((f) => {
+        if (!isObj(f)) return false;
+        if (f.w != null && f.h != null) {
+          return Number(f.w) === Number(bid.w) && Number(f.h) === Number(bid.h);
+        }
+        if (Number(f.wratio) > 0 && Number(f.hratio) > 0) {
+          const bw = Number(bid.w);
+          const bh = Number(bid.h);
+          return (
+            bw > 0 &&
+            bh > 0 &&
+            (f.wmin == null || bw >= Number(f.wmin)) &&
+            Math.abs(bw / bh - Number(f.wratio) / Number(f.hratio)) <= 0.02
+          );
+        }
+        return false;
+      });
       if (allSizes.length && !fits) {
         out.push(
           C('crosscheck.bid.size_mismatch', false, CROSS_LEVELS.WARN, `${bp}.size`, {
             ...baseParams,
             w: bid.w,
             h: bid.h,
-            allowed: allSizes.map((f) => `${f.w}×${f.h}`).join(', '),
+            allowed: allSizes
+              .map((f) =>
+                f.w != null && f.h != null
+                  ? `${f.w}×${f.h}`
+                  : f.wratio != null && f.hratio != null
+                    ? `${f.wratio}:${f.hratio}`
+                    : `${f.w ?? '?'}×${f.h ?? '?'}`,
+              )
+              .join(', '),
           }),
         );
       } else if (allSizes.length) {
@@ -549,6 +602,12 @@ function crosscheck(req, res, _ctx) {
       if (cm.errorKey) {
         out.push(C(cm.errorKey, false, CROSS_LEVELS.WARN, `${bp}.${leaf.adm}`, baseParams));
       } else {
+        // "Complete" only ever meant "the required ids are present". Say so
+        // only when the assets under those ids are also usable — otherwise a
+        // bid that renders blank collects a green tick. Run fitness checks even
+        // when another required asset is missing so present assets are still
+        // checked for unsafe_scheme, over_length, and img_size.
+        const fitness = nativeAssetFitness(imp.native, nativeContent);
         if (cm.missing.length) {
           out.push(
             C(
@@ -563,42 +622,36 @@ function crosscheck(req, res, _ctx) {
               cm,
             ),
           );
-        } else {
-          // "Complete" only ever meant "the required ids are present". Say so
-          // only when the assets under those ids are also usable — otherwise a
-          // bid that renders blank collects a green tick.
-          const fitness = nativeAssetFitness(imp.native, nativeContent);
-          if (!fitness.length) {
-            out.push(
-              C(
-                'crosscheck.bid.native_complete',
-                true,
-                CROSS_LEVELS.OK,
-                `${bp}.${leaf.adm}`,
-                {
-                  ...baseParams,
-                  count: cm.requiredIds.length,
-                },
-                cm,
-              ),
-            );
-          }
-          for (const issue of fitness) {
-            out.push(
-              C(
-                `crosscheck.bid.native_${issue.code}`,
-                false,
-                issue.code === 'unsafe_scheme' ? CROSS_LEVELS.CRIT : CROSS_LEVELS.WARN,
-                `${bp}.${leaf.adm}`,
-                {
-                  ...baseParams,
-                  ...issue.params,
-                  assetId: issue.id >= 0 ? issue.id : '',
-                },
-                issue,
-              ),
-            );
-          }
+        } else if (!fitness.length) {
+          out.push(
+            C(
+              'crosscheck.bid.native_complete',
+              true,
+              CROSS_LEVELS.OK,
+              `${bp}.${leaf.adm}`,
+              {
+                ...baseParams,
+                count: cm.requiredIds.length,
+              },
+              cm,
+            ),
+          );
+        }
+        for (const issue of fitness) {
+          out.push(
+            C(
+              `crosscheck.bid.native_${issue.code}`,
+              false,
+              issue.code === 'unsafe_scheme' ? CROSS_LEVELS.CRIT : CROSS_LEVELS.WARN,
+              `${bp}.${leaf.adm}`,
+              {
+                ...baseParams,
+                ...issue.params,
+                assetId: issue.id >= 0 ? issue.id : '',
+              },
+              issue,
+            ),
+          );
         }
         if (cm.extra.length) {
           out.push(
