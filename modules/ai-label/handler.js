@@ -81,7 +81,7 @@ const MAX_CONCURRENT = Math.max(1, Number(process.env.AI_LABEL_MAX_CONCURRENT) |
 const MAX_QUEUE = Number.isFinite(Number(process.env.AI_LABEL_MAX_QUEUE))
   ? Math.max(0, Number(process.env.AI_LABEL_MAX_QUEUE))
   : 4;
-const QUEUE_WAIT_MS = Number(process.env.AI_LABEL_QUEUE_WAIT_MS) || 12_000;
+const QUEUE_WAIT_MS = Number(process.env.AI_LABEL_QUEUE_WAIT_MS) || 25_000;
 const BUSY_RETRY_AFTER_S = 5;
 // Mirrors the ?locale= pattern documented in public/i18n.js and used by
 // /api/analyze and /api/analyze-behavior — here it arrives in the JSON body
@@ -92,6 +92,38 @@ const SUPPORTED_LOCALES = ['en', 'uk', 'ru'];
 // syntax findings use (`imp[0].ext.type`) — a path we would suggest for but
 // the save route would reject is a broken round trip.
 const SIGNAL_PATH_RX = /^[a-zA-Z_][a-zA-Z0-9_.[\]]*$/;
+const EXPLAIN_ITEMS_MAX = 15;
+const EXPLAIN_FIELD_MAX = 240;
+
+/** @param {unknown} value @returns {string} */
+function clipExplainField(value) {
+  if (value == null) return '';
+  const str = String(value).trim();
+  return str.length > EXPLAIN_FIELD_MAX ? str.slice(0, EXPLAIN_FIELD_MAX) : str;
+}
+
+/**
+ * Allowlist-sanitize finding / crosscheck items so only `{id, level, path, message}`
+ * reach the model — never raw payload values.
+ *
+ * @param {unknown} list
+ * @returns {Array<{id: string, level: string, path: string, message: string}>}
+ */
+function sanitizeFindingsList(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  for (const item of list) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+    const id = clipExplainField(item.id);
+    const level = clipExplainField(item.level);
+    const path = clipExplainField(item.path);
+    const message = clipExplainField(item.message);
+    if (!id && !path && !message) continue;
+    out.push({ id, level, path, message });
+    if (out.length >= EXPLAIN_ITEMS_MAX) break;
+  }
+  return out;
+}
 
 /**
  * Reduce an impression to the structure the classifier needs, dropping
@@ -265,8 +297,48 @@ function createAiLabelModule({ auth, aiLabelLimiter, db, gate } = {}) {
     }
 
     // ── Model fallback: every deterministic source abstained ──────────
-    // Track a caller that disconnects while it waits (for the health check or
-    // for its turn at the model).
+    const outcome = await runGatedModelCall(res, { path: signalPath }, () =>
+      ollama.classifySignal({
+        signalPath,
+        signalValue,
+        impSketch: sketch,
+        siblingKeys,
+        locale,
+      }),
+    );
+    if (!outcome.ok) return undefined;
+
+    const suggestion = outcome.value;
+    if (!STORABLE_LABELS.includes(suggestion.label)) {
+      // Belt and braces: lib/ollama already checks its own enum, but the
+      // set that matters is the one the SAVE route accepts — since
+      // ADR-015 that is the twenty STORABLE_LABELS, not the legacy
+      // eleven of SEMANTIC_LABELS.
+      sendError(res, 424, 'bad_model_output', 'Model returned a label the store rejects');
+      alertOperator(res, 424, 'bad_model_output', undefined, 'upstream');
+      return;
+    }
+    return sendJson(res, 200, {
+      ok: true,
+      // Required routing evidence (016 §Public response compatibility):
+      // without it the preserved-legacy and model variants cannot be told
+      // apart in the SC-002 route counts.
+      suggestion: { ...suggestion, routing: { roleLayer: role.state, legacy: legacy.kind } },
+      signal: { path: signalPath, value: signalValue },
+    });
+  }
+
+  /**
+   * Shared gate, disconnect tracking, persona health check, and error-to-HTTP
+   * mapping for local model endpoints.
+   *
+   * @template T
+   * @param {any} res
+   * @param {object} logMeta
+   * @param {() => Promise<T>} fn
+   * @returns {Promise<{ok: true, value: T} | {ok: false}>}
+   */
+  async function runGatedModelCall(res, logMeta, fn) {
     let clientGone = false;
     if (typeof res.once === 'function') {
       res.once('close', () => {
@@ -274,9 +346,9 @@ function createAiLabelModule({ auth, aiLabelLimiter, db, gate } = {}) {
       });
     }
     const health = await ollama.verifyPersona();
-    if (clientGone) return undefined;
+    if (clientGone) return { ok: false };
     if (!health.ok) {
-      return sendError(
+      sendError(
         res,
         503,
         'labeller_unavailable',
@@ -284,40 +356,19 @@ function createAiLabelModule({ auth, aiLabelLimiter, db, gate } = {}) {
           ? `Model "${health.model}" is not available on this host.`
           : 'Local model service is unreachable.',
       );
+      return { ok: false };
     }
 
     try {
-      const suggestion = await modelGate.run(() => {
+      const value = await modelGate.run(() => {
         // The caller may have left while waiting for a turn; a call nobody will
         // read would only delay the people still waiting.
         if (clientGone) throw Object.assign(new Error('client gone'), { code: 'client_gone' });
-        return ollama.classifySignal({
-          signalPath,
-          signalValue,
-          impSketch: sketch,
-          siblingKeys,
-          locale,
-        });
+        return fn();
       });
-      if (!STORABLE_LABELS.includes(suggestion.label)) {
-        // Belt and braces: lib/ollama already checks its own enum, but the
-        // set that matters is the one the SAVE route accepts — since
-        // ADR-015 that is the twenty STORABLE_LABELS, not the legacy
-        // eleven of SEMANTIC_LABELS.
-        sendError(res, 424, 'bad_model_output', 'Model returned a label the store rejects');
-        alertOperator(res, 424, 'bad_model_output', undefined, 'upstream');
-        return;
-      }
-      return sendJson(res, 200, {
-        ok: true,
-        // Required routing evidence (016 §Public response compatibility):
-        // without it the preserved-legacy and model variants cannot be told
-        // apart in the SC-002 route counts.
-        suggestion: { ...suggestion, routing: { roleLayer: role.state, legacy: legacy.kind } },
-        signal: { path: signalPath, value: signalValue },
-      });
+      return { ok: true, value };
     } catch (e) {
-      if (e && e.code === 'client_gone') return undefined; // nobody is listening
+      if (e && e.code === 'client_gone') return { ok: false };
       if (e && (e.code === 'gate_full' || e.code === 'gate_wait_timeout')) {
         // Not a model failure and not the caller's fault: the model is busy.
         // Say so plainly, with when to come back; do not page the operator.
@@ -325,17 +376,23 @@ function createAiLabelModule({ auth, aiLabelLimiter, db, gate } = {}) {
         if (typeof res.setHeader === 'function') {
           res.setHeader('Retry-After', String(BUSY_RETRY_AFTER_S));
         }
-        return sendError(
+        sendError(
           res,
           429,
           'labeller_busy',
           'The local model is busy with other requests. Try again in a few seconds.',
         );
+        return { ok: false };
       }
       // Payload contents are never logged — only the shape of the failure.
-      log.warn({ code: e.code, path: signalPath }, 'labeller call failed');
-      const timedOut = e.name === 'AbortError';
-      const failCode = timedOut ? 'labeller_timeout' : 'labeller_failed';
+      log.warn({ code: e && e.code, ...logMeta }, 'labeller call failed');
+      const timedOut = e && e.name === 'AbortError';
+      const failCode =
+        e && e.code === 'bad_model_output'
+          ? 'bad_model_output'
+          : timedOut
+            ? 'labeller_timeout'
+            : 'labeller_failed';
       sendError(
         res,
         424,
@@ -345,12 +402,71 @@ function createAiLabelModule({ auth, aiLabelLimiter, db, gate } = {}) {
       // Still operator-actionable (ADR-012): 424 is not a 5xx, so sendError no
       // longer pages by itself.
       alertOperator(res, 424, failCode, undefined, 'upstream');
+      return { ok: false };
     }
+  }
+
+  async function handleExplain(req, res) {
+    const user = auth && auth.getCurrentUser(req);
+    if (!user) {
+      return sendError(res, 401, 'unauthorized', 'Sign in to use the labelling assistant');
+    }
+    if (aiLabelLimiter && !aiLabelLimiter(String(user.id))) {
+      return sendError(res, 429, 'rate_limited', 'Too many labelling requests. Try again shortly.');
+    }
+
+    let body;
+    try {
+      body = await readJson(req, { maxBytes: BODY_MAX_BYTES });
+    } catch (e) {
+      return sendError(res, 400, 'bad_request', e.message);
+    }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return sendError(res, 400, 'bad_request', 'Body must be a JSON object');
+    }
+    if (
+      (body.findings !== undefined && !Array.isArray(body.findings)) ||
+      (body.crosscheck !== undefined && !Array.isArray(body.crosscheck))
+    ) {
+      return sendError(res, 400, 'bad_request', 'findings and crosscheck must be arrays');
+    }
+
+    const safeFindings = sanitizeFindingsList(body.findings);
+    const safeCrosscheck = sanitizeFindingsList(body.crosscheck);
+    if (safeFindings.length === 0 && safeCrosscheck.length === 0) {
+      return sendError(
+        res,
+        400,
+        'findings_required',
+        'At least one finding or crosscheck item is required',
+      );
+    }
+
+    const { sketch: impSketch } = redactImp(body.imp);
+    const locale = SUPPORTED_LOCALES.includes(body.locale) ? body.locale : 'en';
+
+    const outcome = await runGatedModelCall(
+      res,
+      { route: 'explain-findings', findingsCount: safeFindings.length + safeCrosscheck.length },
+      () =>
+        ollama.explainFindings({
+          findings: safeFindings,
+          crosscheck: safeCrosscheck,
+          impSketch,
+          locale,
+        }),
+    );
+    if (!outcome.ok) return undefined;
+
+    return sendJson(res, 200, { ok: true, explanation: outcome.value });
   }
 
   return {
     id: 'ai-label',
-    routes: [{ method: 'POST', path: '/api/dialects/suggest-label', handler: handleSuggest }],
+    routes: [
+      { method: 'POST', path: '/api/dialects/suggest-label', handler: handleSuggest },
+      { method: 'POST', path: '/api/dialects/explain-findings', handler: handleExplain },
+    ],
   };
 }
 
