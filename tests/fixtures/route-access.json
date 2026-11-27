@@ -333,5 +333,9 @@
     "access": "public",
     "limit": "none",
     "reason": "in-memory lookup by a short hash, no external calls"
+  },
+  "POST /api/dialects/explain-findings": {
+    "access": "user",
+    "limit": "aiLabelLimiter"
   }
 }
