@@ -197,10 +197,6 @@ function createAnalyzeModule(deps) {
         // let a bare `42` pass as a clean no-response; Core's validate() rejects
         // it with payload.invalid_root, and the HTTP contract must surface the
         // same rejection (and crosscheck.no_response) rather than silence it.
-        const hasResObj = bidRes && typeof bidRes === 'object' && Object.keys(bidRes).length > 0;
-        const hasResScalar = bidRes !== undefined && bidRes !== null && typeof bidRes !== 'object';
-        const hasRes = hasResObj || hasResScalar;
-
         // Same bargain as `bidReqRaw`, for the other pane. The response arrives
         // parsed too, so a duplicate `id`, an integer past 2^53-1 and a raw
         // control character are already gone by the time validate() sees it.
@@ -209,6 +205,16 @@ function createAnalyzeModule(deps) {
         // the other — a bid price spelled 9007199254740993 came back as
         // ...992 and nothing said so.
         const bidResRaw = typeof body.bidResRaw === 'string' ? body.bidResRaw : undefined;
+        const hasResRaw = typeof bidResRaw === 'string' && bidResRaw.trim().length > 0;
+        const hasResObj =
+          bidRes &&
+          typeof bidRes === 'object' &&
+          (Array.isArray(bidRes) ||
+            Object.keys(bidRes).length > 0 ||
+            hasResRaw ||
+            (!hasReq && bidReq === undefined));
+        const hasResScalar = bidRes !== undefined && bidRes !== null && typeof bidRes !== 'object';
+        const hasRes = hasResObj || hasResScalar;
 
         // Optional `opts.disabledRules`: forwarded to validate() / crosscheck()
         // for per-call rule suppression. Accepts string[] of exact ids or

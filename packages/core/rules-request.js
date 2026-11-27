@@ -243,26 +243,48 @@ function validateRequest(req, ctx) {
   // CCPA `us_privacy` — IAB MSPA spec: 4-char string `<spec_version><opt_out_notice><opt_out><lspa_covered>`,
   // each char is `-`, `Y`, `N`, or (for spec_version) `1`. Anything else
   // is malformed and SSPs will reject.
-  const usp = req.regs && req.regs.ext && req.regs.ext.us_privacy;
-  if (usp != null) {
-    if (!isStr(usp) || !/^[1-9][-YN][-YN][-YN]$/i.test(usp)) {
+  const extUsp = req.regs && req.regs.ext && req.regs.ext.us_privacy;
+  const topUsp = req.regs && req.regs.us_privacy;
+  if (extUsp != null) {
+    if (!isStr(extUsp) || !/^[1-9][-YN][-YN][-YN]$/i.test(extUsp)) {
       findings.push(
-        F('regs.us_privacy_invalid', LEVELS.WARNING, 'regs.ext.us_privacy', { usp: String(usp) }),
+        F('regs.us_privacy_invalid', LEVELS.WARNING, 'regs.ext.us_privacy', {
+          usp: String(extUsp),
+        }),
+      );
+    }
+  } else if (extUsp === undefined && topUsp !== undefined) {
+    if (!isStr(topUsp) || !/^1[YN-]{3}$/i.test(topUsp)) {
+      findings.push(
+        F('regs.us_privacy_invalid', LEVELS.WARNING, 'regs.us_privacy', { usp: String(topUsp) }),
       );
     }
   }
 
   // COPPA — `regs.coppa=1` means the user is a child under 13. When set,
-  // most exchanges require non-PII (no precise geo, no device.dnt, no
-  // user.id/buyeruid). We surface the inconsistency.
+  // most exchanges require non-PII (no precise geo, no device.ifa/device ids,
+  // no user.id/buyeruid/eids). We surface the inconsistency.
   if (req.regs && req.regs.coppa !== undefined && req.regs.coppa !== 0 && req.regs.coppa !== 1) {
     findings.push(F('regs.coppa_invalid', LEVELS.ERROR, 'regs.coppa'));
   }
   if (req.regs && req.regs.coppa === 1) {
-    const userObj = req.user || {};
-    const hasUid = isStr(userObj.id) || isStr(userObj.buyeruid);
-    const hasGeo =
-      req.device && req.device.geo && (req.device.geo.lat != null || req.device.geo.lon != null);
+    const userObj = isObj(req.user) ? req.user : {};
+    const devObj = isObj(req.device) ? req.device : {};
+    const hasIfa = isStr(devObj.ifa) && devObj.ifa.trim().length > 0;
+    const hasEids =
+      (Array.isArray(userObj.eids) && userObj.eids.length > 0) ||
+      (isObj(userObj.ext) && Array.isArray(userObj.ext.eids) && userObj.ext.eids.length > 0);
+    const hasUid =
+      isStr(userObj.id) ||
+      isStr(userObj.buyeruid) ||
+      userObj.yob != null ||
+      isStr(userObj.gender) ||
+      hasIfa ||
+      isStr(devObj.didsha1) ||
+      isStr(devObj.dpidsha1) ||
+      isStr(devObj.macsha1) ||
+      hasEids;
+    const hasGeo = !!(isObj(devObj.geo) && (devObj.geo.lat != null || devObj.geo.lon != null));
     if (hasUid || hasGeo) {
       findings.push(
         F('regs.coppa_pii_present', LEVELS.WARNING, 'regs.coppa', {
